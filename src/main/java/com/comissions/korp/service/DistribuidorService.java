@@ -2,9 +2,9 @@ package com.comissions.korp.service;
 
 import com.comissions.korp.entity.Distribuidor;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,6 +25,10 @@ public class DistribuidorService {
                     "4133330000", "41999991111", "PR"
             )
     ));
+
+    public List<Distribuidor> listarTodosDistribuidores(){
+        return (distribuidores != null) ? distribuidores : Collections.emptyList();
+    }
 
     public Optional<Distribuidor> buscarDistribuidorPorCnpj(String cnpj) {
         if (cnpj == null || cnpj.isBlank()) {

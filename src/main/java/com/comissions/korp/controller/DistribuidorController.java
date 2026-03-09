@@ -20,6 +20,15 @@ public class DistribuidorController {
         this.distribuidorService = distribuidorService;
     }
 
+    @GetMapping
+    public ResponseEntity<List<Distribuidor>> listarTodos(){
+        List<Distribuidor> listarTodos = distribuidorService.listarTodosDistribuidores();
+        if(listarTodos.isEmpty()){
+            return ResponseEntity.status(204).build();
+        }
+        return ResponseEntity.status(200).body(listarTodos);
+    }
+
     @GetMapping("/{cnpj}")
     public ResponseEntity<Object> buscarPorCnpj(@PathVariable String cnpj) {
         try {
