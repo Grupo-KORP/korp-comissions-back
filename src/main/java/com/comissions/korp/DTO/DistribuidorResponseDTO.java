@@ -1,42 +1,20 @@
-package com.comissions.korp.entity;
+package com.comissions.korp.DTO;
 
-
-import jakarta.persistence.*;
-
-import java.util.ArrayList;
 import java.util.List;
 
-@Entity
-@Table(name="Distribuidor")
-public class Distribuidor {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_distribuidor")
+public class DistribuidorResponseDTO {
     private Integer idDistribuidor;
-
-    @Column(name = "razao_social", length = 150, nullable = false)
     private String razaoSocial;
-
-    @Column(name = "nome_fantasia", length = 150)
     private String nomeFantasia;
-
-    @Column(name = "cnpj", length = 20, nullable = false, unique = true)
     private String cnpj;
-
-    @Column(name = "telefone", length = 20)
     private String telefone;
-
-    @Column(name = "email", length = 120)
     private String email;
+    private List<ContatoResponseDTO> contatos;
 
-    // Relacionamento 1:N com Contato
-    @OneToMany(mappedBy = "distribuidor", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Contato> contatos = new ArrayList<>();
-
-    public Distribuidor() {
+    public DistribuidorResponseDTO() {
     }
 
-    public Distribuidor(String cnpj, List<Contato> contatos, String email, Integer idDistribuidor, String nomeFantasia, String razaoSocial, String telefone) {
+    public DistribuidorResponseDTO(String cnpj, List<ContatoResponseDTO> contatos, String email, Integer idDistribuidor, String nomeFantasia, String razaoSocial, String telefone) {
         this.cnpj = cnpj;
         this.contatos = contatos;
         this.email = email;
@@ -54,11 +32,11 @@ public class Distribuidor {
         this.cnpj = cnpj;
     }
 
-    public List<Contato> getContatos() {
+    public List<ContatoResponseDTO> getContatos() {
         return contatos;
     }
 
-    public void setContatos(List<Contato> contatos) {
+    public void setContatos(List<ContatoResponseDTO> contatos) {
         this.contatos = contatos;
     }
 

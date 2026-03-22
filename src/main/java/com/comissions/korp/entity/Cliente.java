@@ -1,18 +1,18 @@
 package com.comissions.korp.entity;
 
-
 import jakarta.persistence.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name="Distribuidor")
-public class Distribuidor {
+@Table(name="Cliente")
+public class Cliente {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_distribuidor")
-    private Integer idDistribuidor;
+    @Column(name = "id_cliente")
+    private Integer idCliente;
 
     @Column(name = "razao_social", length = 150, nullable = false)
     private String razaoSocial;
@@ -30,17 +30,17 @@ public class Distribuidor {
     private String email;
 
     // Relacionamento 1:N com Contato
-    @OneToMany(mappedBy = "distribuidor", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "cliente", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Contato> contatos = new ArrayList<>();
 
-    public Distribuidor() {
+    public Cliente() {
     }
 
-    public Distribuidor(String cnpj, List<Contato> contatos, String email, Integer idDistribuidor, String nomeFantasia, String razaoSocial, String telefone) {
+    public Cliente(String cnpj, List<Contato> contatos, String email, Integer idCliente, String nomeFantasia, String razaoSocial, String telefone) {
         this.cnpj = cnpj;
         this.contatos = contatos;
         this.email = email;
-        this.idDistribuidor = idDistribuidor;
+        this.idCliente = idCliente;
         this.nomeFantasia = nomeFantasia;
         this.razaoSocial = razaoSocial;
         this.telefone = telefone;
@@ -70,12 +70,12 @@ public class Distribuidor {
         this.email = email;
     }
 
-    public Integer getIdDistribuidor() {
-        return idDistribuidor;
+    public Integer getIdCliente() {
+        return idCliente;
     }
 
-    public void setIdDistribuidor(Integer idDistribuidor) {
-        this.idDistribuidor = idDistribuidor;
+    public void setIdCliente(Integer idCliente) {
+        this.idCliente = idCliente;
     }
 
     public String getNomeFantasia() {
