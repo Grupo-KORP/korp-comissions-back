@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name="Distribuidor")
+@Table(name="distribuidor")
 public class Distribuidor {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,18 +29,12 @@ public class Distribuidor {
     @Column(name = "email", length = 120)
     private String email;
 
-    // Relacionamento 1:N com Contato
-    @OneToMany(mappedBy = "distribuidor", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Contato> contatos = new ArrayList<>();
-
     public Distribuidor() {
     }
 
-    public Distribuidor(String cnpj, List<Contato> contatos, String email, Integer idDistribuidor, String nomeFantasia, String razaoSocial, String telefone) {
+    public Distribuidor(String cnpj, String email, String nomeFantasia, String razaoSocial, String telefone) {
         this.cnpj = cnpj;
-        this.contatos = contatos;
         this.email = email;
-        this.idDistribuidor = idDistribuidor;
         this.nomeFantasia = nomeFantasia;
         this.razaoSocial = razaoSocial;
         this.telefone = telefone;
@@ -52,14 +46,6 @@ public class Distribuidor {
 
     public void setCnpj(String cnpj) {
         this.cnpj = cnpj;
-    }
-
-    public List<Contato> getContatos() {
-        return contatos;
-    }
-
-    public void setContatos(List<Contato> contatos) {
-        this.contatos = contatos;
     }
 
     public String getEmail() {

@@ -4,8 +4,8 @@ public class ContatoRequestDTO {
     private String nome;
     private String email;
     private String telefone;
-    private Integer fkCliente;
-    private Integer fkDistribuidor;
+    private Integer idCliente;
+    private Integer idDistribuidor;
 
     public ContatoRequestDTO() {
     }
@@ -40,19 +40,19 @@ public class ContatoRequestDTO {
         this.telefone = telefone;
     }
 
-    public Integer getFkCliente() {
-        return fkCliente;
+    public Integer getIdCliente() {
+        return idCliente;
     }
 
-    public void setFkCliente(Integer fkCliente) {
-        this.fkCliente = fkCliente;
+    public void setIdCliente(Integer idCliente) {
+        this.idCliente = idCliente;
     }
 
-    public Integer getFkDistribuidor() {
-        return fkDistribuidor;
+    public Integer getIdDistribuidor() {
+        return idDistribuidor;
     }
 
-    public void setFkDistribuidor(Integer fkDistribuidor) {
-        this.fkDistribuidor = fkDistribuidor;
+    public void setIdDistribuidor(Integer idDistribuidor) {
+        this.idDistribuidor = idDistribuidor;
     }
 }

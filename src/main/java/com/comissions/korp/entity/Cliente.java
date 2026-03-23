@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name="Cliente")
+@Table(name="cliente")
 public class Cliente {
 
     @Id
@@ -29,18 +29,12 @@ public class Cliente {
     @Column(name = "email", length = 120)
     private String email;
 
-    // Relacionamento 1:N com Contato
-    @OneToMany(mappedBy = "cliente", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Contato> contatos = new ArrayList<>();
-
     public Cliente() {
     }
 
-    public Cliente(String cnpj, List<Contato> contatos, String email, Integer idCliente, String nomeFantasia, String razaoSocial, String telefone) {
+    public Cliente(String cnpj, String email, String nomeFantasia, String razaoSocial, String telefone) {
         this.cnpj = cnpj;
-        this.contatos = contatos;
         this.email = email;
-        this.idCliente = idCliente;
         this.nomeFantasia = nomeFantasia;
         this.razaoSocial = razaoSocial;
         this.telefone = telefone;
@@ -52,14 +46,6 @@ public class Cliente {
 
     public void setCnpj(String cnpj) {
         this.cnpj = cnpj;
-    }
-
-    public List<Contato> getContatos() {
-        return contatos;
-    }
-
-    public void setContatos(List<Contato> contatos) {
-        this.contatos = contatos;
     }
 
     public String getEmail() {

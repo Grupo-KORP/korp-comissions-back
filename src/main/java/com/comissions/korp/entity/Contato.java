@@ -3,7 +3,7 @@ package com.comissions.korp.entity;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "Contato")
+@Table(name = "contato")
 public class Contato {
 
     @Id
@@ -33,11 +33,10 @@ public class Contato {
     public Contato() {
     }
 
-    public Contato(Cliente cliente, Distribuidor distribuidor, String email, Integer idContato, String nome, String telefone) {
+    public Contato(Cliente cliente, Distribuidor distribuidor, String email, String nome, String telefone) {
         this.cliente = cliente;
         this.distribuidor = distribuidor;
         this.email = email;
-        this.idContato = idContato;
         this.nome = nome;
         this.telefone = telefone;
     }

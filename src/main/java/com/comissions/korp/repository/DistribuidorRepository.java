@@ -7,6 +7,6 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface DistribuidorRespository extends JpaRepository<Distribuidor, Integer> {
+public interface DistribuidorRepository extends JpaRepository<Distribuidor, Integer> {
     Optional<Distribuidor> findByCnpj(String cnpj);
 }
