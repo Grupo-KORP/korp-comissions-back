@@ -9,14 +9,12 @@ public class DistribuidorResponseDTO {
     private String cnpj;
     private String telefone;
     private String email;
-    private List<ContatoResponseDTO> contatos;
 
     public DistribuidorResponseDTO() {
     }
 
-    public DistribuidorResponseDTO(String cnpj, List<ContatoResponseDTO> contatos, String email, Integer idDistribuidor, String nomeFantasia, String razaoSocial, String telefone) {
+    public DistribuidorResponseDTO(String cnpj, String email, Integer idDistribuidor, String nomeFantasia, String razaoSocial, String telefone) {
         this.cnpj = cnpj;
-        this.contatos = contatos;
         this.email = email;
         this.idDistribuidor = idDistribuidor;
         this.nomeFantasia = nomeFantasia;
@@ -30,14 +28,6 @@ public class DistribuidorResponseDTO {
 
     public void setCnpj(String cnpj) {
         this.cnpj = cnpj;
-    }
-
-    public List<ContatoResponseDTO> getContatos() {
-        return contatos;
-    }
-
-    public void setContatos(List<ContatoResponseDTO> contatos) {
-        this.contatos = contatos;
     }
 
     public String getEmail() {

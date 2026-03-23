@@ -8,7 +8,7 @@ import com.comissions.korp.entity.Distribuidor;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.repository.ClienteRepository;
 import com.comissions.korp.repository.ContatoRepository;
-import com.comissions.korp.repository.DistribuidorRespository;
+import com.comissions.korp.repository.DistribuidorRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -19,15 +19,17 @@ public class ContatoService {
 
     private final ContatoRepository contatoRepository;
     private final ClienteRepository clienteRepository;
-    private final DistribuidorRespository distribuidorRespository;
+    private final DistribuidorRepository distribuidorRepository;
 
-    public ContatoService(ContatoRepository contatoRepository, ClienteRepository clienteRepository, DistribuidorRespository distribuidorRespository) {
+    public ContatoService(ContatoRepository contatoRepository, ClienteRepository clienteRepository, DistribuidorRepository distribuidorRepository) {
         this.contatoRepository = contatoRepository;
         this.clienteRepository = clienteRepository;
-        this.distribuidorRespository = distribuidorRespository;
+        this.distribuidorRepository = distribuidorRepository;
     }
 
     public ContatoResponseDTO criar(ContatoRequestDTO requestDTO) {
+
+
         Contato contato = convertToEntity(requestDTO);
         Contato contatoSalvo = contatoRepository.save(contato);
         return convertToResponseDTO(contatoSalvo);
@@ -58,22 +60,18 @@ public class ContatoService {
         contatoExistente.setTelefone(requestDTO.getTelefone());
 
         // Atualiza relacionamentos se fornecidos
-        if (requestDTO.getFkCliente() != null) {
-            Cliente cliente = clienteRepository.findById(requestDTO.getFkCliente())
+        if (requestDTO.getIdCliente() != null) {
+            Cliente cliente = clienteRepository.findById(requestDTO.getIdCliente())
                     .orElseThrow(() -> new RecursoNaoEncontrado(
-                            "Cliente não encontrado com ID: " + requestDTO.getFkCliente()));
+                            "Cliente não encontrado com ID: " + requestDTO.getIdCliente()));
             contatoExistente.setCliente(cliente);
-        } else {
-            contatoExistente.setCliente(null);
         }
 
-        if (requestDTO.getFkDistribuidor() != null) {
-            Distribuidor distribuidor = distribuidorRespository.findById(requestDTO.getFkDistribuidor())
+        if (requestDTO.getIdDistribuidor() != null) {
+            Distribuidor distribuidor = distribuidorRepository.findById(requestDTO.getIdDistribuidor())
                     .orElseThrow(() -> new RecursoNaoEncontrado(
-                            "Distribuidor não encontrado com ID: " + requestDTO.getFkDistribuidor()));
+                            "Distribuidor não encontrado com ID: " + requestDTO.getIdDistribuidor()));
             contatoExistente.setDistribuidor(distribuidor);
-        } else {
-            contatoExistente.setDistribuidor(null);
         }
 
         Contato contatoAtualizado = contatoRepository.save(contatoExistente);
@@ -94,17 +92,17 @@ public class ContatoService {
         contato.setTelefone(dto.getTelefone());
 
         // Define relacionamentos se fornecidos
-        if (dto.getFkCliente() != null) {
-            Cliente cliente = clienteRepository.findById(dto.getFkCliente())
+        if (dto.getIdCliente() != null) {
+            Cliente cliente = clienteRepository.findById(dto.getIdCliente())
                     .orElseThrow(() -> new RecursoNaoEncontrado(
-                            "Cliente não encontrado com ID: " + dto.getFkCliente()));
+                            "Cliente não encontrado com ID: " + dto.getIdCliente()));
             contato.setCliente(cliente);
         }
 
-        if (dto.getFkDistribuidor() != null) {
-            Distribuidor distribuidor = distribuidorRespository.findById(dto.getFkDistribuidor())
+        if (dto.getIdDistribuidor() != null) {
+            Distribuidor distribuidor = distribuidorRepository.findById(dto.getIdDistribuidor())
                     .orElseThrow(() -> new RecursoNaoEncontrado(
-                            "Distribuidor não encontrado com ID: " + dto.getFkDistribuidor()));
+                            "Distribuidor não encontrado com ID: " + dto.getIdDistribuidor()));
             contato.setDistribuidor(distribuidor);
         }
 
