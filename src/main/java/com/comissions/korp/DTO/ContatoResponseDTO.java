@@ -51,4 +51,12 @@ public class ContatoResponseDTO {
     public void setTelefone(String telefone) {
         this.telefone = telefone;
     }
+
+    public Integer getFkCliente() {
+        return fkCliente;
+    }
+
+    public void setFkCliente(Integer fkCliente) {
+        this.fkCliente = fkCliente;
+    }
 }

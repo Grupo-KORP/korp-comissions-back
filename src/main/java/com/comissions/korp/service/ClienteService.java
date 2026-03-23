@@ -115,20 +115,6 @@ public class ClienteService {
         dto.setTelefone(cliente.getTelefone());
         dto.setEmail(cliente.getEmail());
 
-        // Converte lista de contatos usando Stream
-        List<ContatoResponseDTO> contatos = cliente.getContatos() != null
-                ? cliente.getContatos().stream()
-                .map(contato -> new ContatoResponseDTO(
-                        contato.getIdContato(),
-                        contato.getNome(),
-                        contato.getEmail(),
-                        contato.getTelefone(),
-                        contato.getCliente() != null ? contato.getCliente().getIdCliente() : null,
-                        contato.getDistribuidor() != null ? contato.getDistribuidor().getIdDistribuidor() : null
-                ))
-                .collect(Collectors.toList())
-                : Collections.emptyList();
-        dto.setContatos(contatos);
         return dto;
     }
 }

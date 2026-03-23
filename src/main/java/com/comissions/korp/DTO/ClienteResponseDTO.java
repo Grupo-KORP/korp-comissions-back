@@ -9,7 +9,6 @@ public class ClienteResponseDTO {
     private String cnpj;
     private String telefone;
     private String email;
-    private List<ContatoResponseDTO> contatos;
 
     public String getCnpj() {
         return cnpj;
@@ -17,14 +16,6 @@ public class ClienteResponseDTO {
 
     public void setCnpj(String cnpj) {
         this.cnpj = cnpj;
-    }
-
-    public List<ContatoResponseDTO> getContatos() {
-        return contatos;
-    }
-
-    public void setContatos(List<ContatoResponseDTO> contatos) {
-        this.contatos = contatos;
     }
 
     public String getEmail() {
