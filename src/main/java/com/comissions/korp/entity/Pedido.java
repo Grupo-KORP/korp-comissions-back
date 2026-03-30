@@ -50,9 +50,6 @@ public class Pedido {
     @JoinColumn(name = "fk_distribuidor")
     private Distribuidor distribuidor;
 
-    @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL)
-    private List<ItemPedido> itens;
-
     public Pedido() {
     }
 
@@ -142,13 +139,5 @@ public class Pedido {
 
     public void setDistribuidor(Distribuidor distribuidor) {
         this.distribuidor = distribuidor;
-    }
-
-    public List<ItemPedido> getItens() {
-        return itens;
-    }
-
-    public void setItens(List<ItemPedido> itens) {
-        this.itens = itens;
     }
 }
