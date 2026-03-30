@@ -2,14 +2,17 @@ package com.comissions.korp.service;
 
 import com.comissions.korp.DTO.UsuarioRequestDTO;
 import com.comissions.korp.DTO.UsuarioResponseDTO;
+import com.comissions.korp.entity.Role;
 import com.comissions.korp.entity.Usuario;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.exception.UsuarioJaExistente;
+import com.comissions.korp.repository.RoleRepository;
 import com.comissions.korp.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -17,6 +20,9 @@ public class UsuarioService {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private RoleRepository roleRepository ;
 
     /**
      * Cria um novo Usuario
@@ -32,7 +38,11 @@ public class UsuarioService {
             throw new UsuarioJaExistente("Já existe um usuário com este nome: " + requestDTO.nome());
         }
 
-        Usuario usuario = convertToEntity(requestDTO);
+        Optional<Role> role = roleRepository.findById(requestDTO.role());
+        Role roleUsuarioVendedor = role.get();
+
+
+        Usuario usuario = convertToEntity(requestDTO,roleUsuarioVendedor);
         Usuario usuarioSalvo = usuarioRepository.save(usuario);
         return convertToResponseDTO(usuarioSalvo);
     }
@@ -85,13 +95,14 @@ public class UsuarioService {
     /**
      * Converte UsuarioRequestDTO para Entity
      */
-    private Usuario convertToEntity(UsuarioRequestDTO dto) {
+    private Usuario convertToEntity(UsuarioRequestDTO dto, Role role) {
         Usuario usuario = new Usuario();
         usuario.setIdUsuario(dto.idUsuario());
         usuario.setNome(dto.nome());
         usuario.setEmail(dto.email());
         usuario.setSenha(dto.senha());
         usuario.setTelefone(dto.telefone());
+        usuario.setRoles(role);
         return usuario;
     }
 

@@ -33,17 +33,23 @@ public class Usuario {
     @Column(name = "dtCriacao")
     private LocalDateTime dtCriacao;
 
-    public Usuario() {
-    }
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "fkRole")
+    private Role roles;
 
-    public Usuario(Integer idUsuario, String nome, String email, String senha, String telefone, LocalDateTime dtCriacao) {
+    public Usuario(Integer idUsuario, String nome, String email, String senha, String telefone, LocalDateTime dtCriacao, Role roles) {
         this.idUsuario = idUsuario;
         this.nome = nome;
         this.email = email;
         this.senha = senha;
         this.telefone = telefone;
         this.dtCriacao = dtCriacao;
+        this.roles = roles;
     }
+
+    public Usuario() {
+    }
+
 
     public Integer getIdUsuario() {
         return idUsuario;
@@ -91,5 +97,13 @@ public class Usuario {
 
     public void setDtCriacao(LocalDateTime dtCriacao) {
         this.dtCriacao = dtCriacao;
+    }
+
+    public Role getRoles() {
+        return roles;
+    }
+
+    public void setRoles(Role roles) {
+        this.roles = roles;
     }
 }
