@@ -1,4 +1,7 @@
 package com.comissions.korp.repository;
 
-public interface ProdutoRepository {
+import com.comissions.korp.entity.Produto;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface ProdutoRepository extends JpaRepository<Produto, Integer> {
 }

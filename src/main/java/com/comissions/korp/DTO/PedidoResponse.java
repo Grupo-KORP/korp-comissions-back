@@ -1,59 +1,22 @@
-package com.comissions.korp.entity;
-
-
-import jakarta.persistence.*;
+package com.comissions.korp.DTO;
 
 import java.time.LocalDate;
 import java.util.List;
 
-@Entity
-@Table(name = "Pedido")
-public class Pedido {
+public class PedidoResponse {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer idPedido;
-
-    @Column(nullable = false)
     private LocalDate dataPedido;
-
-    @Column(nullable = false)
     private Integer numeroNotaDistribuidor;
-
-    @Column(nullable = false)
     private Double valorTotalRevenda;
-
-    @Column(nullable = false)
     private Double valorTotalFaturamento;
-
-    @Column(nullable = false, length = 50)
     private String statusPedido;
-
-    @Column(nullable = false)
     private Boolean frete;
-
-    @Column(nullable = false, length = 150)
     private String transportadora;
-
-    @Column(length = 250)
     private String observacoes;
+    private List<ItemPedidoResumoResponse> itens;
 
-//        @ManyToOne
-//        @JoinColumn(name = "fkVendedor")
-//        private Vendedor vendedor;
-
-    @ManyToOne
-    @JoinColumn(name = "fk_cliente")
-    private Cliente cliente;
-
-    @ManyToOne
-    @JoinColumn(name = "fk_distribuidor")
-    private Distribuidor distribuidor;
-
-    @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL)
-    private List<ItemPedido> itens;
-
-    public Pedido() {
+    public PedidoResponse() {
     }
 
     public Integer getIdPedido() {
@@ -78,14 +41,6 @@ public class Pedido {
 
     public void setNumeroNotaDistribuidor(Integer numeroNotaDistribuidor) {
         this.numeroNotaDistribuidor = numeroNotaDistribuidor;
-    }
-
-    public Cliente getCliente() {
-        return cliente;
-    }
-
-    public void setCliente(Cliente cliente) {
-        this.cliente = cliente;
     }
 
     public Double getValorTotalRevenda() {
@@ -136,19 +91,11 @@ public class Pedido {
         this.observacoes = observacoes;
     }
 
-    public Distribuidor getDistribuidor() {
-        return distribuidor;
-    }
-
-    public void setDistribuidor(Distribuidor distribuidor) {
-        this.distribuidor = distribuidor;
-    }
-
-    public List<ItemPedido> getItens() {
+    public List<ItemPedidoResumoResponse> getItens() {
         return itens;
     }
 
-    public void setItens(List<ItemPedido> itens) {
+    public void setItens(List<ItemPedidoResumoResponse> itens) {
         this.itens = itens;
     }
 }

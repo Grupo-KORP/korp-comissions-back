@@ -1,4 +1,7 @@
 package com.comissions.korp.repository;
 
-public interface PedidoRepository {
+import com.comissions.korp.entity.Pedido;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
 }
