@@ -1,11 +1,20 @@
-package com.comissions.korp.DTO;
+package com.comissions.korp.DTO.ProdutoDTO;
 
-public class ProdutoRequest {
+public class ProdutoResponse {
 
+    private Integer idProduto;
     private String nome;
     private String descricao;
 
-    public ProdutoRequest() {
+    public ProdutoResponse() {
+    }
+
+    public Integer getIdProduto() {
+        return idProduto;
+    }
+
+    public void setIdProduto(Integer idProduto) {
+        this.idProduto = idProduto;
     }
 
     public String getNome() {

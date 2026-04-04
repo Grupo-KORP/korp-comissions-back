@@ -1,22 +1,19 @@
-package com.comissions.korp.DTO;
+package com.comissions.korp.DTO.DistribuidorDTO;
 
-import java.util.List;
+public class DistribuidorRequestDTO {
 
-public class DistribuidorResponseDTO {
-    private Integer idDistribuidor;
     private String razaoSocial;
     private String nomeFantasia;
     private String cnpj;
     private String telefone;
     private String email;
 
-    public DistribuidorResponseDTO() {
+    public DistribuidorRequestDTO() {
     }
 
-    public DistribuidorResponseDTO(String cnpj, String email, Integer idDistribuidor, String nomeFantasia, String razaoSocial, String telefone) {
+    public DistribuidorRequestDTO(String cnpj, String email, String nomeFantasia, String razaoSocial, String telefone) {
         this.cnpj = cnpj;
         this.email = email;
-        this.idDistribuidor = idDistribuidor;
         this.nomeFantasia = nomeFantasia;
         this.razaoSocial = razaoSocial;
         this.telefone = telefone;
@@ -36,14 +33,6 @@ public class DistribuidorResponseDTO {
 
     public void setEmail(String email) {
         this.email = email;
-    }
-
-    public Integer getIdDistribuidor() {
-        return idDistribuidor;
-    }
-
-    public void setIdDistribuidor(Integer idDistribuidor) {
-        this.idDistribuidor = idDistribuidor;
     }
 
     public String getNomeFantasia() {

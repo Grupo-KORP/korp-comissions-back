@@ -17,7 +17,7 @@ public class Pedido {
     @Column(nullable = false)
     private LocalDate dataPedido;
 
-    @Column(nullable = false)
+
     private Integer numeroNotaDistribuidor;
 
     @Column(nullable = false)

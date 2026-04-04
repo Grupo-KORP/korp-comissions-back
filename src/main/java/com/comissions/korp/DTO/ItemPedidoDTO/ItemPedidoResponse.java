@@ -1,13 +1,17 @@
-package com.comissions.korp.DTO;
+package com.comissions.korp.DTO.ItemPedidoDTO;
 
-public class ItemPedidoResumoResponse {
+import com.comissions.korp.DTO.PedidoDTO.PedidoResumidoResponse;
+import com.comissions.korp.DTO.ProdutoDTO.ProdutoResponse;
+
+public class ItemPedidoResponse {
 
     private Integer idItemPedido;
     private Integer quantidade;
     private Double valorUnitario;
+    private PedidoResumidoResponse pedido;
     private ProdutoResponse produto;
 
-    public ItemPedidoResumoResponse() {
+    public ItemPedidoResponse() {
     }
 
     public Integer getIdItemPedido() {
@@ -32,6 +36,14 @@ public class ItemPedidoResumoResponse {
 
     public void setValorUnitario(Double valorUnitario) {
         this.valorUnitario = valorUnitario;
+    }
+
+    public PedidoResumidoResponse getPedido() {
+        return pedido;
+    }
+
+    public void setPedido(PedidoResumidoResponse pedido) {
+        this.pedido = pedido;
     }
 
     public ProdutoResponse getProduto() {

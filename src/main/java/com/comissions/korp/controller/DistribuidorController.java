@@ -1,8 +1,7 @@
 package com.comissions.korp.controller;
 
-import com.comissions.korp.DTO.DistribuidorRequestDTO;
-import com.comissions.korp.DTO.DistribuidorResponseDTO;
-import com.comissions.korp.entity.Distribuidor;
+import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorRequestDTO;
+import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorResponseDTO;
 import com.comissions.korp.service.DistribuidorService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

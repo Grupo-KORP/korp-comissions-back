@@ -1,4 +1,4 @@
-package com.comissions.korp.DTO;
+package com.comissions.korp.DTO.PedidoDTO;
 
 import java.time.LocalDate;
 

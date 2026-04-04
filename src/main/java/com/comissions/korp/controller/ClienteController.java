@@ -1,17 +1,13 @@
 package com.comissions.korp.controller;
 
-import com.comissions.korp.DTO.ClienteRequestDTO;
-import com.comissions.korp.DTO.ClienteResponseDTO;
-import com.comissions.korp.entity.Cliente;
+import com.comissions.korp.DTO.ClienteDTO.ClienteRequestDTO;
+import com.comissions.korp.DTO.ClienteDTO.ClienteResponseDTO;
 import com.comissions.korp.service.ClienteService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/cliente")
