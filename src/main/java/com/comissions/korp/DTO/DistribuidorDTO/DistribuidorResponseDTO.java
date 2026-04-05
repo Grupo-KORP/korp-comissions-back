@@ -1,19 +1,20 @@
-package com.comissions.korp.DTO;
+package com.comissions.korp.DTO.DistribuidorDTO;
 
-public class DistribuidorRequestDTO {
-
+public class DistribuidorResponseDTO {
+    private Integer idDistribuidor;
     private String razaoSocial;
     private String nomeFantasia;
     private String cnpj;
     private String telefone;
     private String email;
 
-    public DistribuidorRequestDTO() {
+    public DistribuidorResponseDTO() {
     }
 
-    public DistribuidorRequestDTO(String cnpj, String email, String nomeFantasia, String razaoSocial, String telefone) {
+    public DistribuidorResponseDTO(String cnpj, String email, Integer idDistribuidor, String nomeFantasia, String razaoSocial, String telefone) {
         this.cnpj = cnpj;
         this.email = email;
+        this.idDistribuidor = idDistribuidor;
         this.nomeFantasia = nomeFantasia;
         this.razaoSocial = razaoSocial;
         this.telefone = telefone;
@@ -33,6 +34,14 @@ public class DistribuidorRequestDTO {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public Integer getIdDistribuidor() {
+        return idDistribuidor;
+    }
+
+    public void setIdDistribuidor(Integer idDistribuidor) {
+        this.idDistribuidor = idDistribuidor;
     }
 
     public String getNomeFantasia() {

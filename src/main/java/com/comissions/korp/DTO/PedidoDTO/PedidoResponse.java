@@ -1,4 +1,6 @@
-package com.comissions.korp.DTO;
+package com.comissions.korp.DTO.PedidoDTO;
+
+import com.comissions.korp.DTO.ItemPedidoDTO.ItemPedidoResumoResponse;
 
 import java.time.LocalDate;
 import java.util.List;

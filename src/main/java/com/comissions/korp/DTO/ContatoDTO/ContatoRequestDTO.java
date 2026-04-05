@@ -1,23 +1,19 @@
-package com.comissions.korp.DTO;
+package com.comissions.korp.DTO.ContatoDTO;
 
-public class ContatoResponseDTO {
-    private Integer idContato;
+public class ContatoRequestDTO {
     private String nome;
     private String email;
     private String telefone;
     private Integer idCliente;
     private Integer idDistribuidor;
 
-    public ContatoResponseDTO() {
+    public ContatoRequestDTO() {
     }
 
-    public ContatoResponseDTO(Integer idContato, String nome, String email, String telefone, Integer idCliente, Integer idDistribuidor){
-        this.idContato = idContato;
-        this.nome = nome;
+    public ContatoRequestDTO(String email, String nome, String telefone) {
         this.email = email;
+        this.nome = nome;
         this.telefone = telefone;
-        this.idCliente = idCliente;
-        this.idDistribuidor = idDistribuidor;
     }
 
     public String getEmail() {
@@ -26,14 +22,6 @@ public class ContatoResponseDTO {
 
     public void setEmail(String email) {
         this.email = email;
-    }
-
-    public Integer getIdContato() {
-        return idContato;
-    }
-
-    public void setIdContato(Integer idContato) {
-        this.idContato = idContato;
     }
 
     public String getNome() {

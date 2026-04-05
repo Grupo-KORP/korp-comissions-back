@@ -1,7 +1,7 @@
 package com.comissions.korp.service;
 
-import com.comissions.korp.DTO.ContatoRequestDTO;
-import com.comissions.korp.DTO.ContatoResponseDTO;
+import com.comissions.korp.DTO.ContatoDTO.ContatoRequestDTO;
+import com.comissions.korp.DTO.ContatoDTO.ContatoResponseDTO;
 import com.comissions.korp.entity.Cliente;
 import com.comissions.korp.entity.Contato;
 import com.comissions.korp.entity.Distribuidor;

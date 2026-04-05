@@ -1,0 +1,88 @@
+package com.comissions.korp.service;
+
+
+import com.comissions.korp.DTO.ProdutoDTO.ProdutoRequest;
+import com.comissions.korp.DTO.ProdutoDTO.ProdutoResponse;
+import com.comissions.korp.entity.Produto;
+import com.comissions.korp.exception.RecursoNaoEncontrado;
+import com.comissions.korp.repository.ProdutoRepository;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+
+@Service
+public class ProdutoService {
+
+    private ProdutoRepository produtoRepository;
+
+    public ProdutoService(ProdutoRepository produtoRepository) {
+        this.produtoRepository = produtoRepository;
+    }
+
+    public ProdutoResponse cadastrarProduto(ProdutoRequest produtoRequest){
+        Produto produto = convertToEntity(produtoRequest);
+        Produto produtoSalvo = produtoRepository.save(produto);
+        return convertToResponseDTO(produtoSalvo);
+    }
+
+    public List<ProdutoResponse> listarProdutos(){
+        return produtoRepository.findAll()
+                .stream()
+                .map(this::convertToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    public ProdutoResponse buscarPorId(Integer id){
+        Produto produto = produtoRepository.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontrado(
+                        "Produto não encontrado"
+                ));
+        return convertToResponseDTO(produto);
+    }
+
+    public List<ProdutoResponse> buscarPorNome(String nome){
+        List<ProdutoResponse> produtos = produtoRepository.findByNomeContains(nome)
+                .stream()
+                .map(this::convertToResponseDTO)
+                .collect(Collectors.toList());
+
+        if (produtos.isEmpty()) {
+            throw new RuntimeException("Nenhum produto encontrado com esse nome");
+        }
+        return produtos;
+    }
+
+    public ProdutoResponse atualizarProduto(Integer id, ProdutoRequest produtoRequest){
+        Produto produto = produtoRepository.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontrado("Produto não encontrado."));
+
+        produto.setNome(produtoRequest.getNome());
+        produto.setDescricao(produtoRequest.getDescricao());
+        Produto produtoAtt = produtoRepository.save(produto);
+        return convertToResponseDTO(produtoAtt);
+    }
+
+    public void deletarProduto(Integer id){
+        Produto produto = produtoRepository.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontrado("Não foi encontrado este produto."));
+
+        produtoRepository.deleteById(id);
+    }
+
+    private Produto convertToEntity(ProdutoRequest dto) {
+        Produto produto = new Produto();
+        produto.setNome(dto.getNome());
+        produto.setDescricao(dto.getDescricao());
+        return produto;
+    }
+
+    private ProdutoResponse convertToResponseDTO(Produto produto) {
+        ProdutoResponse dto = new ProdutoResponse();
+        dto.setIdProduto(produto.getIdProduto());
+        dto.setNome(produto.getNome() != null ? produto.getNome() : "Não informado");
+        dto.setDescricao(produto.getDescricao() != null ? produto.getDescricao() : "Não informado");
+        return dto;
+    }
+}

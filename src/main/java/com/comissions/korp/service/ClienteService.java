@@ -1,17 +1,13 @@
 package com.comissions.korp.service;
 
-import com.comissions.korp.DTO.ClienteRequestDTO;
-import com.comissions.korp.DTO.ClienteResponseDTO;
-import com.comissions.korp.DTO.ContatoResponseDTO;
+import com.comissions.korp.DTO.ClienteDTO.ClienteRequestDTO;
+import com.comissions.korp.DTO.ClienteDTO.ClienteResponseDTO;
 import com.comissions.korp.entity.Cliente;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.repository.ClienteRepository;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service

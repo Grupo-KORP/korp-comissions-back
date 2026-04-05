@@ -1,4 +1,4 @@
-package com.comissions.korp.DTO;
+package com.comissions.korp.DTO.ItemPedidoDTO;
 
 import com.comissions.korp.entity.Produto;
 
@@ -6,7 +6,7 @@ public class ItemPedidoRequest {
 
     private Integer quantidade;
     private Double valorUnitario;
-    private Produto fkProduto;
+    private Integer fkProduto;
 
     public ItemPedidoRequest() {
     }
@@ -27,11 +27,11 @@ public class ItemPedidoRequest {
         this.valorUnitario = valorUnitario;
     }
 
-    public Produto getFkProduto() {
+    public Integer getFkProduto() {
         return fkProduto;
     }
 
-    public void setFkProduto(Produto fkProduto) {
+    public void setFkProduto(Integer fkProduto) {
         this.fkProduto = fkProduto;
     }
 }
