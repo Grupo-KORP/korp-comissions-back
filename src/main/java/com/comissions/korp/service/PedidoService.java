@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional(readOnly = true)
 public class PedidoService {
 
     private final PedidoRepository pedidoRepository;
@@ -41,6 +42,7 @@ public class PedidoService {
         this.itemPedidoService = itemPedidoService;
     }
 
+    @Transactional
     public PedidoResponse cadastrarPedido(PedidoRequest pedidoRequest) {
 
 //        Vendedor vendedor = vendedorRepository.findById(pedidoRequest.getFkVendedor())
@@ -76,6 +78,7 @@ public class PedidoService {
         return convertToPedidoResponse(pedido, itens);
     }
 
+    @Transactional
     public PedidoResponse atualizarPedido(Integer id, PedidoRequest pedidoRequest) {
         Pedido pedido = pedidoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontrado("Pedido não encontrado com id: " + id));
@@ -89,6 +92,11 @@ public class PedidoService {
         atualizarDadosPedido(pedido, pedidoRequest, cliente, distribuidor);
 
         Pedido pedidoAtualizado = pedidoRepository.save(pedido);
+
+        if (pedidoRequest.getItens() != null) {
+            atualizarItensDoPedido(pedidoAtualizado, pedidoRequest.getItens());
+        }
+
         List<ItemPedido> itens = itemPedidoRepository.findByPedido(pedidoAtualizado);
 
         return convertToPedidoResponse(pedidoAtualizado, itens);
@@ -110,13 +118,15 @@ public class PedidoService {
         PedidoResponse pedidoResponse = new PedidoResponse();
         pedidoResponse.setIdPedido(pedido.getIdPedido());
         pedidoResponse.setDataPedido(pedido.getDataPedido());
-        pedidoResponse.setNumeroNotaDistribuidor(pedido.getNumeroNotaDistribuidor() != null ? pedido.getNumeroNotaDistribuidor() : 0);
-        pedidoResponse.setValorTotalRevenda(pedido.getValorTotalRevenda() != null ? pedido.getValorTotalRevenda() : 0.0);
-        pedidoResponse.setValorTotalFaturamento(pedido.getValorTotalFaturamento() != null ? pedido.getValorTotalFaturamento() : 0.0);
-        pedidoResponse.setStatusPedido(pedido.getStatusPedido() != null ? pedido.getStatusPedido() : "Não informado");
-        pedidoResponse.setFrete(pedido.getFrete() != null ? pedido.getFrete() : false);
-        pedidoResponse.setTransportadora(pedido.getTransportadora() != null ? pedido.getTransportadora() : "Não informado");
-        pedidoResponse.setObservacoes(pedido.getObservacoes() != null ? pedido.getObservacoes() : "Não informado");
+        pedidoResponse.setNumeroNotaDistribuidor(pedido.getNumeroNotaDistribuidor());
+        pedidoResponse.setValorTotalRevenda(pedido.getValorTotalRevenda());
+        pedidoResponse.setValorTotalFaturamento(pedido.getValorTotalFaturamento());
+        pedidoResponse.setStatusPedido(pedido.getStatusPedido());
+        pedidoResponse.setFrete(pedido.getFrete());
+        pedidoResponse.setTransportadora(pedido.getTransportadora());
+        pedidoResponse.setObservacoes(pedido.getObservacoes());
+        pedidoResponse.setFkCliente(pedido.getCliente() != null ? pedido.getCliente().getIdCliente() : null);
+        pedidoResponse.setFkDistribuidor(pedido.getDistribuidor() != null ? pedido.getDistribuidor().getIdDistribuidor() : null);
 
         List<ItemPedidoResumoResponse> itensResponse = itens
                 .stream()
@@ -169,6 +179,17 @@ public class PedidoService {
         }
 
         return itensSalvos;
+    }
+
+    private void atualizarItensDoPedido(Pedido pedido, List<ItemPedidoRequest> itensRequest) {
+        itemPedidoRepository.deleteByPedido(pedido);
+
+        if (itensRequest.isEmpty()) {
+            return;
+        }
+
+        Map<Integer, Produto> produtoMap = mapearProdutosPorId(itensRequest);
+        salvarItensDoPedido(pedido, itensRequest, produtoMap);
     }
 
     private Produto buscarProdutoPorId(Integer idProduto, Map<Integer, Produto> produtoMap) {

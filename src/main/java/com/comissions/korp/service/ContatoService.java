@@ -8,11 +8,13 @@ import com.comissions.korp.entity.Distribuidor;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.repository.ContatoRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional(readOnly = true)
 public class ContatoService {
 
     private final ContatoRepository contatoRepository;
@@ -25,9 +27,8 @@ public class ContatoService {
         this.distribuidorService = distribuidorService;
     }
 
+    @Transactional
     public ContatoResponseDTO criar(ContatoRequestDTO requestDTO) {
-
-
         Contato contato = convertToEntity(requestDTO);
         Contato contatoSalvo = contatoRepository.save(contato);
         return convertToResponseDTO(contatoSalvo);
@@ -47,6 +48,7 @@ public class ContatoService {
         return convertToResponseDTO(contato);
     }
 
+    @Transactional
     public ContatoResponseDTO atualizar(Integer id, ContatoRequestDTO requestDTO) {
         Contato contatoExistente = contatoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontrado(
@@ -72,6 +74,7 @@ public class ContatoService {
         return convertToResponseDTO(contatoAtualizado);
     }
 
+    @Transactional
     public void deletar(Integer id) {
         if (!contatoRepository.existsById(id)) {
             throw new RecursoNaoEncontrado("Contato não encontrado com ID: " + id);

@@ -6,11 +6,13 @@ import com.comissions.korp.entity.Distribuidor;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.repository.DistribuidorRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional(readOnly = true)
 public class DistribuidorService {
 
     private final DistribuidorRepository distribuidorRepository;
@@ -19,6 +21,7 @@ public class DistribuidorService {
         this.distribuidorRepository = distribuidorRepository;
     }
 
+    @Transactional
     public DistribuidorResponseDTO criar(DistribuidorRequestDTO requestDTO) {
         Distribuidor distribuidor = convertToEntity(requestDTO);
         Distribuidor distribuidorSalvo = distribuidorRepository.save(distribuidor);
@@ -50,6 +53,7 @@ public class DistribuidorService {
         return convertToResponseDTO(distribuidor);
     }
 
+    @Transactional
     public DistribuidorResponseDTO atualizar(Integer id, DistribuidorRequestDTO requestDTO) {
         Distribuidor distribuidorExistente = buscarDistribuidorPorId(id);
 
@@ -64,6 +68,7 @@ public class DistribuidorService {
         return convertToResponseDTO(distribuidorAtualizado);
     }
 
+    @Transactional
     public void deletar(Integer id) {
         if (!distribuidorRepository.existsById(id)) {
             throw new RecursoNaoEncontrado("Distribuidor não encontrado com ID: " + id);

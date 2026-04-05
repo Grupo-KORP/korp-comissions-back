@@ -16,6 +16,8 @@ public class PedidoResponse {
     private Boolean frete;
     private String transportadora;
     private String observacoes;
+    private Integer fkCliente;
+    private Integer fkDistribuidor;
     private List<ItemPedidoResumoResponse> itens;
 
     public PedidoResponse() {
@@ -91,6 +93,22 @@ public class PedidoResponse {
 
     public void setObservacoes(String observacoes) {
         this.observacoes = observacoes;
+    }
+
+    public Integer getFkCliente() {
+        return fkCliente;
+    }
+
+    public void setFkCliente(Integer fkCliente) {
+        this.fkCliente = fkCliente;
+    }
+
+    public Integer getFkDistribuidor() {
+        return fkDistribuidor;
+    }
+
+    public void setFkDistribuidor(Integer fkDistribuidor) {
+        this.fkDistribuidor = fkDistribuidor;
     }
 
     public List<ItemPedidoResumoResponse> getItens() {

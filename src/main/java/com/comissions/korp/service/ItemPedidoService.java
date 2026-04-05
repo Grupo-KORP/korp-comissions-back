@@ -10,12 +10,14 @@ import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.repository.ItemPedidoRepository;
 import com.comissions.korp.repository.PedidoRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 
 @Service
+@Transactional(readOnly = true)
 public class ItemPedidoService {
 
     private final ItemPedidoRepository itemPedidoRepository;
@@ -67,6 +69,7 @@ public class ItemPedidoService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
     public void deletar(Integer id) {
         buscarItemPedidoPorId(id);
         itemPedidoRepository.deleteById(id);
