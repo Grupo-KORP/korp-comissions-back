@@ -4,11 +4,11 @@ import com.comissions.korp.DTO.ItemPedidoDTO.ItemPedidoRequest;
 import com.comissions.korp.DTO.ItemPedidoDTO.ItemPedidoResumoResponse;
 import com.comissions.korp.DTO.PedidoDTO.PedidoRequest;
 import com.comissions.korp.DTO.PedidoDTO.PedidoResponse;
-import com.comissions.korp.DTO.ProdutoDTO.ProdutoResponse;
 import com.comissions.korp.entity.*;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.repository.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,79 +16,45 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional(readOnly = true)
 public class PedidoService {
 
     private final PedidoRepository pedidoRepository;
     private final ItemPedidoRepository itemPedidoRepository;
     private final ProdutoRepository produtoRepository;
 //    private final VendedorRepository vendedorRepository;
-    private final ClienteRepository clienteRepository;
-    private final DistribuidorRepository distribuidorRepository;
+    private final ClienteService clienteService;
+    private final DistribuidorService distribuidorService;
+    private final ItemPedidoService itemPedidoService;
 
 
     public PedidoService(PedidoRepository pedidoRepository
             ,ItemPedidoRepository itemPedidoRepository
             ,ProdutoRepository produtoRepository
-            ,ClienteRepository clienteRepository
-            ,DistribuidorRepository distribuidorRepository) {
+            ,ClienteService clienteService
+            ,DistribuidorService distribuidorService,
+                         ItemPedidoService itemPedidoService) {
         this.pedidoRepository = pedidoRepository;
         this.itemPedidoRepository = itemPedidoRepository;
         this.produtoRepository = produtoRepository;
-        this.clienteRepository = clienteRepository;
-        this.distribuidorRepository = distribuidorRepository;
+        this.clienteService = clienteService;
+        this.distribuidorService = distribuidorService;
+        this.itemPedidoService = itemPedidoService;
     }
 
+    @Transactional
     public PedidoResponse cadastrarPedido(PedidoRequest pedidoRequest) {
 
 //        Vendedor vendedor = vendedorRepository.findById(pedidoRequest.getFkVendedor())
 //                .orElseThrow(() -> new RuntimeException("Vendedor não encontrado com id: " + pedidoRequest.getFkVendedor()));
 
-        Cliente cliente = clienteRepository.findById(pedidoRequest.getFkCliente())
-                .orElseThrow(() -> new RuntimeException("Cliente não encontrado com id: " + pedidoRequest.getFkCliente()));
+        Cliente cliente = clienteService.buscarClientePorId(pedidoRequest.getFkCliente());
+        Distribuidor distribuidor = distribuidorService.buscarDistribuidorPorId(pedidoRequest.getFkDistribuidor());
 
-        Distribuidor distribuidor = distribuidorRepository.findById(pedidoRequest.getFkDistribuidor())
-                .orElseThrow(() -> new RuntimeException("Distribuidor não encontrado com id: " + pedidoRequest.getFkDistribuidor()));
+        Pedido pedidoSalvo = pedidoRepository.save(criarPedidoFromRequest(pedidoRequest, cliente, distribuidor));
+        Map<Integer, Produto> produtoMap = mapearProdutosPorId(pedidoRequest.getItens());
+        List<ItemPedido> itensSalvos = salvarItensDoPedido(pedidoSalvo, pedidoRequest.getItens(), produtoMap);
 
-        Pedido pedido = new Pedido();
-        pedido.setDataPedido(pedidoRequest.getDataPedido());
-        pedido.setNumeroNotaDistribuidor(pedidoRequest.getNumeroNotaDistribuidor());
-        pedido.setValorTotalRevenda(pedidoRequest.getValorTotalRevenda());
-        pedido.setValorTotalFaturamento(pedidoRequest.getValorTotalFaturamento());
-        pedido.setStatusPedido(pedidoRequest.getStatusPedido());
-        pedido.setFrete(pedidoRequest.getFrete());
-        pedido.setTransportadora(pedidoRequest.getTransportadora());
-        pedido.setObservacoes(pedidoRequest.getObservacoes());
-//        pedido.setVendedor(vendedor);
-        pedido.setCliente(cliente);
-        pedido.setDistribuidor(distribuidor);
-
-        Pedido pedidoSalvo = pedidoRepository.save(pedido);
-
-        List<Integer> idsProdutos = pedidoRequest.getItens()
-                .stream()
-                .map(ItemPedidoRequest::getFkProduto)
-                .collect(Collectors.toList());
-
-        List<Produto> produtos = produtoRepository.findByIdProdutoIn(idsProdutos);
-
-        Map<Integer, Produto> produtoMap = produtos.stream()
-                .collect(Collectors.toMap(Produto::getIdProduto, produto -> produto));
-
-        List<ItemPedido> itensSalvos = new ArrayList<>();
-        for (ItemPedidoRequest itemRequest : pedidoRequest.getItens()) {
-
-            Produto produto = produtoMap.get(itemRequest.getFkProduto());
-            if (produto == null) {
-                throw new RecursoNaoEncontrado("Produto não encontrado com id: " + itemRequest.getFkProduto());
-            }
-            ItemPedido itemPedido = new ItemPedido();
-            itemPedido.setPedido(pedidoSalvo);
-            itemPedido.setProduto(produto);
-            itemPedido.setQuantidade(itemRequest.getQuantidade());
-            itemPedido.setValorUnitario(itemRequest.getValorUnitario());
-
-            itensSalvos.add(itemPedidoRepository.save(itemPedido));
-        }
         return convertToPedidoResponse(pedidoSalvo, itensSalvos);
     }
 
@@ -112,79 +78,134 @@ public class PedidoService {
         return convertToPedidoResponse(pedido, itens);
     }
 
+    @Transactional
     public PedidoResponse atualizarPedido(Integer id, PedidoRequest pedidoRequest) {
         Pedido pedido = pedidoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Pedido não encontrado com id: " + id));
+                .orElseThrow(() -> new RecursoNaoEncontrado("Pedido não encontrado com id: " + id));
 
 //        Vendedor vendedor = vendedorRepository.findById(pedidoRequest.getFkVendedor())
 //                .orElseThrow(() -> new RuntimeException("Vendedor não encontrado com id: " + pedidoRequest.getFkVendedor()));
 
-        Cliente cliente = clienteRepository.findById(pedidoRequest.getFkCliente())
-                .orElseThrow(() -> new RecursoNaoEncontrado("Cliente não encontrado com id: " + pedidoRequest.getFkCliente()));
+        Cliente cliente = clienteService.buscarClientePorId(pedidoRequest.getFkCliente());
+        Distribuidor distribuidor = distribuidorService.buscarDistribuidorPorId(pedidoRequest.getFkDistribuidor());
 
-        Distribuidor distribuidor = distribuidorRepository.findById(pedidoRequest.getFkDistribuidor())
-                .orElseThrow(() -> new RecursoNaoEncontrado("Distribuidor não encontrado com id: " + pedidoRequest.getFkDistribuidor()));
-
-        pedido.setDataPedido(pedidoRequest.getDataPedido());
-        pedido.setNumeroNotaDistribuidor(pedidoRequest.getNumeroNotaDistribuidor());
-        pedido.setValorTotalRevenda(pedidoRequest.getValorTotalRevenda());
-        pedido.setValorTotalFaturamento(pedidoRequest.getValorTotalFaturamento());
-        pedido.setStatusPedido(pedidoRequest.getStatusPedido());
-        pedido.setFrete(pedidoRequest.getFrete());
-        pedido.setTransportadora(pedidoRequest.getTransportadora());
-        pedido.setObservacoes(pedidoRequest.getObservacoes());
-//        pedido.setVendedor(vendedor);
-        pedido.setCliente(cliente);
-        pedido.setDistribuidor(distribuidor);
+        atualizarDadosPedido(pedido, pedidoRequest, cliente, distribuidor);
 
         Pedido pedidoAtualizado = pedidoRepository.save(pedido);
+
+        if (pedidoRequest.getItens() != null) {
+            atualizarItensDoPedido(pedidoAtualizado, pedidoRequest.getItens());
+        }
+
         List<ItemPedido> itens = itemPedidoRepository.findByPedido(pedidoAtualizado);
+
         return convertToPedidoResponse(pedidoAtualizado, itens);
     }
 
+    @Transactional
     public void deletarPedido(Integer id) {
         Pedido pedido = pedidoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Pedido não encontrado com id: " + id));
+                .orElseThrow(() -> new RecursoNaoEncontrado("Pedido não encontrado com id: " + id));
 
         // Para deletar o pedido, precisa del tambem suas amarrações na tbl: Item_pedido
         itemPedidoRepository.deleteByPedido(pedido);
         pedidoRepository.deleteById(id);
     }
 
-    //Convertento entidades em DTO
-    private static ItemPedidoResumoResponse convertToItemResumoResponse(ItemPedido itemPedido) {
-        ItemPedidoResumoResponse itemResponse = new ItemPedidoResumoResponse();
-        itemResponse.setIdItemPedido(itemPedido.getIdItemPedido());
-        itemResponse.setQuantidade(itemPedido.getQuantidade() != null ? itemPedido.getQuantidade() : 0);
-        itemResponse.setValorUnitario(itemPedido.getValorUnitario() != null ? itemPedido.getValorUnitario() : 0.0);
+    //Convertendo entidades em DTO
 
-        ProdutoResponse produtoResponse = new ProdutoResponse();
-        produtoResponse.setIdProduto(itemPedido.getProduto().getIdProduto());
-        produtoResponse.setNome(itemPedido.getProduto().getNome() != null ? itemPedido.getProduto().getNome() : "Não informado");
-        produtoResponse.setDescricao(itemPedido.getProduto().getDescricao() != null ? itemPedido.getProduto().getDescricao() : "Não informado");
-
-        itemResponse.setProduto(produtoResponse);
-        return itemResponse;
-        }
-
-    private static PedidoResponse convertToPedidoResponse(Pedido pedido, List<ItemPedido> itens) {
+    private PedidoResponse convertToPedidoResponse(Pedido pedido, List<ItemPedido> itens) {
         PedidoResponse pedidoResponse = new PedidoResponse();
         pedidoResponse.setIdPedido(pedido.getIdPedido());
         pedidoResponse.setDataPedido(pedido.getDataPedido());
-        pedidoResponse.setNumeroNotaDistribuidor(pedido.getNumeroNotaDistribuidor() != null ? pedido.getNumeroNotaDistribuidor() : 0);
-        pedidoResponse.setValorTotalRevenda(pedido.getValorTotalRevenda() != null ? pedido.getValorTotalRevenda() : 0.0);
-        pedidoResponse.setValorTotalFaturamento(pedido.getValorTotalFaturamento() != null ? pedido.getValorTotalFaturamento() : 0.0);
-        pedidoResponse.setStatusPedido(pedido.getStatusPedido() != null ? pedido.getStatusPedido() : "Não informado");
-        pedidoResponse.setFrete(pedido.getFrete() != null ? pedido.getFrete() : false);
-        pedidoResponse.setTransportadora(pedido.getTransportadora() != null ? pedido.getTransportadora() : "Não informado");
-        pedidoResponse.setObservacoes(pedido.getObservacoes() != null ? pedido.getObservacoes() : "Não informado");
+        pedidoResponse.setNumeroNotaDistribuidor(pedido.getNumeroNotaDistribuidor());
+        pedidoResponse.setValorTotalRevenda(pedido.getValorTotalRevenda());
+        pedidoResponse.setValorTotalFaturamento(pedido.getValorTotalFaturamento());
+        pedidoResponse.setStatusPedido(pedido.getStatusPedido());
+        pedidoResponse.setFrete(pedido.getFrete());
+        pedidoResponse.setTransportadora(pedido.getTransportadora());
+        pedidoResponse.setObservacoes(pedido.getObservacoes());
+        pedidoResponse.setFkCliente(pedido.getCliente() != null ? pedido.getCliente().getIdCliente() : null);
+        pedidoResponse.setFkDistribuidor(pedido.getDistribuidor() != null ? pedido.getDistribuidor().getIdDistribuidor() : null);
 
         List<ItemPedidoResumoResponse> itensResponse = itens
                 .stream()
-                .map(PedidoService::convertToItemResumoResponse)
+                .map(itemPedidoService::convertToItemPedidoResumoResponse)
                 .collect(Collectors.toList());
 
         pedidoResponse.setItens(itensResponse);
         return pedidoResponse;
+    }
+
+    private void atualizarDadosPedido(Pedido pedido, PedidoRequest request, Cliente cliente, Distribuidor distribuidor) {
+        pedido.setDataPedido(request.getDataPedido());
+        pedido.setNumeroNotaDistribuidor(request.getNumeroNotaDistribuidor());
+        pedido.setValorTotalRevenda(request.getValorTotalRevenda());
+        pedido.setValorTotalFaturamento(request.getValorTotalFaturamento());
+        pedido.setStatusPedido(request.getStatusPedido());
+        pedido.setFrete(request.getFrete());
+        pedido.setTransportadora(request.getTransportadora());
+        pedido.setObservacoes(request.getObservacoes());
+        pedido.setCliente(cliente);
+        pedido.setDistribuidor(distribuidor);
+    }
+
+
+    private Pedido criarPedidoFromRequest(PedidoRequest pedidoRequest, Cliente cliente, Distribuidor distribuidor) {
+        Pedido pedido = new Pedido();
+        atualizarDadosPedido(pedido, pedidoRequest, cliente, distribuidor);
+        return pedido;
+    }
+
+    private Map<Integer, Produto> mapearProdutosPorId(List<ItemPedidoRequest> itensRequest) {
+        List<Integer> idsProdutos = itensRequest.stream()
+                .map(ItemPedidoRequest::getFkProduto)
+                .collect(Collectors.toList());
+
+        List<Produto> produtos = produtoRepository.findByIdProdutoIn(idsProdutos);
+
+        return produtos.stream()
+                .collect(Collectors.toMap(Produto::getIdProduto, produto -> produto));
+    }
+
+    private List<ItemPedido> salvarItensDoPedido(Pedido pedido, List<ItemPedidoRequest> itensRequest,
+                                                  Map<Integer, Produto> produtoMap) {
+        List<ItemPedido> itensSalvos = new ArrayList<>();
+
+        for (ItemPedidoRequest itemRequest : itensRequest) {
+            Produto produto = buscarProdutoPorId(itemRequest.getFkProduto(), produtoMap);
+            ItemPedido itemPedido = criarItemPedido(pedido, produto, itemRequest);
+            itensSalvos.add(itemPedidoRepository.save(itemPedido));
+        }
+
+        return itensSalvos;
+    }
+
+    private void atualizarItensDoPedido(Pedido pedido, List<ItemPedidoRequest> itensRequest) {
+        itemPedidoRepository.deleteByPedido(pedido);
+
+        if (itensRequest.isEmpty()) {
+            return;
+        }
+
+        Map<Integer, Produto> produtoMap = mapearProdutosPorId(itensRequest);
+        salvarItensDoPedido(pedido, itensRequest, produtoMap);
+    }
+
+    private Produto buscarProdutoPorId(Integer idProduto, Map<Integer, Produto> produtoMap) {
+        Produto produto = produtoMap.get(idProduto);
+        if (produto == null) {
+            throw new RecursoNaoEncontrado("Produto não encontrado com id: " + idProduto);
+        }
+        return produto;
+    }
+
+    private ItemPedido criarItemPedido(Pedido pedido, Produto produto, ItemPedidoRequest itemRequest) {
+        ItemPedido itemPedido = new ItemPedido();
+        itemPedido.setPedido(pedido);
+        itemPedido.setProduto(produto);
+        itemPedido.setQuantidade(itemRequest.getQuantidade());
+        itemPedido.setValorUnitario(itemRequest.getValorUnitario());
+        return itemPedido;
     }
 }

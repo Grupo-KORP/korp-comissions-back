@@ -32,10 +32,10 @@ public class ProdutoController {
 
     @GetMapping("/buscar/{id}")
     public ResponseEntity<ProdutoResponse> busccarPorId(@PathVariable Integer id){
-        return ResponseEntity.status(200).body(produtoService.buscarPorId(id));
+        return ResponseEntity.status(200).body(produtoService.buscarDtoPorId(id));
     }
 
-    @GetMapping("/buscar/{nome}")
+    @GetMapping("/buscar/nome/{nome}")
     public ResponseEntity<List<ProdutoResponse>> busccarPorNome(@PathVariable String nome){
         return ResponseEntity.status(200).body(produtoService.buscarPorNome(nome));
     }
@@ -47,6 +47,7 @@ public class ProdutoController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletarProduto(@PathVariable Integer id){
+        produtoService.deletarProduto(id);
         return ResponseEntity.status(204).build();
     }
 }

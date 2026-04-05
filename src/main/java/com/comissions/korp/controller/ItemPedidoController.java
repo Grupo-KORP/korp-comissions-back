@@ -1,5 +1,6 @@
 package com.comissions.korp.controller;
 
+import com.comissions.korp.DTO.ItemPedidoDTO.ItemPedidoResponse;
 import com.comissions.korp.entity.ItemPedido;
 import com.comissions.korp.service.ItemPedidoService;
 import org.springframework.http.ResponseEntity;
@@ -19,12 +20,8 @@ public class ItemPedidoController {
     }
 
     @GetMapping("/buscar/{id}")
-    public ResponseEntity<Object> buscarPorId(@PathVariable Integer id) {
-        try {
-            return ResponseEntity.status(200).body(itemPedidoService.buscarPorId(id));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(404).body(e.getMessage());
-        }
+    public ResponseEntity<ItemPedidoResponse> buscarPorId(@PathVariable Integer id) {
+            return ResponseEntity.status(200).body(itemPedidoService.buscarDtoPorId(id));
     }
 
     @GetMapping("/buscar")
