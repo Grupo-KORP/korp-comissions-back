@@ -8,6 +8,7 @@ import com.comissions.korp.entity.*;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.repository.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -93,6 +94,7 @@ public class PedidoService {
         return convertToPedidoResponse(pedidoAtualizado, itens);
     }
 
+    @Transactional
     public void deletarPedido(Integer id) {
         Pedido pedido = pedidoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontrado("Pedido não encontrado com id: " + id));

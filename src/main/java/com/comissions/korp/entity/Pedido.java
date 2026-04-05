@@ -17,7 +17,6 @@ public class Pedido {
     @Column(nullable = false)
     private LocalDate dataPedido;
 
-
     private Integer numeroNotaDistribuidor;
 
     @Column(nullable = false)
@@ -32,7 +31,7 @@ public class Pedido {
     @Column(nullable = false)
     private Boolean frete;
 
-    @Column(nullable = false, length = 150)
+    @Column(length = 150)
     private String transportadora;
 
     @Column(length = 250)
