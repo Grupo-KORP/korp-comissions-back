@@ -34,12 +34,14 @@ public class ProdutoService {
                 .collect(Collectors.toList());
     }
 
-    public ProdutoResponse buscarPorId(Integer id){
-        Produto produto = produtoRepository.findById(id)
-                .orElseThrow(() -> new RecursoNaoEncontrado(
-                        "Produto não encontrado"
-                ));
+    public ProdutoResponse buscarDtoPorId(Integer id){
+        Produto produto = buscarProdutoPorId(id);
         return convertToResponseDTO(produto);
+    }
+
+    public Produto buscarProdutoPorId(Integer id) {
+        return produtoRepository.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontrado("Produto não encontrado"));
     }
 
     public List<ProdutoResponse> buscarPorNome(String nome){
@@ -55,8 +57,7 @@ public class ProdutoService {
     }
 
     public ProdutoResponse atualizarProduto(Integer id, ProdutoRequest produtoRequest){
-        Produto produto = produtoRepository.findById(id)
-                .orElseThrow(() -> new RecursoNaoEncontrado("Produto não encontrado."));
+        Produto produto = buscarProdutoPorId(id);
 
         produto.setNome(produtoRequest.getNome());
         produto.setDescricao(produtoRequest.getDescricao());
@@ -65,20 +66,19 @@ public class ProdutoService {
     }
 
     public void deletarProduto(Integer id){
-        Produto produto = produtoRepository.findById(id)
-                .orElseThrow(() -> new RecursoNaoEncontrado("Não foi encontrado este produto."));
+        buscarProdutoPorId(id);
 
         produtoRepository.deleteById(id);
     }
 
-    private Produto convertToEntity(ProdutoRequest dto) {
+    public Produto convertToEntity(ProdutoRequest dto) {
         Produto produto = new Produto();
         produto.setNome(dto.getNome());
         produto.setDescricao(dto.getDescricao());
         return produto;
     }
 
-    private ProdutoResponse convertToResponseDTO(Produto produto) {
+    public ProdutoResponse convertToResponseDTO(Produto produto) {
         ProdutoResponse dto = new ProdutoResponse();
         dto.setIdProduto(produto.getIdProduto());
         dto.setNome(produto.getNome() != null ? produto.getNome() : "Não informado");

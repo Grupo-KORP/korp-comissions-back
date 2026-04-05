@@ -50,18 +50,21 @@ public class UsuarioService {
     /**
      * Busca Usuario por ID
      */
-    public UsuarioResponseDTO buscarPorId(Integer id) {
-        Usuario usuario = usuarioRepository.findById(id)
-                .orElseThrow(() -> new RecursoNaoEncontrado("Usuário não encontrado com ID: " + id));
+    public UsuarioResponseDTO buscarDtoPorId(Integer id) {
+        Usuario usuario = buscarUsuarioPorId(id);
         return convertToResponseDTO(usuario);
+    }
+
+    public Usuario buscarUsuarioPorId(Integer id) {
+        return usuarioRepository.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontrado("Usuário não encontrado com ID: " + id));
     }
 
     /**
      * Atualiza Usuario existente
      */
     public UsuarioResponseDTO atualizar(Integer id, UsuarioRequestDTO requestDTO) {
-        Usuario usuarioExistente = usuarioRepository.findById(id)
-                .orElseThrow(() -> new RecursoNaoEncontrado("Usuário não encontrado com ID: " + id));
+        Usuario usuarioExistente = buscarUsuarioPorId(id);
 
         usuarioExistente.setNome(requestDTO.nome());
         usuarioExistente.setEmail(requestDTO.email());
@@ -107,4 +110,5 @@ public class UsuarioService {
                 usuario.getTelefone()
         );
     }
+
 }

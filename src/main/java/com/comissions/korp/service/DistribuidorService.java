@@ -32,11 +32,15 @@ public class DistribuidorService {
                 .collect(Collectors.toList());
     }
 
-    public DistribuidorResponseDTO buscarPorId(Integer id) {
-        Distribuidor distribuidor = distribuidorRepository.findById(id)
+    public DistribuidorResponseDTO buscarDtoPorId(Integer id) {
+        Distribuidor distribuidor = buscarDistribuidorPorId(id);
+        return convertToResponseDTO(distribuidor);
+    }
+
+    public Distribuidor buscarDistribuidorPorId(Integer id) {
+        return distribuidorRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontrado(
                         "Distribuidor não encontrado com ID: " + id));
-        return convertToResponseDTO(distribuidor);
     }
 
     public DistribuidorResponseDTO buscarPorCnpj(String cnpj) {
@@ -47,9 +51,7 @@ public class DistribuidorService {
     }
 
     public DistribuidorResponseDTO atualizar(Integer id, DistribuidorRequestDTO requestDTO) {
-        Distribuidor distribuidorExistente = distribuidorRepository.findById(id)
-                .orElseThrow(() -> new RecursoNaoEncontrado(
-                        "Distribuidor não encontrado com ID: " + id));
+        Distribuidor distribuidorExistente = buscarDistribuidorPorId(id);
 
         // Atualiza os campos usando dados do DTO
         distribuidorExistente.setRazaoSocial(requestDTO.getRazaoSocial());

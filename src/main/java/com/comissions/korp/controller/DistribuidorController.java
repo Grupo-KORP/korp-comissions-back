@@ -33,7 +33,7 @@ public class DistribuidorController {
 
     @GetMapping("/{id}")
     public ResponseEntity<DistribuidorResponseDTO> buscarPorId(@PathVariable Integer id) {
-        DistribuidorResponseDTO responseDTO = distribuidorService.buscarPorId(id);
+        DistribuidorResponseDTO responseDTO = distribuidorService.buscarDtoPorId(id);
         return ResponseEntity.ok(responseDTO);
     }
 

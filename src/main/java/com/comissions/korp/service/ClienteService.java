@@ -40,11 +40,15 @@ public class ClienteService {
     /**
      * Busca um Cliente por ID
      */
-    public ClienteResponseDTO buscarPorId(Integer id) {
-        Cliente cliente = clienteRepository.findById(id)
+    public ClienteResponseDTO buscarDtoPorId(Integer id) {
+        Cliente cliente = buscarClientePorId(id);
+        return convertToResponseDTO(cliente);
+    }
+
+    public Cliente buscarClientePorId(Integer id) {
+        return clienteRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontrado(
                         "Cliente não encontrado com ID: " + id));
-        return convertToResponseDTO(cliente);
     }
 
     /**
@@ -61,9 +65,7 @@ public class ClienteService {
      * Atualiza um Cliente existente
      */
     public ClienteResponseDTO atualizar(Integer id, ClienteRequestDTO requestDTO) {
-        Cliente clienteExistente = clienteRepository.findById(id)
-                .orElseThrow(() -> new RecursoNaoEncontrado(
-                        "Cliente não encontrado com ID: " + id));
+        Cliente clienteExistente = buscarClientePorId(id);
 
         // Atualiza os campos usando dados do DTO
         clienteExistente.setRazaoSocial(requestDTO.getRazaoSocial());
