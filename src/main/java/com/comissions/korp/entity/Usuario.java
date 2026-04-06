@@ -29,7 +29,7 @@ public class Usuario {
     @Length(min = 10, message = "Formato do numero de telefone deve ser válido (ex: xxxxxxxxxxx).")
     private String telefone;
 
-    @Column(name = "percentualComissao", precision = 5, scale = 2)
+    @Column(name = "percentualComissao", precision = 5)
     private Double percentualComissao;
 
     @ManyToOne

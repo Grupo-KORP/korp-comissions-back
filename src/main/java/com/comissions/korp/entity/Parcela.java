@@ -18,7 +18,7 @@ public class Parcela {
     @Column(nullable = false)
     private Integer numeroParcela;
 
-    @Column(name = "valorParcela", nullable = false, precision = 10, scale = 2)
+    @Column(name = "valorParcela", nullable = false, precision = 10)
     private Double valorParcela;
 
     @Column(nullable = false)

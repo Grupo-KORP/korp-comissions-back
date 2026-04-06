@@ -15,7 +15,7 @@ public class Comissao {
     @Column(name = "idComissao")
     private Integer id;
 
-    @Column(name = "valorComissao", nullable = false, precision = 10, scale = 2)
+    @Column(name = "valorComissao", nullable = false, precision = 10)
     private Double valorComissao;
 
     @Enumerated(EnumType.STRING)

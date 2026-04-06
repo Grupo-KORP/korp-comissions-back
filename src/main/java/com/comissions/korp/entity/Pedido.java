@@ -20,10 +20,10 @@ public class Pedido {
 
     private Integer numeroNotaDistribuidor;
 
-    @Column(name = "valorTotalRevenda", nullable = false, precision = 10, scale = 2)
+    @Column(name = "valorTotalRevenda", nullable = false, precision = 10)
     private Double valorTotalRevenda;
 
-    @Column(name = "valorTotalFaturamento", nullable = false, precision = 10, scale = 2)
+    @Column(name = "valorTotalFaturamento", nullable = false, precision = 10)
     private Double valorTotalFaturamento;
 
     @Column(name = "statusPedido", nullable = false, length = 50, columnDefinition = "VARCHAR(50) DEFAULT 'PENDENTE'")

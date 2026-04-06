@@ -15,7 +15,7 @@ public class ItemPedido {
     @Column(nullable = false)
     private Integer quantidade;
 
-    @Column(name = "valor_unitario", nullable = false, precision = 10, scale = 2)
+    @Column(name = "valor_unitario", nullable = false, precision = 10)
     private Double valorUnitario;
 
     @ManyToOne
