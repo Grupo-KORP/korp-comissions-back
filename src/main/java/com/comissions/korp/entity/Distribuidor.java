@@ -1,23 +1,19 @@
 package com.comissions.korp.entity;
 
-
 import jakarta.persistence.*;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Table(name="distribuidor")
 public class Distribuidor {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_distribuidor")
+    @Column(name = "idDistribuidor")
     private Integer idDistribuidor;
 
-    @Column(name = "razao_social", length = 150, nullable = false)
+    @Column(name = "razaoSocial", length = 150, nullable = false, unique = true)
     private String razaoSocial;
 
-    @Column(name = "nome_fantasia", length = 150)
+    @Column(name = "nomeFantasia", length = 150, nullable = false)
     private String nomeFantasia;
 
     @Column(name = "cnpj", length = 20, nullable = false, unique = true)
@@ -26,7 +22,7 @@ public class Distribuidor {
     @Column(name = "telefone", length = 20)
     private String telefone;
 
-    @Column(name = "email", length = 120)
+    @Column(name = "email", length = 120, nullable = false)
     private String email;
 
     public Distribuidor() {

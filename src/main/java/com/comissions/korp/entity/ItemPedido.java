@@ -4,25 +4,26 @@ package com.comissions.korp.entity;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "Item_pedido")
+@Table(name = "item_pedido")
 public class ItemPedido {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "idItemPedido")
     private Integer idItemPedido;
 
     @Column(nullable = false)
     private Integer quantidade;
 
-    @Column(nullable = false)
+    @Column(name = "valor_unitario", nullable = false, precision = 10, scale = 2)
     private Double valorUnitario;
 
     @ManyToOne
-    @JoinColumn(name = "fk_pedido")
+    @JoinColumn(name = "fkPedido", nullable = false)
     private Pedido pedido;
 
     @ManyToOne
-    @JoinColumn(name = "fk_produto")
+    @JoinColumn(name = "fkProduto", nullable = false)
     private Produto produto;
 
     public ItemPedido() {
