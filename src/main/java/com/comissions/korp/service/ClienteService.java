@@ -5,6 +5,7 @@ import com.comissions.korp.DTO.ClienteDTO.ClienteResponseDTO;
 import com.comissions.korp.entity.Cliente;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.repository.ClienteRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -81,6 +82,8 @@ public class ClienteService {
     /**
      * Deleta um Cliente por ID
      */
+
+    @Transactional
     public void deletar(Integer id) {
         if (!clienteRepository.existsById(id)) {
             throw new RecursoNaoEncontrado("Cliente não encontrado com ID: " + id);
