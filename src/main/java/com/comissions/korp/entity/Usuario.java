@@ -2,35 +2,41 @@ package com.comissions.korp.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
-import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.validator.constraints.Length;
 
 import java.time.LocalDateTime;
 
-@Entity(name = "usuario")
+@Entity
+@Table(name = "usuario")
 public class Usuario {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "idUsuario")
     private Integer idUsuario;
 
     @Column(name = "nome", length = 250, nullable = false)
     private String nome;
 
-    @Column(name = "email", unique = true, nullable = false, length = 120)
+    @Column(name = "email", nullable = false, length = 120)
     @Email(message = "Formato do email deve ser válido (ex: nome@dominio.com).") //nome@dominio.com
     private String email;
 
-    @Column(name = "senha", nullable = false)
+    @Transient
     private String senha;
 
-    @Column(name = "telefone", nullable = false)
+    @Column(name = "telefone", length = 20)
     @Length(min = 10, message = "Formato do numero de telefone deve ser válido (ex: xxxxxxxxxxx).")
     private String telefone;
 
-    @CreationTimestamp
-    @Column(name = "dtCriacao")
+    @Column(name = "percentualComissao", precision = 5)
+    private Double percentualComissao;
+
+    @ManyToOne
+    @JoinColumn(name = "fkRole", nullable = false)
+    private Role role;
+
+    @Transient
     private LocalDateTime dtCriacao;
 
     public Usuario() {
@@ -91,5 +97,21 @@ public class Usuario {
 
     public void setDtCriacao(LocalDateTime dtCriacao) {
         this.dtCriacao = dtCriacao;
+    }
+
+    public Double getPercentualComissao() {
+        return percentualComissao;
+    }
+
+    public void setPercentualComissao(Double percentualComissao) {
+        this.percentualComissao = percentualComissao;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
     }
 }

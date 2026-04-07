@@ -16,7 +16,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-@Transactional(readOnly = true)
 public class PedidoService {
 
     private final PedidoRepository pedidoRepository;
@@ -42,7 +41,6 @@ public class PedidoService {
         this.itemPedidoService = itemPedidoService;
     }
 
-    @Transactional
     public PedidoResponse cadastrarPedido(PedidoRequest pedidoRequest) {
 
 //        Vendedor vendedor = vendedorRepository.findById(pedidoRequest.getFkVendedor())
@@ -78,7 +76,6 @@ public class PedidoService {
         return convertToPedidoResponse(pedido, itens);
     }
 
-    @Transactional
     public PedidoResponse atualizarPedido(Integer id, PedidoRequest pedidoRequest) {
         Pedido pedido = pedidoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontrado("Pedido não encontrado com id: " + id));

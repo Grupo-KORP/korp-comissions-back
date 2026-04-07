@@ -4,17 +4,18 @@ package com.comissions.korp.entity;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "Produto")
-public class Produto {
+@Table(name = "produto")
+public class    Produto {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "idProduto")
     private Integer idProduto;
 
-    @Column(nullable = false, length = 15)
+    @Column(name = "nome", nullable = false, length = 150)
     private String nome;
 
-    @Column(nullable = false)
+    @Column(name = "descricao", columnDefinition = "TEXT")
     private String descricao;
 
     public Produto() {

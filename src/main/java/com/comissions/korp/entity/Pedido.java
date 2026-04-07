@@ -7,11 +7,12 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Entity
-@Table(name = "Pedido")
+@Table(name = "pedido")
 public class Pedido {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "idPedido")
     private Integer idPedido;
 
     @Column(nullable = false)
@@ -19,16 +20,16 @@ public class Pedido {
 
     private Integer numeroNotaDistribuidor;
 
-    @Column(nullable = false)
+    @Column(name = "valorTotalRevenda", nullable = false, precision = 10)
     private Double valorTotalRevenda;
 
-    @Column(nullable = false)
+    @Column(name = "valorTotalFaturamento", nullable = false, precision = 10)
     private Double valorTotalFaturamento;
 
-    @Column(nullable = false, length = 50)
+    @Column(name = "statusPedido", nullable = false, length = 50, columnDefinition = "VARCHAR(50) DEFAULT 'PENDENTE'")
     private String statusPedido;
 
-    @Column(nullable = false)
+    @Column(name = "frete")
     private Boolean frete;
 
     @Column(length = 150)
@@ -37,16 +38,16 @@ public class Pedido {
     @Column(length = 250)
     private String observacoes;
 
-//        @ManyToOne
-//        @JoinColumn(name = "fkVendedor")
-//        private Vendedor vendedor;
+    @ManyToOne
+    @JoinColumn(name = "fkVendedor", nullable = false)
+    private Usuario usuario;
 
     @ManyToOne
-    @JoinColumn(name = "fk_cliente")
+    @JoinColumn(name = "fkCliente", nullable = false)
     private Cliente cliente;
 
     @ManyToOne
-    @JoinColumn(name = "fk_distribuidor")
+    @JoinColumn(name = "fkDistribuidor", nullable = false)
     private Distribuidor distribuidor;
 
     public Pedido() {
@@ -138,5 +139,13 @@ public class Pedido {
 
     public void setDistribuidor(Distribuidor distribuidor) {
         this.distribuidor = distribuidor;
+    }
+
+    public Usuario getUsuario() {
+        return usuario;
+    }
+
+    public void setUsuario(Usuario usuario) {
+        this.usuario = usuario;
     }
 }
