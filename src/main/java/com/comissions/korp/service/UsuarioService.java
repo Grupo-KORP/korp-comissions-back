@@ -11,12 +11,14 @@ import com.comissions.korp.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional(readOnly = true)
 public class UsuarioService {
 
     @Autowired
@@ -31,6 +33,7 @@ public class UsuarioService {
     /**
      * Cria um novo Usuario
      */
+    @Transactional
     public UsuarioResponseDTO criar(UsuarioRequestDTO requestDTO) {
         // Verifica se já existe usuário com mesmo email
         if (usuarioRepository.existsByEmail(requestDTO.getEmail())) {
@@ -65,18 +68,22 @@ public class UsuarioService {
     /**
      * Busca Usuario por ID
      */
-    public UsuarioResponseDTO buscarPorId(Integer id) {
-        Usuario usuario = usuarioRepository.findById(id)
-                .orElseThrow(() -> new RecursoNaoEncontrado("Usuário não encontrado com ID: " + id));
+    public UsuarioResponseDTO buscarDtoPorId(Integer id) {
+        Usuario usuario = buscarUsuarioPorId(id);
         return convertToResponseDTO(usuario);
+    }
+
+    public Usuario buscarUsuarioPorId(Integer id) {
+        return usuarioRepository.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontrado("Usuário não encontrado com ID: " + id));
     }
 
     /**
      * Atualiza Usuario existente
      */
+    @Transactional
     public UsuarioResponseDTO atualizar(Integer id, UsuarioRequestDTO requestDTO) {
-        Usuario usuarioExistente = usuarioRepository.findById(id)
-                .orElseThrow(() -> new RecursoNaoEncontrado("Usuário não encontrado com ID: " + id));
+        Usuario usuarioExistente = buscarUsuarioPorId(id);
 
         usuarioExistente.setNome(requestDTO.getNome());
         usuarioExistente.setEmail(requestDTO.getEmail());
@@ -90,6 +97,7 @@ public class UsuarioService {
     /**
      * Deleta Usuario por ID
      */
+    @Transactional
     public void deletar(Integer id) {
         if (!usuarioRepository.existsById(id)) {
             throw new RecursoNaoEncontrado("Usuário não encontrado com ID: " + id);
@@ -123,4 +131,5 @@ public class UsuarioService {
                 usuario.getTelefone()
         );
     }
+
 }

@@ -1,17 +1,14 @@
 package com.comissions.korp.service;
 
-import com.comissions.korp.DTO.ClienteRequestDTO;
-import com.comissions.korp.DTO.ClienteResponseDTO;
-import com.comissions.korp.DTO.ContatoResponseDTO;
+import com.comissions.korp.DTO.ClienteDTO.ClienteRequestDTO;
+import com.comissions.korp.DTO.ClienteDTO.ClienteResponseDTO;
 import com.comissions.korp.entity.Cliente;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.repository.ClienteRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,6 +22,8 @@ public class ClienteService {
     /**
      * Cria um novo Cliente
      */
+
+    @Transactional
     public ClienteResponseDTO criar(ClienteRequestDTO requestDTO) {
         Cliente cliente = convertToEntity(requestDTO);
         Cliente clienteSalvo = clienteRepository.save(cliente);
@@ -44,11 +43,15 @@ public class ClienteService {
     /**
      * Busca um Cliente por ID
      */
-    public ClienteResponseDTO buscarPorId(Integer id) {
-        Cliente cliente = clienteRepository.findById(id)
+    public ClienteResponseDTO buscarDtoPorId(Integer id) {
+        Cliente cliente = buscarClientePorId(id);
+        return convertToResponseDTO(cliente);
+    }
+
+    public Cliente buscarClientePorId(Integer id) {
+        return clienteRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontrado(
                         "Cliente não encontrado com ID: " + id));
-        return convertToResponseDTO(cliente);
     }
 
     /**
@@ -64,10 +67,10 @@ public class ClienteService {
     /**
      * Atualiza um Cliente existente
      */
+
+    @Transactional
     public ClienteResponseDTO atualizar(Integer id, ClienteRequestDTO requestDTO) {
-        Cliente clienteExistente = clienteRepository.findById(id)
-                .orElseThrow(() -> new RecursoNaoEncontrado(
-                        "Cliente não encontrado com ID: " + id));
+        Cliente clienteExistente = buscarClientePorId(id);
 
         // Atualiza os campos usando dados do DTO
         clienteExistente.setRazaoSocial(requestDTO.getRazaoSocial());
@@ -83,6 +86,8 @@ public class ClienteService {
     /**
      * Deleta um Cliente por ID
      */
+
+    @Transactional
     public void deletar(Integer id) {
         if (!clienteRepository.existsById(id)) {
             throw new RecursoNaoEncontrado("Cliente não encontrado com ID: " + id);

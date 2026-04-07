@@ -1,17 +1,13 @@
 package com.comissions.korp.controller;
 
-import com.comissions.korp.DTO.ClienteRequestDTO;
-import com.comissions.korp.DTO.ClienteResponseDTO;
-import com.comissions.korp.entity.Cliente;
+import com.comissions.korp.DTO.ClienteDTO.ClienteRequestDTO;
+import com.comissions.korp.DTO.ClienteDTO.ClienteResponseDTO;
 import com.comissions.korp.service.ClienteService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/cliente")
@@ -22,73 +18,6 @@ public class ClienteController {
     public ClienteController(ClienteService clienteService) {
         this.clienteService = clienteService;
     }
-
-//    @GetMapping
-//    public ResponseEntity<List<Cliente>> listarTodos(){
-//        List<Cliente> listarTodos = clienteService.listarTodosClientes();
-//        if(listarTodos.isEmpty()){
-//            return ResponseEntity.status(204).build();
-//        }
-//        return ResponseEntity.status(200).body(listarTodos);
-//    }
-//
-//    @GetMapping("/{cnpj}")
-//    public ResponseEntity<Object> buscarPorCnpj(@PathVariable String cnpj) {
-//        try {
-//            Optional<Cliente> cliente = clienteService.buscarClientePorCnpj(cnpj);
-//
-//            if (cliente.isPresent()) {
-//                return ResponseEntity.status(200).body(cliente.get());
-//            }
-//
-//            return ResponseEntity.status(400)
-//                    .body(Map.of("erro", "Cliente não encontrado para o CNPJ: " + cnpj));
-//
-//        } catch (IllegalArgumentException e) {
-//            return ResponseEntity.status(400).body(Map.of("erro", e.getMessage()));
-//        }
-//    }
-//
-//    @PostMapping
-//    public ResponseEntity<Object> cadastrarCliente(@RequestBody Cliente cliente) {
-//        try {
-//            Cliente cadastroRealizado = clienteService.cadastrarCliente(cliente);
-//
-//            return ResponseEntity.status(201).body(cadastroRealizado);
-//        } catch (IllegalArgumentException e) {
-//            Map<String, String> erro = new HashMap<>();
-//
-//            erro.put("mensagem", e.getMessage());
-//            return ResponseEntity.status(400).body(erro);
-//        }
-//    }
-//
-//    @PutMapping("/cnpj/{cnpj}")
-//    public ResponseEntity<Object> atualizarPorCnpj(@PathVariable String cnpj, @RequestBody Cliente dados) {
-//
-//        Optional<Cliente> atualizado = clienteService.atualizarCliente(cnpj, dados);
-//
-//        if (atualizado.isPresent()) {
-//            return ResponseEntity.status(200).body(atualizado.get());
-//        }
-//
-//        return ResponseEntity.status(400)
-//                .body(Map.of("erro", "Cliente com CNPJ " + cnpj + " não encontrado."));
-//    }
-//
-//    @DeleteMapping("/cnpj/{cnpj}")
-//    public ResponseEntity<Object> deletarCliente(@PathVariable String cnpj) {
-//        boolean removido = clienteService.deletarPorCnpj(cnpj);
-//
-//        if (removido) {
-//            return ResponseEntity.status(204).build();
-//        }
-//
-//        Map<String, String> erro = new HashMap<>();
-//        erro.put("erro", "Cliente com CNPJ " + cnpj + " não encontrado para remoção.");
-//
-//        return ResponseEntity.status(400).body(erro);
-//    }
 
     /**
      * Cria um novo Cliente
@@ -116,7 +45,7 @@ public class ClienteController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<ClienteResponseDTO> buscarPorId(@PathVariable Integer id) {
-        ClienteResponseDTO responseDTO = clienteService.buscarPorId(id);
+        ClienteResponseDTO responseDTO = clienteService.buscarDtoPorId(id);
         return ResponseEntity.ok(responseDTO);
     }
 

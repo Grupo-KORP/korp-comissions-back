@@ -1,25 +1,25 @@
 package com.comissions.korp.entity;
 
-import com.comissions.korp.entity.ENUM.Roles;
 import jakarta.persistence.*;
 
-@Entity(name = "roles" )
+@Entity
+@Table(name = "roles")
 public class Role {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "role_id")
+    @Column(name = "idRole")
     private Integer id;
 
-    @Enumerated(EnumType.STRING)
-    private Roles role;
+    @Column(name = "nome", length = 50, nullable = false)
+    private String nome;
 
     public Role() {
     }
 
-    public Role(Integer id, Roles role) {
+    public Role(Integer id, String nome) {
         this.id = id;
-        this.role = role;
+        this.nome = nome;
     }
 
     public Integer getId() {
@@ -30,12 +30,12 @@ public class Role {
         this.id = id;
     }
 
-    public Roles getRole() {
-        return role;
+    public String getNome() {
+        return nome;
     }
 
-    public void setRole(Roles role) {
-        this.role = role;
+    public void setNome(String nome) {
+        this.nome = nome;
     }
 
 }

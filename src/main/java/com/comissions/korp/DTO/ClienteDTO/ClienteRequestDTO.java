@@ -1,14 +1,22 @@
-package com.comissions.korp.DTO;
+package com.comissions.korp.DTO.ClienteDTO;
 
-import java.util.List;
-
-public class ClienteResponseDTO {
-    private Integer idCliente;
+public class ClienteRequestDTO {
     private String razaoSocial;
     private String nomeFantasia;
     private String cnpj;
     private String telefone;
     private String email;
+
+    public ClienteRequestDTO() {
+    }
+
+    public ClienteRequestDTO(String cnpj, String email, String nomeFantasia, String razaoSocial, String telefone) {
+        this.cnpj = cnpj;
+        this.email = email;
+        this.nomeFantasia = nomeFantasia;
+        this.razaoSocial = razaoSocial;
+        this.telefone = telefone;
+    }
 
     public String getCnpj() {
         return cnpj;
@@ -24,14 +32,6 @@ public class ClienteResponseDTO {
 
     public void setEmail(String email) {
         this.email = email;
-    }
-
-    public Integer getIdCliente() {
-        return idCliente;
-    }
-
-    public void setIdCliente(Integer idCliente) {
-        this.idCliente = idCliente;
     }
 
     public String getNomeFantasia() {

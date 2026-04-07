@@ -1,0 +1,37 @@
+package com.comissions.korp.DTO.ItemPedidoDTO;
+
+import com.comissions.korp.entity.Produto;
+
+public class ItemPedidoRequest {
+
+    private Integer quantidade;
+    private Double valorUnitario;
+    private Integer fkProduto;
+
+    public ItemPedidoRequest() {
+    }
+
+    public Integer getQuantidade() {
+        return quantidade;
+    }
+
+    public void setQuantidade(Integer quantidade) {
+        this.quantidade = quantidade;
+    }
+
+    public Double getValorUnitario() {
+        return valorUnitario;
+    }
+
+    public void setValorUnitario(Double valorUnitario) {
+        this.valorUnitario = valorUnitario;
+    }
+
+    public Integer getFkProduto() {
+        return fkProduto;
+    }
+
+    public void setFkProduto(Integer fkProduto) {
+        this.fkProduto = fkProduto;
+    }
+}

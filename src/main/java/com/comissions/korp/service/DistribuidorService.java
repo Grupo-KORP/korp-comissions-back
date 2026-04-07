@@ -1,16 +1,18 @@
 package com.comissions.korp.service;
 
-import com.comissions.korp.DTO.DistribuidorRequestDTO;
-import com.comissions.korp.DTO.DistribuidorResponseDTO;
+import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorRequestDTO;
+import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorResponseDTO;
 import com.comissions.korp.entity.Distribuidor;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.repository.DistribuidorRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional(readOnly = true)
 public class DistribuidorService {
 
     private final DistribuidorRepository distribuidorRepository;
@@ -19,6 +21,7 @@ public class DistribuidorService {
         this.distribuidorRepository = distribuidorRepository;
     }
 
+    @Transactional
     public DistribuidorResponseDTO criar(DistribuidorRequestDTO requestDTO) {
         Distribuidor distribuidor = convertToEntity(requestDTO);
         Distribuidor distribuidorSalvo = distribuidorRepository.save(distribuidor);
@@ -32,11 +35,15 @@ public class DistribuidorService {
                 .collect(Collectors.toList());
     }
 
-    public DistribuidorResponseDTO buscarPorId(Integer id) {
-        Distribuidor distribuidor = distribuidorRepository.findById(id)
+    public DistribuidorResponseDTO buscarDtoPorId(Integer id) {
+        Distribuidor distribuidor = buscarDistribuidorPorId(id);
+        return convertToResponseDTO(distribuidor);
+    }
+
+    public Distribuidor buscarDistribuidorPorId(Integer id) {
+        return distribuidorRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontrado(
                         "Distribuidor não encontrado com ID: " + id));
-        return convertToResponseDTO(distribuidor);
     }
 
     public DistribuidorResponseDTO buscarPorCnpj(String cnpj) {
@@ -46,10 +53,9 @@ public class DistribuidorService {
         return convertToResponseDTO(distribuidor);
     }
 
+    @Transactional
     public DistribuidorResponseDTO atualizar(Integer id, DistribuidorRequestDTO requestDTO) {
-        Distribuidor distribuidorExistente = distribuidorRepository.findById(id)
-                .orElseThrow(() -> new RecursoNaoEncontrado(
-                        "Distribuidor não encontrado com ID: " + id));
+        Distribuidor distribuidorExistente = buscarDistribuidorPorId(id);
 
         // Atualiza os campos usando dados do DTO
         distribuidorExistente.setRazaoSocial(requestDTO.getRazaoSocial());
@@ -62,6 +68,7 @@ public class DistribuidorService {
         return convertToResponseDTO(distribuidorAtualizado);
     }
 
+    @Transactional
     public void deletar(Integer id) {
         if (!distribuidorRepository.existsById(id)) {
             throw new RecursoNaoEncontrado("Distribuidor não encontrado com ID: " + id);

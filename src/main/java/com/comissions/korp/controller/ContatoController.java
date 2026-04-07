@@ -1,7 +1,7 @@
 package com.comissions.korp.controller;
 
-import com.comissions.korp.DTO.ContatoRequestDTO;
-import com.comissions.korp.DTO.ContatoResponseDTO;
+import com.comissions.korp.DTO.ContatoDTO.ContatoRequestDTO;
+import com.comissions.korp.DTO.ContatoDTO.ContatoResponseDTO;
 import com.comissions.korp.service.ContatoService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,7 +33,7 @@ public class ContatoController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ContatoResponseDTO> buscarPorId(@PathVariable Integer id) {
-        ContatoResponseDTO responseDTO = contatoService.buscarPorId(id);
+        ContatoResponseDTO responseDTO = contatoService.buscarDtoPorId(id);
         return ResponseEntity.ok(responseDTO);
     }
 
