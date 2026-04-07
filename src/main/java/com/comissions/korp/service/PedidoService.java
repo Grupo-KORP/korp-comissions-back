@@ -41,6 +41,9 @@ public class PedidoService {
         this.itemPedidoService = itemPedidoService;
     }
 
+
+
+    @Transactional
     public PedidoResponse cadastrarPedido(PedidoRequest pedidoRequest) {
 
 //        Vendedor vendedor = vendedorRepository.findById(pedidoRequest.getFkVendedor())
@@ -76,6 +79,9 @@ public class PedidoService {
         return convertToPedidoResponse(pedido, itens);
     }
 
+
+
+    @Transactional
     public PedidoResponse atualizarPedido(Integer id, PedidoRequest pedidoRequest) {
         Pedido pedido = pedidoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontrado("Pedido não encontrado com id: " + id));
@@ -154,7 +160,7 @@ public class PedidoService {
         return pedido;
     }
 
-    private Map<Integer, Produto> mapearProdutosPorId(List<ItemPedidoRequest> itensRequest) {
+    public Map<Integer, Produto> mapearProdutosPorId(List<ItemPedidoRequest> itensRequest) {
         List<Integer> idsProdutos = itensRequest.stream()
                 .map(ItemPedidoRequest::getFkProduto)
                 .collect(Collectors.toList());
@@ -165,7 +171,7 @@ public class PedidoService {
                 .collect(Collectors.toMap(Produto::getIdProduto, produto -> produto));
     }
 
-    private List<ItemPedido> salvarItensDoPedido(Pedido pedido, List<ItemPedidoRequest> itensRequest,
+    public List<ItemPedido> salvarItensDoPedido(Pedido pedido, List<ItemPedidoRequest> itensRequest,
                                                   Map<Integer, Produto> produtoMap) {
         List<ItemPedido> itensSalvos = new ArrayList<>();
 

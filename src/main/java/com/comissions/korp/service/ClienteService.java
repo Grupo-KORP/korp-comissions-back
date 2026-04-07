@@ -22,6 +22,8 @@ public class ClienteService {
     /**
      * Cria um novo Cliente
      */
+
+    @Transactional
     public ClienteResponseDTO criar(ClienteRequestDTO requestDTO) {
         Cliente cliente = convertToEntity(requestDTO);
         Cliente clienteSalvo = clienteRepository.save(cliente);
@@ -65,6 +67,8 @@ public class ClienteService {
     /**
      * Atualiza um Cliente existente
      */
+
+    @Transactional
     public ClienteResponseDTO atualizar(Integer id, ClienteRequestDTO requestDTO) {
         Cliente clienteExistente = buscarClientePorId(id);
 
