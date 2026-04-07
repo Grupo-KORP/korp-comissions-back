@@ -1,0 +1,1 @@
+INSERT INTO roles VALUES (1,'VEND'), (2,'FINAN');

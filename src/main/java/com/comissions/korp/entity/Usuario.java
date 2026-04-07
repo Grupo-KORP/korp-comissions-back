@@ -39,17 +39,23 @@ public class Usuario {
     @Transient
     private LocalDateTime dtCriacao;
 
-    public Usuario() {
-    }
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "fkRole")
+    private Role roles;
 
-    public Usuario(Integer idUsuario, String nome, String email, String senha, String telefone, LocalDateTime dtCriacao) {
+    public Usuario(Integer idUsuario, String nome, String email, String senha, String telefone, LocalDateTime dtCriacao, Role roles) {
         this.idUsuario = idUsuario;
         this.nome = nome;
         this.email = email;
         this.senha = senha;
         this.telefone = telefone;
         this.dtCriacao = dtCriacao;
+        this.roles = roles;
     }
+
+    public Usuario() {
+    }
+
 
     public Integer getIdUsuario() {
         return idUsuario;
