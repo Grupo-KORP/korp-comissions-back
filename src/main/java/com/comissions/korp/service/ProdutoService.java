@@ -6,6 +6,7 @@ import com.comissions.korp.DTO.ProdutoDTO.ProdutoResponse;
 import com.comissions.korp.entity.Produto;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.repository.ProdutoRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,6 +22,9 @@ public class ProdutoService {
         this.produtoRepository = produtoRepository;
     }
 
+
+
+    @Transactional
     public ProdutoResponse cadastrarProduto(ProdutoRequest produtoRequest){
         Produto produto = convertToEntity(produtoRequest);
         Produto produtoSalvo = produtoRepository.save(produto);
@@ -56,6 +60,8 @@ public class ProdutoService {
         return produtos;
     }
 
+
+    @Transactional
     public ProdutoResponse atualizarProduto(Integer id, ProdutoRequest produtoRequest){
         Produto produto = buscarProdutoPorId(id);
 
@@ -65,6 +71,8 @@ public class ProdutoService {
         return convertToResponseDTO(produtoAtt);
     }
 
+
+    @Transactional
     public void deletarProduto(Integer id){
         buscarProdutoPorId(id);
 

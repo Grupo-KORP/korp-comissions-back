@@ -5,6 +5,7 @@ import com.comissions.korp.DTO.ClienteDTO.ClienteResponseDTO;
 import com.comissions.korp.entity.Cliente;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.repository.ClienteRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,6 +22,8 @@ public class ClienteService {
     /**
      * Cria um novo Cliente
      */
+
+    @Transactional
     public ClienteResponseDTO criar(ClienteRequestDTO requestDTO) {
         Cliente cliente = convertToEntity(requestDTO);
         Cliente clienteSalvo = clienteRepository.save(cliente);
@@ -64,6 +67,8 @@ public class ClienteService {
     /**
      * Atualiza um Cliente existente
      */
+
+    @Transactional
     public ClienteResponseDTO atualizar(Integer id, ClienteRequestDTO requestDTO) {
         Cliente clienteExistente = buscarClientePorId(id);
 
@@ -81,6 +86,8 @@ public class ClienteService {
     /**
      * Deleta um Cliente por ID
      */
+
+    @Transactional
     public void deletar(Integer id) {
         if (!clienteRepository.existsById(id)) {
             throw new RecursoNaoEncontrado("Cliente não encontrado com ID: " + id);
