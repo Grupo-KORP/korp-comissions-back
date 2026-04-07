@@ -9,6 +9,7 @@ import com.comissions.korp.exception.UsuarioJaExistente;
 import com.comissions.korp.repository.RoleRepository;
 import com.comissions.korp.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -22,27 +23,31 @@ public class UsuarioService {
     private UsuarioRepository usuarioRepository;
 
     @Autowired
-    private RoleRepository roleRepository ;
+    private RoleRepository roleRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     /**
      * Cria um novo Usuario
      */
     public UsuarioResponseDTO criar(UsuarioRequestDTO requestDTO) {
         // Verifica se já existe usuário com mesmo email
-        if (usuarioRepository.existsByEmail(requestDTO.email())) {
-            throw new UsuarioJaExistente("Já existe um usuário com este email: " + requestDTO.email());
+        if (usuarioRepository.existsByEmail(requestDTO.getEmail())) {
+            throw new UsuarioJaExistente("Já existe um usuário com este email: " + requestDTO.getEmail());
         }
 
         // Verifica se já existe usuário com mesmo nome
-        if (usuarioRepository.existsByNome(requestDTO.nome())) {
-            throw new UsuarioJaExistente("Já existe um usuário com este nome: " + requestDTO.nome());
+        if (usuarioRepository.existsByNome(requestDTO.getNome())) {
+            throw new UsuarioJaExistente("Já existe um usuário com este nome: " + requestDTO.getNome());
         }
 
-        Optional<Role> role = roleRepository.findById(requestDTO.role());
-        Role roleUsuarioVendedor = role.get();
+        Optional<Role> role = roleRepository.findById(requestDTO.getRole());
+        Role roleUsuario = role.get();
 
+        String senhaEncriptada = passwordEncoder.encode(requestDTO.getSenha());
 
-        Usuario usuario = convertToEntity(requestDTO,roleUsuarioVendedor);
+        Usuario usuario = convertToEntity(requestDTO,roleUsuario, senhaEncriptada);
         Usuario usuarioSalvo = usuarioRepository.save(usuario);
         return convertToResponseDTO(usuarioSalvo);
     }
@@ -73,10 +78,10 @@ public class UsuarioService {
         Usuario usuarioExistente = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontrado("Usuário não encontrado com ID: " + id));
 
-        usuarioExistente.setNome(requestDTO.nome());
-        usuarioExistente.setEmail(requestDTO.email());
-        usuarioExistente.setSenha(requestDTO.senha());
-        usuarioExistente.setTelefone(requestDTO.telefone());
+        usuarioExistente.setNome(requestDTO.getNome());
+        usuarioExistente.setEmail(requestDTO.getEmail());
+        usuarioExistente.setSenha(requestDTO.getSenha());
+        usuarioExistente.setTelefone(requestDTO.getTelefone());
 
         Usuario usuarioAtualizado = usuarioRepository.save(usuarioExistente);
         return convertToResponseDTO(usuarioAtualizado);
@@ -95,13 +100,13 @@ public class UsuarioService {
     /**
      * Converte UsuarioRequestDTO para Entity
      */
-    private Usuario convertToEntity(UsuarioRequestDTO dto, Role role) {
+    private Usuario convertToEntity(UsuarioRequestDTO dto, Role role, String senha) {
         Usuario usuario = new Usuario();
-        usuario.setIdUsuario(dto.idUsuario());
-        usuario.setNome(dto.nome());
-        usuario.setEmail(dto.email());
-        usuario.setSenha(dto.senha());
-        usuario.setTelefone(dto.telefone());
+        usuario.setIdUsuario(dto.getIdUsuario());
+        usuario.setNome(dto.getNome());
+        usuario.setEmail(dto.getEmail());
+        usuario.setSenha(senha);
+        usuario.setTelefone(dto.getTelefone());
         usuario.setRoles(role);
         return usuario;
     }
@@ -113,8 +118,8 @@ public class UsuarioService {
         return new UsuarioResponseDTO(
                 usuario.getIdUsuario(),
                 usuario.getNome(),
-                usuario.getSenha(),
                 usuario.getEmail(),
+                usuario.getSenha(),
                 usuario.getTelefone()
         );
     }

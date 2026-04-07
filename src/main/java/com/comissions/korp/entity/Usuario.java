@@ -7,11 +7,12 @@ import org.hibernate.validator.constraints.Length;
 
 import java.time.LocalDateTime;
 
-@Entity(name = "usuario")
+@Entity
+@Table(name = "usuario")
 public class Usuario {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "idUsuario")
     private Integer idUsuario;
 
