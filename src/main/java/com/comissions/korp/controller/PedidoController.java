@@ -3,6 +3,7 @@ package com.comissions.korp.controller;
 
 import com.comissions.korp.DTO.PedidoDTO.PedidoRequest;
 import com.comissions.korp.DTO.PedidoDTO.PedidoResponse;
+import com.comissions.korp.config.utils.SecurityUtils;
 import com.comissions.korp.entity.Pedido;
 import com.comissions.korp.service.PedidoService;
 import org.springframework.http.ResponseEntity;
@@ -15,14 +16,17 @@ import java.util.List;
 public class PedidoController {
 
     private PedidoService pedidoService;
+    private SecurityUtils securityUtils;
 
-    public PedidoController(PedidoService pedidoService) {
+    public PedidoController(PedidoService pedidoService, SecurityUtils securityUtils) {
         this.pedidoService = pedidoService;
+        this.securityUtils = securityUtils;
     }
 
     @PostMapping("/cadastrar")
     public ResponseEntity<PedidoResponse> cadastrarPedido(@RequestBody PedidoRequest pedidoRequest) {
-            return ResponseEntity.status(201).body(pedidoService.cadastrarPedido(pedidoRequest));
+        Integer usuarioId = securityUtils.getUsuarioIdAutenticado();
+            return ResponseEntity.status(201).body(pedidoService.cadastrarPedido(pedidoRequest, usuarioId));
     }
 
     @GetMapping("/listar")
@@ -39,7 +43,8 @@ public class PedidoController {
     public ResponseEntity<PedidoResponse> atualizarPedido(
             @PathVariable Integer id,
             @RequestBody PedidoRequest pedidoRequest) {
-            return ResponseEntity.status(200).body(pedidoService.atualizarPedido(id, pedidoRequest));
+            Integer vendedorId = securityUtils.getUsuarioIdAutenticado();
+            return ResponseEntity.status(200).body(pedidoService.atualizarPedido(id, pedidoRequest, vendedorId));
     }
 
     @DeleteMapping("/deletar/{id}")

@@ -18,9 +18,18 @@ public class PedidoResponse {
     private String observacoes;
     private Integer fkCliente;
     private Integer fkDistribuidor;
+    private Integer fkVendedor;
     private List<ItemPedidoResumoResponse> itens;
 
     public PedidoResponse() {
+    }
+
+    public Integer getFkVendedor() {
+        return fkVendedor;
+    }
+
+    public void setFkVendedor(Integer fkVendedor) {
+        this.fkVendedor = fkVendedor;
     }
 
     public Integer getIdPedido() {

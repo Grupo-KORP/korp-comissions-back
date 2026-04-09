@@ -7,13 +7,13 @@ import jakarta.persistence.*;
 public class Distribuidor {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "idDistribuidor")
+    @Column(name = "id_distribuidor")
     private Integer idDistribuidor;
 
-    @Column(name = "razaoSocial", length = 150, nullable = false, unique = true)
+    @Column(name = "razao_social", length = 150, nullable = false, unique = true)
     private String razaoSocial;
 
-    @Column(name = "nomeFantasia", length = 150, nullable = false)
+    @Column(name = "nome_fantasia", length = 150, nullable = false)
     private String nomeFantasia;
 
     @Column(name = "cnpj", length = 20, nullable = false, unique = true)

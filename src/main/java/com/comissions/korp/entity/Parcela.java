@@ -12,26 +12,27 @@ public class Parcela {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "idParcela")
+    @Column(name = "id_parcela")
     private Integer id;
 
-    @Column(nullable = false)
+    @Column(name = "numero_parcela", nullable = false)
     private Integer numeroParcela;
 
-    @Column(name = "valorParcela", nullable = false, precision = 10)
+    @Column(name = "valor_parcela", nullable = false, precision = 10)
     private Double valorParcela;
 
-    @Column(nullable = false)
+    @Column(name = "data_vencimento",nullable = false)
     private LocalDate dataVencimento;
 
+    @Column(name = "data_pagamento")
     private LocalDate dataPagamento;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "statusParcela", nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'PENDENTE'")
+    @Column(name = "status_parcela", nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'PENDENTE'")
     private StatusParcela statusParcela;
 
     @ManyToOne
-    @JoinColumn(name = "fkPagamento", nullable = false)
+    @JoinColumn(name = "fk_pagamento", nullable = false)
     private Pagamento pagamento;
 
     public Integer getId() {

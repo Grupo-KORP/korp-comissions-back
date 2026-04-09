@@ -12,21 +12,22 @@ public class Pedido {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "idPedido")
+    @Column(name = "id_pedido")
     private Integer idPedido;
 
-    @Column(nullable = false)
+    @Column(name = "data_pedido", nullable = false)
     private LocalDate dataPedido;
 
+    @Column(name = "numero_nota_distribuidor")
     private Integer numeroNotaDistribuidor;
 
-    @Column(name = "valorTotalRevenda", nullable = false, precision = 10)
+    @Column(name = "valor_total_revenda", nullable = false, precision = 10)
     private Double valorTotalRevenda;
 
-    @Column(name = "valorTotalFaturamento", nullable = false, precision = 10)
+    @Column(name = "valor_total_faturamento", nullable = false, precision = 10)
     private Double valorTotalFaturamento;
 
-    @Column(name = "statusPedido", nullable = false, length = 50, columnDefinition = "VARCHAR(50) DEFAULT 'PENDENTE'")
+    @Column(name = "status_pedido", nullable = false, length = 50, columnDefinition = "VARCHAR(50) DEFAULT 'PENDENTE'")
     private String statusPedido;
 
     @Column(name = "frete")
@@ -39,15 +40,15 @@ public class Pedido {
     private String observacoes;
 
     @ManyToOne
-    @JoinColumn(name = "fkVendedor", nullable = false)
+    @JoinColumn(name = "fk_vendedor", nullable = false)
     private Usuario usuario;
 
     @ManyToOne
-    @JoinColumn(name = "fkCliente", nullable = false)
+    @JoinColumn(name = "fk_cliente", nullable = false)
     private Cliente cliente;
 
     @ManyToOne
-    @JoinColumn(name = "fkDistribuidor", nullable = false)
+    @JoinColumn(name = "fk_distribuidor", nullable = false)
     private Distribuidor distribuidor;
 
     public Pedido() {

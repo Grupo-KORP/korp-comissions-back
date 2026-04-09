@@ -8,7 +8,7 @@ public class Contato {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "idContato")
+    @Column(name = "id_contato")
     private Integer idContato;
 
     @Column(name = "nome", length = 250, nullable = false)
@@ -22,12 +22,12 @@ public class Contato {
 
     // Relacionamento N:1 com Cliente
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "fkCliente")
+    @JoinColumn(name = "fk_cliente")
     private Cliente cliente;
 
     // Relacionamento N:1 com Distribuidor
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "fkDistribuidor")
+    @JoinColumn(name = "fk_distribuidor")
     private Distribuidor distribuidor;
 
     public Contato() {

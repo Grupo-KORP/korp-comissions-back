@@ -9,21 +9,21 @@ public class Pagamento {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "idPagamento")
+    @Column(name = "id_pagamento")
     private Integer id;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "metodoPagamento", nullable = false)
+    @Column(name = "metodo_pagamento", nullable = false)
     private MetodoPagamento metodoPagamento;
 
     @Column(name = "parcelado", columnDefinition = "BOOLEAN DEFAULT FALSE")
     private Boolean parcelado;
 
-    @Column(name = "quantidadeParcelas")
+    @Column(name = "quantidade_parcelas")
     private Integer quantidadeParcelas;
 
     @OneToOne
-    @JoinColumn(name = "fkPedido", nullable = false, unique = true)
+    @JoinColumn(name = "fk_pedido", nullable = false, unique = true)
     private Pedido pedido;
 
     public Integer getId() {

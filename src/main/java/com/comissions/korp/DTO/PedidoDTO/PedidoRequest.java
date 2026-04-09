@@ -15,7 +15,6 @@ public class PedidoRequest {
     private Boolean frete;
     private String transportadora;
     private String observacoes;
-    private Integer fkVendedor;
     private Integer fkCliente;
     private Integer fkDistribuidor;
     private List<ItemPedidoRequest> itens;
@@ -46,14 +45,6 @@ public class PedidoRequest {
 
     public void setFkDistribuidor(Integer fkDistribuidor) {
         this.fkDistribuidor = fkDistribuidor;
-    }
-
-    public Integer getFkVendedor() {
-        return fkVendedor;
-    }
-
-    public void setFkVendedor(Integer fkVendedor) {
-        this.fkVendedor = fkVendedor;
     }
 
     public Boolean getFrete() {

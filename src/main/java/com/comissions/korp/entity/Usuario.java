@@ -2,6 +2,7 @@ package com.comissions.korp.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.validator.constraints.Length;
 
 import java.time.LocalDateTime;
@@ -12,7 +13,7 @@ public class Usuario {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "idUsuario")
+    @Column(name = "id_usuario")
     private Integer idUsuario;
 
     @Column(name = "nome", length = 250, nullable = false)
@@ -22,33 +23,44 @@ public class Usuario {
     @Email(message = "Formato do email deve ser válido (ex: nome@dominio.com).") //nome@dominio.com
     private String email;
 
-    @Transient
+    @Column(name = "senha", nullable = false)
     private String senha;
 
     @Column(name = "telefone", length = 20)
     @Length(min = 10, message = "Formato do numero de telefone deve ser válido (ex: xxxxxxxxxxx).")
     private String telefone;
 
-    @Column(name = "percentualComissao", precision = 5)
+    @Column(name = "percentual_comissao", precision = 5)
     private Double percentualComissao;
 
-    @ManyToOne
-    @JoinColumn(name = "fkRole", nullable = false)
-    private Role role;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "fk_role")
+    private Role roles;
 
-    @Transient
+    @CreationTimestamp
+    @Column(name = "dt_criacao")
     private LocalDateTime dtCriacao;
 
     public Usuario() {
     }
 
-    public Usuario(Integer idUsuario, String nome, String email, String senha, String telefone, LocalDateTime dtCriacao) {
+    public Usuario(Integer idUsuario, String nome, String email, String senha, String telefone, Double percentualComissao, Role roles, LocalDateTime dtCriacao) {
         this.idUsuario = idUsuario;
         this.nome = nome;
         this.email = email;
         this.senha = senha;
         this.telefone = telefone;
+        this.percentualComissao = percentualComissao;
+        this.roles = roles;
         this.dtCriacao = dtCriacao;
+    }
+
+    public Role getRoles() {
+        return roles;
+    }
+
+    public void setRoles(Role roles) {
+        this.roles = roles;
     }
 
     public Integer getIdUsuario() {
@@ -107,11 +119,4 @@ public class Usuario {
         this.percentualComissao = percentualComissao;
     }
 
-    public Role getRole() {
-        return role;
-    }
-
-    public void setRole(Role role) {
-        this.role = role;
-    }
 }

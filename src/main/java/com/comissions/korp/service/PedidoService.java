@@ -21,7 +21,7 @@ public class PedidoService {
     private final PedidoRepository pedidoRepository;
     private final ItemPedidoRepository itemPedidoRepository;
     private final ProdutoRepository produtoRepository;
-//    private final VendedorRepository vendedorRepository;
+    private final UsuarioRepository usuarioRepository;
     private final ClienteService clienteService;
     private final DistribuidorService distribuidorService;
     private final ItemPedidoService itemPedidoService;
@@ -32,27 +32,28 @@ public class PedidoService {
             ,ProdutoRepository produtoRepository
             ,ClienteService clienteService
             ,DistribuidorService distribuidorService,
-                         ItemPedidoService itemPedidoService) {
+                         ItemPedidoService itemPedidoService, UsuarioRepository usuarioRepository) {
         this.pedidoRepository = pedidoRepository;
         this.itemPedidoRepository = itemPedidoRepository;
         this.produtoRepository = produtoRepository;
         this.clienteService = clienteService;
         this.distribuidorService = distribuidorService;
         this.itemPedidoService = itemPedidoService;
+        this.usuarioRepository = usuarioRepository;
     }
 
 
 
     @Transactional
-    public PedidoResponse cadastrarPedido(PedidoRequest pedidoRequest) {
+    public PedidoResponse cadastrarPedido(PedidoRequest pedidoRequest, Integer vendedorId) {
 
-//        Vendedor vendedor = vendedorRepository.findById(pedidoRequest.getFkVendedor())
-//                .orElseThrow(() -> new RuntimeException("Vendedor não encontrado com id: " + pedidoRequest.getFkVendedor()));
+        Usuario vendedor = usuarioRepository.findById(vendedorId)
+                .orElseThrow(() -> new RuntimeException("Vendedor não encontrado com id: " + vendedorId));
 
         Cliente cliente = clienteService.buscarClientePorId(pedidoRequest.getFkCliente());
         Distribuidor distribuidor = distribuidorService.buscarDistribuidorPorId(pedidoRequest.getFkDistribuidor());
 
-        Pedido pedidoSalvo = pedidoRepository.save(criarPedidoFromRequest(pedidoRequest, cliente, distribuidor));
+        Pedido pedidoSalvo = pedidoRepository.save(criarPedidoFromRequest(pedidoRequest, cliente, distribuidor, vendedor));
         Map<Integer, Produto> produtoMap = mapearProdutosPorId(pedidoRequest.getItens());
         List<ItemPedido> itensSalvos = salvarItensDoPedido(pedidoSalvo, pedidoRequest.getItens(), produtoMap);
 
@@ -82,17 +83,17 @@ public class PedidoService {
 
 
     @Transactional
-    public PedidoResponse atualizarPedido(Integer id, PedidoRequest pedidoRequest) {
+    public PedidoResponse atualizarPedido(Integer id, PedidoRequest pedidoRequest, Integer vendedorId) {
         Pedido pedido = pedidoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontrado("Pedido não encontrado com id: " + id));
 
-//        Vendedor vendedor = vendedorRepository.findById(pedidoRequest.getFkVendedor())
-//                .orElseThrow(() -> new RuntimeException("Vendedor não encontrado com id: " + pedidoRequest.getFkVendedor()));
+                Usuario vendedor = usuarioRepository.findById(vendedorId)
+                .orElseThrow(() -> new RuntimeException("Vendedor não encontrado com id: " + vendedorId));
 
         Cliente cliente = clienteService.buscarClientePorId(pedidoRequest.getFkCliente());
         Distribuidor distribuidor = distribuidorService.buscarDistribuidorPorId(pedidoRequest.getFkDistribuidor());
 
-        atualizarDadosPedido(pedido, pedidoRequest, cliente, distribuidor);
+        atualizarDadosPedido(pedido, pedidoRequest, cliente, distribuidor,vendedor);
 
         Pedido pedidoAtualizado = pedidoRepository.save(pedido);
 
@@ -128,6 +129,7 @@ public class PedidoService {
         pedidoResponse.setFrete(pedido.getFrete());
         pedidoResponse.setTransportadora(pedido.getTransportadora());
         pedidoResponse.setObservacoes(pedido.getObservacoes());
+        pedidoResponse.setFkVendedor(pedido.getUsuario() != null? pedido.getUsuario().getIdUsuario(): null);
         pedidoResponse.setFkCliente(pedido.getCliente() != null ? pedido.getCliente().getIdCliente() : null);
         pedidoResponse.setFkDistribuidor(pedido.getDistribuidor() != null ? pedido.getDistribuidor().getIdDistribuidor() : null);
 
@@ -140,7 +142,7 @@ public class PedidoService {
         return pedidoResponse;
     }
 
-    private void atualizarDadosPedido(Pedido pedido, PedidoRequest request, Cliente cliente, Distribuidor distribuidor) {
+    private void atualizarDadosPedido(Pedido pedido, PedidoRequest request, Cliente cliente, Distribuidor distribuidor, Usuario vendedor) {
         pedido.setDataPedido(request.getDataPedido());
         pedido.setNumeroNotaDistribuidor(request.getNumeroNotaDistribuidor());
         pedido.setValorTotalRevenda(request.getValorTotalRevenda());
@@ -149,14 +151,15 @@ public class PedidoService {
         pedido.setFrete(request.getFrete());
         pedido.setTransportadora(request.getTransportadora());
         pedido.setObservacoes(request.getObservacoes());
+        pedido.setUsuario(vendedor);
         pedido.setCliente(cliente);
         pedido.setDistribuidor(distribuidor);
     }
 
 
-    private Pedido criarPedidoFromRequest(PedidoRequest pedidoRequest, Cliente cliente, Distribuidor distribuidor) {
+    private Pedido criarPedidoFromRequest(PedidoRequest pedidoRequest, Cliente cliente, Distribuidor distribuidor, Usuario vendedor) {
         Pedido pedido = new Pedido();
-        atualizarDadosPedido(pedido, pedidoRequest, cliente, distribuidor);
+        atualizarDadosPedido(pedido, pedidoRequest, cliente, distribuidor, vendedor);
         return pedido;
     }
 

@@ -12,28 +12,28 @@ public class Comissao {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "idComissao")
+    @Column(name = "id_comissao")
     private Integer id;
 
-    @Column(name = "valorComissao", nullable = false, precision = 10)
+    @Column(name = "valor_comissao", nullable = false, precision = 10)
     private Double valorComissao;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "statusComissao", nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'PENDENTE'")
+    @Column(name = "status_comissao", nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'PENDENTE'")
     private StatusComissao statusComissao;
 
     private LocalDate dataPagamento;
 
     @ManyToOne
-    @JoinColumn(name = "fkPedido", nullable = false)
+    @JoinColumn(name = "fk_pedido", nullable = false)
     private Pedido pedido;
 
     @ManyToOne
-    @JoinColumn(name = "fkParcela", nullable = false)
+    @JoinColumn(name = "fk_parcela", nullable = false)
     private Parcela parcela;
 
     @ManyToOne
-    @JoinColumn(name = "fkVendedor", nullable = false)
+    @JoinColumn(name = "fk_vendedor", nullable = false)
     private Usuario usuario;
 
     public Integer getId() {

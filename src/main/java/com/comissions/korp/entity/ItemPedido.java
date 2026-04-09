@@ -9,7 +9,7 @@ public class ItemPedido {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "idItemPedido")
+    @Column(name = "id_item_pedido")
     private Integer idItemPedido;
 
     @Column(nullable = false)
@@ -19,11 +19,11 @@ public class ItemPedido {
     private Double valorUnitario;
 
     @ManyToOne
-    @JoinColumn(name = "fkPedido", nullable = false)
+    @JoinColumn(name = "fk_pedido", nullable = false)
     private Pedido pedido;
 
     @ManyToOne
-    @JoinColumn(name = "fkProduto", nullable = false)
+    @JoinColumn(name = "fk_produto", nullable = false)
     private Produto produto;
 
     public ItemPedido() {

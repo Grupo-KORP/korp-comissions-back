@@ -2,40 +2,54 @@ package com.comissions.korp.service;
 
 import com.comissions.korp.DTO.UsuarioRequestDTO;
 import com.comissions.korp.DTO.UsuarioResponseDTO;
+import com.comissions.korp.entity.Role;
 import com.comissions.korp.entity.Usuario;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.exception.UsuarioJaExistente;
+import com.comissions.korp.repository.RoleRepository;
 import com.comissions.korp.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
-@Transactional(readOnly = true)
 public class UsuarioService {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
 
+    @Autowired
+    private RoleRepository roleRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     /**
      * Cria um novo Usuario
      */
-    @Transactional
     public UsuarioResponseDTO criar(UsuarioRequestDTO requestDTO) {
         // Verifica se já existe usuário com mesmo email
-        if (usuarioRepository.existsByEmail(requestDTO.email())) {
-            throw new UsuarioJaExistente("Já existe um usuário com este email: " + requestDTO.email());
+        if (usuarioRepository.existsByEmail(requestDTO.getEmail())) {
+            throw new UsuarioJaExistente("Já existe um usuário com este email: " + requestDTO.getEmail());
         }
 
         // Verifica se já existe usuário com mesmo nome
-        if (usuarioRepository.existsByNome(requestDTO.nome())) {
-            throw new UsuarioJaExistente("Já existe um usuário com este nome: " + requestDTO.nome());
+        if (usuarioRepository.existsByNome(requestDTO.getNome())) {
+            throw new UsuarioJaExistente("Já existe um usuário com este nome: " + requestDTO.getNome());
         }
 
-        Usuario usuario = convertToEntity(requestDTO);
+        Optional<Role> role = roleRepository.findById(requestDTO.getRole());
+        Role roleUsuario = role.get();
+
+        String senhaEncriptada = passwordEncoder.encode(requestDTO.getSenha());
+
+        Usuario usuario = convertToEntity(requestDTO,roleUsuario, senhaEncriptada);
         Usuario usuarioSalvo = usuarioRepository.save(usuario);
         return convertToResponseDTO(usuarioSalvo);
     }
@@ -66,14 +80,14 @@ public class UsuarioService {
     /**
      * Atualiza Usuario existente
      */
-    @Transactional
     public UsuarioResponseDTO atualizar(Integer id, UsuarioRequestDTO requestDTO) {
-        Usuario usuarioExistente = buscarUsuarioPorId(id);
+        Usuario usuarioExistente = usuarioRepository.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontrado("Usuário não encontrado com ID: " + id));
 
-        usuarioExistente.setNome(requestDTO.nome());
-        usuarioExistente.setEmail(requestDTO.email());
-        usuarioExistente.setSenha(requestDTO.senha());
-        usuarioExistente.setTelefone(requestDTO.telefone());
+        usuarioExistente.setNome(requestDTO.getNome());
+        usuarioExistente.setEmail(requestDTO.getEmail());
+        usuarioExistente.setSenha(requestDTO.getSenha());
+        usuarioExistente.setTelefone(requestDTO.getTelefone());
 
         Usuario usuarioAtualizado = usuarioRepository.save(usuarioExistente);
         return convertToResponseDTO(usuarioAtualizado);
@@ -82,7 +96,6 @@ public class UsuarioService {
     /**
      * Deleta Usuario por ID
      */
-    @Transactional
     public void deletar(Integer id) {
         if (!usuarioRepository.existsById(id)) {
             throw new RecursoNaoEncontrado("Usuário não encontrado com ID: " + id);
@@ -93,13 +106,16 @@ public class UsuarioService {
     /**
      * Converte UsuarioRequestDTO para Entity
      */
-    private Usuario convertToEntity(UsuarioRequestDTO dto) {
+    private Usuario convertToEntity(UsuarioRequestDTO dto, Role role, String senha) {
         Usuario usuario = new Usuario();
-        usuario.setIdUsuario(dto.idUsuario());
-        usuario.setNome(dto.nome());
-        usuario.setEmail(dto.email());
-        usuario.setSenha(dto.senha());
-        usuario.setTelefone(dto.telefone());
+        usuario.setIdUsuario(dto.getIdUsuario());
+        usuario.setNome(dto.getNome());
+        usuario.setEmail(dto.getEmail());
+        usuario.setSenha(senha);
+        usuario.setTelefone(dto.getTelefone());
+        usuario.setPercentualComissao(dto.getPercentualComissao());
+        usuario.setDtCriacao(LocalDateTime.now());
+        usuario.setRoles(role);
         return usuario;
     }
 

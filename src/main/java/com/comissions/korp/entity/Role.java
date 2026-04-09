@@ -1,5 +1,6 @@
 package com.comissions.korp.entity;
 
+import com.comissions.korp.entity.ENUM.Roles;
 import jakarta.persistence.*;
 
 @Entity
@@ -8,19 +9,28 @@ public class Role {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "idRole")
+    @Column(name = "role_id")
     private Integer id;
 
-    @Column(name = "nome", length = 50, nullable = false)
-    private String nome;
+    @Enumerated(EnumType.STRING)
+    private Roles role;
 
     public Role() {
     }
 
-    public Role(Integer id, String nome) {
+    public Role(Integer id, Roles role) {
         this.id = id;
-        this.nome = nome;
+        this.role = role;
     }
+
+    public Roles getRole() {
+        return role;
+    }
+
+    public void setRole(Roles role) {
+        this.role = role;
+    }
+
 
     public Integer getId() {
         return id;
@@ -30,12 +40,6 @@ public class Role {
         this.id = id;
     }
 
-    public String getNome() {
-        return nome;
-    }
 
-    public void setNome(String nome) {
-        this.nome = nome;
-    }
 
 }
