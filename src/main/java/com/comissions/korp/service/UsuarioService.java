@@ -128,7 +128,8 @@ public class UsuarioService {
                 usuario.getNome(),
                 usuario.getSenha(),
                 usuario.getEmail(),
-                usuario.getTelefone()
+                usuario.getTelefone(),
+                usuario.getPercentualComissao()
         );
     }
 

@@ -6,14 +6,16 @@ public class UsuarioResponseDTO {
     private String email;
     private String senha;
     private String telefone;
+    private Double percentualComissao;
 
 
-    public UsuarioResponseDTO(Integer idUsuario, String nome, String email, String senha, String telefone) {
+    public UsuarioResponseDTO(Integer idUsuario, String nome, String email, String senha, String telefone, Double percentualComissao) {
         this.idUsuario = idUsuario;
         this.nome = nome;
         this.email = email;
         this.senha = senha;
         this.telefone = telefone;
+        this.percentualComissao = percentualComissao;
     }
 
     public UsuarioResponseDTO() {}
@@ -36,5 +38,9 @@ public class UsuarioResponseDTO {
 
     public String getTelefone() {
         return telefone;
+    }
+
+    public Double getPercentualComissao() {
+        return percentualComissao;
     }
 }
