@@ -45,6 +45,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/usuario").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/usuario/{id}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/usuario/**").hasRole("FINAN")
                         .requestMatchers(ROUTE_PERMIT).permitAll()
 
