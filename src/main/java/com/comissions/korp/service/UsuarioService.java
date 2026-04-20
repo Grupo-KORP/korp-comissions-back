@@ -126,8 +126,8 @@ public class UsuarioService {
         return new UsuarioResponseDTO(
                 usuario.getIdUsuario(),
                 usuario.getNome(),
-                usuario.getSenha(),
                 usuario.getEmail(),
+                usuario.getSenha(),
                 usuario.getTelefone(),
                 usuario.getPercentualComissao()
         );
