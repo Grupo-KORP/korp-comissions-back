@@ -1,3 +1,5 @@
+-- V1__create_tables.sql
+
 CREATE TABLE roles (
                        role_id INT AUTO_INCREMENT NOT NULL,
                        role VARCHAR(255),
@@ -5,7 +7,7 @@ CREATE TABLE roles (
 );
 
 CREATE TABLE usuario (
-                         id_usuario  INT AUTO_INCREMENT NOT NULL,
+                         id_usuario INT AUTO_INCREMENT NOT NULL,
                          nome VARCHAR(250) NOT NULL,
                          email VARCHAR(120) NOT NULL,
                          senha VARCHAR(255) NOT NULL,
@@ -15,7 +17,7 @@ CREATE TABLE usuario (
                          fk_role INT NULL,
                          CONSTRAINT pk_usuario PRIMARY KEY (id_usuario),
                          CONSTRAINT uc_usuario_email UNIQUE (email),
-                         CONSTRAINT FK_USUARIO_ON_FKROLE FOREIGN KEY (fk_role) REFERENCES roles(role_id)
+                         CONSTRAINT FK_USUARIO_ON_FKROLE FOREIGN KEY (fk_role) REFERENCES roles(role_id) ON DELETE SET NULL
 );
 
 CREATE TABLE cliente (
@@ -48,8 +50,8 @@ CREATE TABLE contato (
                          fk_cliente INT NULL,
                          fk_distribuidor INT NULL,
                          CONSTRAINT pk_contato PRIMARY KEY (id_contato),
-                         CONSTRAINT FK_CONTATO_ON_FK_CLIENTE FOREIGN KEY (fk_cliente) REFERENCES cliente(id_cliente),
-                         CONSTRAINT FK_CONTATO_ON_FK_DISTRIBUIDOR FOREIGN KEY (fk_distribuidor) REFERENCES distribuidor(id_distribuidor)
+                         CONSTRAINT FK_CONTATO_ON_FK_CLIENTE FOREIGN KEY (fk_cliente) REFERENCES cliente(id_cliente) ON DELETE CASCADE,
+                         CONSTRAINT FK_CONTATO_ON_FK_DISTRIBUIDOR FOREIGN KEY (fk_distribuidor) REFERENCES distribuidor(id_distribuidor) ON DELETE CASCADE
 );
 
 CREATE TABLE produto (
@@ -71,9 +73,9 @@ CREATE TABLE pedido (
                         fk_vendedor INT NOT NULL,
                         fk_cliente INT NOT NULL,
                         fk_distribuidor INT NOT NULL,
-                        FOREIGN KEY (fk_vendedor) REFERENCES usuario(id_usuario),
-                        FOREIGN KEY (fk_cliente) REFERENCES cliente(id_cliente),
-                        FOREIGN KEY (fk_distribuidor) REFERENCES distribuidor(id_distribuidor)
+                        FOREIGN KEY (fk_vendedor) REFERENCES usuario(id_usuario) ON DELETE RESTRICT,
+                        FOREIGN KEY (fk_cliente) REFERENCES cliente(id_cliente) ON DELETE RESTRICT,
+                        FOREIGN KEY (fk_distribuidor) REFERENCES distribuidor(id_distribuidor) ON DELETE RESTRICT
 );
 
 CREATE TABLE pagamento (
@@ -82,7 +84,7 @@ CREATE TABLE pagamento (
                            parcelado BOOLEAN DEFAULT FALSE,
                            quantidade_parcelas INT,
                            fk_pedido INT UNIQUE NOT NULL,
-                           FOREIGN KEY (fk_pedido) REFERENCES pedido(id_pedido)
+                           FOREIGN KEY (fk_pedido) REFERENCES pedido(id_pedido) ON DELETE CASCADE
 );
 
 CREATE TABLE parcela (
@@ -93,7 +95,7 @@ CREATE TABLE parcela (
                          data_pagamento DATE,
                          status_parcela VARCHAR(20) DEFAULT 'PENDENTE',
                          fk_pagamento INT NOT NULL,
-                         FOREIGN KEY (fk_pagamento) REFERENCES pagamento(id_pagamento)
+                         FOREIGN KEY (fk_pagamento) REFERENCES pagamento(id_pagamento) ON DELETE CASCADE
 );
 
 CREATE TABLE item_pedido (
@@ -102,8 +104,8 @@ CREATE TABLE item_pedido (
                              valor_unitario DECIMAL(10,2) NOT NULL,
                              fk_pedido INT NOT NULL,
                              fk_produto INT NOT NULL,
-                             FOREIGN KEY (fk_pedido) REFERENCES pedido(id_pedido),
-                             FOREIGN KEY (fk_produto) REFERENCES produto(id_produto)
+                             FOREIGN KEY (fk_pedido) REFERENCES pedido(id_pedido) ON DELETE CASCADE,
+                             FOREIGN KEY (fk_produto) REFERENCES produto(id_produto) ON DELETE RESTRICT
 );
 
 CREATE TABLE comissao (
@@ -114,7 +116,7 @@ CREATE TABLE comissao (
                           fk_pedido INT NOT NULL,
                           fk_parcela INT NOT NULL,
                           fk_vendedor INT NOT NULL,
-                          FOREIGN KEY (fk_pedido) REFERENCES pedido(id_pedido),
-                          FOREIGN KEY (fk_parcela) REFERENCES parcela(id_parcela),
-                          FOREIGN KEY (fk_vendedor) REFERENCES usuario(id_usuario)
+                          FOREIGN KEY (fk_pedido) REFERENCES pedido(id_pedido) ON DELETE CASCADE,
+                          FOREIGN KEY (fk_parcela) REFERENCES parcela(id_parcela) ON DELETE CASCADE,
+                          FOREIGN KEY (fk_vendedor) REFERENCES usuario(id_usuario) ON DELETE RESTRICT
 );
