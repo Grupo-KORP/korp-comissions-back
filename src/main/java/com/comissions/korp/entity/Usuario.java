@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Email;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.validator.constraints.Length;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 
 @Entity
@@ -53,6 +54,19 @@ public class Usuario {
         this.percentualComissao = percentualComissao;
         this.roles = roles;
         this.dtCriacao = dtCriacao;
+    }
+
+    public String gerarSenha() {
+        String caracteres = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        SecureRandom random = new SecureRandom();
+        StringBuilder senhaGerada = new StringBuilder();
+
+        for (int i = 0; i < 8; i++) {
+            int index = random.nextInt(caracteres.length());
+            senhaGerada.append(caracteres.charAt(index));
+        }
+
+        return senhaGerada.toString();
     }
 
     public Role getRoles() {

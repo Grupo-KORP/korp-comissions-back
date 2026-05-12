@@ -30,6 +30,9 @@ public class UsuarioService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private EmailService emailService;
+
     /**
      * Cria um novo Usuario
      */
@@ -47,10 +50,14 @@ public class UsuarioService {
         Optional<Role> role = roleRepository.findById(requestDTO.getRole());
         Role roleUsuario = role.get();
 
-        String senhaEncriptada = passwordEncoder.encode(requestDTO.getSenha());
+        Usuario geradorDeSenha = new Usuario();
+        String senhaAleatoria = geradorDeSenha.gerarSenha();
+
+        String senhaEncriptada = passwordEncoder.encode(senhaAleatoria);
 
         Usuario usuario = convertToEntity(requestDTO,roleUsuario, senhaEncriptada);
         Usuario usuarioSalvo = usuarioRepository.save(usuario);
+        emailService.enviarEmailSenhaProvisoria(usuario, senhaAleatoria);
         return convertToResponseDTO(usuarioSalvo);
     }
 
