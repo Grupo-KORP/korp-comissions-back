@@ -6,6 +6,7 @@ import com.comissions.korp.entity.Role;
 import com.comissions.korp.entity.Usuario;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.exception.UsuarioJaExistente;
+import com.comissions.korp.repository.PedidoRepository;
 import com.comissions.korp.repository.RoleRepository;
 import com.comissions.korp.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -45,6 +47,10 @@ public class UsuarioService {
         // Verifica se já existe usuário com mesmo nome
         if (usuarioRepository.existsByNome(requestDTO.getNome())) {
             throw new UsuarioJaExistente("Já existe um usuário com este nome: " + requestDTO.getNome());
+        }
+
+        if (usuarioRepository.existsByTelefone((requestDTO.getTelefone()))) {
+            throw new UsuarioJaExistente("Já existe um usuário com este telefone: " + requestDTO.getTelefone());
         }
 
         Optional<Role> role = roleRepository.findById(requestDTO.getRole());
