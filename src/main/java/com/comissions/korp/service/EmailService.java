@@ -21,7 +21,7 @@ public class EmailService {
     public EmailService(JavaMailSender enviadorEmail) {
         this.enviadorEmail = enviadorEmail;
     }
-    @Async
+
     public void enviarEmail(String emailUsuario, String assunto, String conteudo) {
         MimeMessage message = enviadorEmail.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message);
@@ -42,6 +42,7 @@ public class EmailService {
         return template.replace("[[name]]", nome).replace("[[password]]", senhaAleatoria);
     }
 
+    @Async
     public void enviarEmailSenhaProvisoria(Usuario usuario, String senhaAleatoria) {
 
         String assunto = "Aqui está sua senha de acesso para o Sistema de Comissões - TND";

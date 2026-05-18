@@ -50,4 +50,11 @@ public class GlobalExceptionHandler {
         response.put("erro", e.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
+
+    @ExceptionHandler(UsuarioJaExistente.class)
+    public ResponseEntity<Map<String, String>> handleUsuarioJaExistente(UsuarioJaExistente ex) {
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT) // 409
+                .body(Map.of("message", ex.getMessage()));
+    }
 }
