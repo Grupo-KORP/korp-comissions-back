@@ -1,5 +1,6 @@
 package com.comissions.korp.service;
 
+import com.comissions.korp.DTO.ListarVendedoresResponseDTO;
 import com.comissions.korp.DTO.UsuarioRequestDTO;
 import com.comissions.korp.DTO.UsuarioResponseDTO;
 import com.comissions.korp.entity.Role;
@@ -10,6 +11,8 @@ import com.comissions.korp.repository.PedidoRepository;
 import com.comissions.korp.repository.RoleRepository;
 import com.comissions.korp.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -28,6 +31,9 @@ public class UsuarioService {
 
     @Autowired
     private RoleRepository roleRepository;
+
+    @Autowired
+    private PedidoRepository pedidoRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -104,6 +110,36 @@ public class UsuarioService {
 
         Usuario usuarioAtualizado = usuarioRepository.save(usuarioExistente);
         return convertToResponseDTO(usuarioAtualizado);
+    }
+
+    /**
+     * Lista todos os Vendedores com paginação
+     */
+    public Page<ListarVendedoresResponseDTO> listarTodosVendedores(String busca, Pageable pageable) {
+
+        String filtro = (busca != null && !busca.isBlank()) ? busca : null;
+
+        Page<Usuario> paginaVendedores = usuarioRepository.findVendedoresComFiltro(filtro, pageable);
+
+
+        // COUNT retorna Long — cast correto
+        List<Object[]> pedidosPorVendedor = pedidoRepository.contarPedidosPorVendedor();
+
+        Map<Integer, Integer> mapaPedidos = pedidosPorVendedor.stream()
+                .collect(Collectors.toMap(
+                        obj -> (Integer) obj[0],
+                        obj -> ((Long) obj[1]).intValue() // <-- era Integer, explode em runtime
+                ));
+
+        return paginaVendedores.map(vendedor -> new ListarVendedoresResponseDTO(
+                vendedor.getNome(),
+                vendedor.getEmail(),
+                vendedor.getTelefone(),
+                vendedor.getPercentualComissao(),
+                mapaPedidos.getOrDefault(vendedor.getIdUsuario(), 0),
+                0, // vendasEfetivadas — implementar quando tiver status de pedido
+                0  // comissoesPendentes — implementar quando tiver lógica de comissão
+        ));
     }
 
     /**
