@@ -4,6 +4,7 @@ import com.comissions.korp.DTO.ClienteDTO.ClienteRequestDTO;
 import com.comissions.korp.DTO.ClienteDTO.ClienteResponseDTO;
 import com.comissions.korp.entity.Cliente;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
+import com.comissions.korp.exception.UsuarioJaExistente;
 import com.comissions.korp.repository.ClienteRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -23,8 +24,20 @@ public class ClienteService {
      * Cria um novo Cliente
      */
 
-    @Transactional
     public ClienteResponseDTO criar(ClienteRequestDTO requestDTO) {
+        // Verifica se já existe cliente com mesmo email
+        if (clienteRepository.existsByEmail((requestDTO.getEmail()))) {
+            throw new UsuarioJaExistente("Já existe um cliente com este email: " + requestDTO.getEmail());
+        }
+
+        // Verifica se já existe cliente com mesmo cnpj
+        if (clienteRepository.existsByCnpj((requestDTO.getCnpj()))) {
+            throw new UsuarioJaExistente("Já existe um cliente com este CNPJ: " + requestDTO.getCnpj());
+        }
+
+        if (clienteRepository.existsByTelefone(((requestDTO.getTelefone())))) {
+            throw new UsuarioJaExistente("Já existe um cliente com este telefone: " + requestDTO.getTelefone());
+        }
         Cliente cliente = convertToEntity(requestDTO);
         Cliente clienteSalvo = clienteRepository.save(cliente);
         return convertToResponseDTO(clienteSalvo);
