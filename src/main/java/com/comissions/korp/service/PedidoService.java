@@ -123,8 +123,8 @@ public class PedidoService {
         pedidoResponse.setIdPedido(pedido.getIdPedido());
         pedidoResponse.setDataPedido(pedido.getDataPedido());
         pedidoResponse.setNumeroNotaDistribuidor(pedido.getNumeroNotaDistribuidor());
-        pedidoResponse.setValorTotalRevenda(pedido.getValorTotalRevenda());
-        pedidoResponse.setValorTotalFaturamento(pedido.getValorTotalFaturamento());
+        pedidoResponse.setValorTotalDistr(pedido.getValorTotalRevenda());
+        pedidoResponse.setValorTotalCliente(pedido.getValorTotalFaturamento());
         pedidoResponse.setStatusPedido(pedido.getStatusPedido());
         pedidoResponse.setFrete(pedido.getFrete());
         pedidoResponse.setTransportadora(pedido.getTransportadora());
@@ -211,7 +211,10 @@ public class PedidoService {
         itemPedido.setPedido(pedido);
         itemPedido.setProduto(produto);
         itemPedido.setQuantidade(itemRequest.getQuantidade());
-        itemPedido.setValorUnitario(itemRequest.getValorUnitario());
+        itemPedido.setVlrUnitDistr(itemRequest.getVlrUnitDistr());
+        itemPedido.setVlrTotalDistr(itemRequest.getVlrTotalDistr());
+        itemPedido.setVlrUnitCliente(itemRequest.getVlrUnitCliente());
+        itemPedido.setVlrTotalCliente(itemRequest.getVlrTotalCliente());
         return itemPedido;
     }
 }

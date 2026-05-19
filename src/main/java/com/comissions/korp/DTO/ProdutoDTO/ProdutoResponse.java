@@ -5,6 +5,8 @@ public class ProdutoResponse {
     private Integer idProduto;
     private String nome;
     private String descricao;
+    private Boolean ativo;
+    private Integer fkVendedorCadastro;
 
     public ProdutoResponse() {
     }
@@ -31,5 +33,21 @@ public class ProdutoResponse {
 
     public void setDescricao(String descricao) {
         this.descricao = descricao;
+    }
+
+    public Boolean getAtivo() {
+        return ativo;
+    }
+
+    public void setAtivo(Boolean ativo) {
+        this.ativo = ativo;
+    }
+
+    public Integer getFkVendedorCadastro() {
+        return fkVendedorCadastro;
+    }
+
+    public void setFkVendedorCadastro(Integer fkVendedorCadastro) {
+        this.fkVendedorCadastro = fkVendedorCadastro;
     }
 }

@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.math.BigDecimal;
 
 @Component
 public class DataInicializer implements ApplicationRunner {
@@ -35,7 +36,7 @@ public class DataInicializer implements ApplicationRunner {
         // Verifica se já existe usuário com mesmo email
         if (!usuarioRepository.existsByEmail("janderson@tndbrasil.com.br")) {
             UsuarioRequestDTO requestDTO = new UsuarioRequestDTO(
-                    null,"Janderson Mira","janderson@tndbrasil.com.br","","119950012322",1,0.0
+                    null,"Janderson Mira","janderson@tndbrasil.com.br","","119950012322",2, BigDecimal.valueOf(0.0)
             );
 
             Optional<Role> role = roleRepository.findById(requestDTO.getRole());

@@ -4,13 +4,14 @@ import com.comissions.korp.DTO.ItemPedidoDTO.ItemPedidoRequest;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.math.BigDecimal;
 
 public class PedidoRequest {
 
     private LocalDate dataPedido;
-    private Integer numeroNotaDistribuidor;
-    private Double valorTotalRevenda;
-    private Double valorTotalFaturamento;
+    private String numeroNotaDistribuidor;
+    private BigDecimal valorTotalDistr;
+    private BigDecimal valorTotalCliente;
     private String statusPedido;
     private Boolean frete;
     private String transportadora;
@@ -63,11 +64,11 @@ public class PedidoRequest {
         this.itens = itens;
     }
 
-    public Integer getNumeroNotaDistribuidor() {
+    public String getNumeroNotaDistribuidor() {
         return numeroNotaDistribuidor;
     }
 
-    public void setNumeroNotaDistribuidor(Integer numeroNotaDistribuidor) {
+    public void setNumeroNotaDistribuidor(String numeroNotaDistribuidor) {
         this.numeroNotaDistribuidor = numeroNotaDistribuidor;
     }
 
@@ -95,19 +96,35 @@ public class PedidoRequest {
         this.transportadora = transportadora;
     }
 
-    public Double getValorTotalFaturamento() {
-        return valorTotalFaturamento;
+    public BigDecimal getValorTotalFaturamento() {
+        return valorTotalCliente;
     }
 
-    public void setValorTotalFaturamento(Double valorTotalFaturamento) {
-        this.valorTotalFaturamento = valorTotalFaturamento;
+    public void setValorTotalFaturamento(BigDecimal valorTotalFaturamento) {
+        this.valorTotalCliente = valorTotalFaturamento;
     }
 
-    public Double getValorTotalRevenda() {
-        return valorTotalRevenda;
+    public BigDecimal getValorTotalRevenda() {
+        return valorTotalDistr;
     }
 
-    public void setValorTotalRevenda(Double valorTotalRevenda) {
-        this.valorTotalRevenda = valorTotalRevenda;
+    public void setValorTotalRevenda(BigDecimal valorTotalRevenda) {
+        this.valorTotalDistr = valorTotalRevenda;
+    }
+
+    public BigDecimal getValorTotalCliente() {
+        return valorTotalCliente;
+    }
+
+    public void setValorTotalCliente(BigDecimal valorTotalCliente) {
+        this.valorTotalCliente = valorTotalCliente;
+    }
+
+    public BigDecimal getValorTotalDistr() {
+        return valorTotalDistr;
+    }
+
+    public void setValorTotalDistr(BigDecimal valorTotalDistr) {
+        this.valorTotalDistr = valorTotalDistr;
     }
 }

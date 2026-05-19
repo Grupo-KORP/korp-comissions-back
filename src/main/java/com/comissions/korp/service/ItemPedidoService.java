@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import java.math.BigDecimal;
 
 
 @Service
@@ -79,7 +80,10 @@ public class ItemPedidoService {
         ItemPedidoResumoResponse itemResponse = new ItemPedidoResumoResponse();
         itemResponse.setIdItemPedido(itemPedido.getIdItemPedido());
         itemResponse.setQuantidade(itemPedido.getQuantidade() != null ? itemPedido.getQuantidade() : 0);
-        itemResponse.setValorUnitario(itemPedido.getValorUnitario() != null ? itemPedido.getValorUnitario() : 0.0);
+        itemResponse.setVlrUnitDistr(itemPedido.getVlrUnitDistr() != null ? itemPedido.getVlrUnitDistr() : BigDecimal.ZERO);
+        itemResponse.setVlrTotalDistr(itemPedido.getVlrTotalDistr() != null ? itemPedido.getVlrTotalDistr() : BigDecimal.ZERO);
+        itemResponse.setVlrUnitCliente(itemPedido.getVlrUnitCliente() != null ? itemPedido.getVlrUnitCliente() : BigDecimal.ZERO);
+        itemResponse.setVlrTotalCliente(itemPedido.getVlrTotalCliente() != null ? itemPedido.getVlrTotalCliente() : BigDecimal.ZERO);
 
         ProdutoResponse produtoResponse = new ProdutoResponse();
         produtoResponse.setIdProduto(itemPedido.getProduto().getIdProduto());
@@ -94,7 +98,10 @@ public class ItemPedidoService {
         ItemPedidoResponse itemPedidoResponse = new ItemPedidoResponse();
         itemPedidoResponse.setIdItemPedido(itemPedido.getIdItemPedido());
         itemPedidoResponse.setQuantidade(itemPedido.getQuantidade() != null ? itemPedido.getQuantidade() : 0);
-        itemPedidoResponse.setValorUnitario(itemPedido.getValorUnitario() != null ? itemPedido.getValorUnitario() : 0.0);
+        itemPedidoResponse.setVlrUnitDistr(itemPedido.getVlrUnitDistr() != null ? itemPedido.getVlrUnitDistr() : BigDecimal.ZERO);
+        itemPedidoResponse.setVlrTotalDistr(itemPedido.getVlrTotalDistr() != null ? itemPedido.getVlrTotalDistr() : BigDecimal.ZERO);
+        itemPedidoResponse.setVlrUnitCliente(itemPedido.getVlrUnitCliente() != null ? itemPedido.getVlrUnitCliente() : BigDecimal.ZERO);
+        itemPedidoResponse.setVlrTotalCliente(itemPedido.getVlrTotalCliente() != null ? itemPedido.getVlrTotalCliente() : BigDecimal.ZERO);
 
         return itemPedidoResponse;
     }
@@ -103,9 +110,9 @@ public class ItemPedidoService {
         PedidoResumidoResponse pedidoResumo = new PedidoResumidoResponse();
         pedidoResumo.setIdPedido(itemPedido.getPedido().getIdPedido());
         pedidoResumo.setDataPedido(itemPedido.getPedido().getDataPedido());
-        pedidoResumo.setNumeroNotaDistribuidor(itemPedido.getPedido().getNumeroNotaDistribuidor() != null ? itemPedido.getPedido().getNumeroNotaDistribuidor() : 0);
-        pedidoResumo.setValorTotalRevenda(itemPedido.getPedido().getValorTotalRevenda() != null ? itemPedido.getPedido().getValorTotalRevenda() : 0.0);
-        pedidoResumo.setValorTotalFaturamento(itemPedido.getPedido().getValorTotalFaturamento() != null ? itemPedido.getPedido().getValorTotalFaturamento() : 0.0);
+        pedidoResumo.setNumeroNotaDistribuidor(itemPedido.getPedido().getNumeroNotaDistribuidor() != null ? itemPedido.getPedido().getNumeroNotaDistribuidor() : null);
+        pedidoResumo.setValorTotalDistr(itemPedido.getPedido().getValorTotalRevenda() != null ? itemPedido.getPedido().getValorTotalRevenda() : BigDecimal.ZERO);
+        pedidoResumo.setValorTotalCliente(itemPedido.getPedido().getValorTotalFaturamento() != null ? itemPedido.getPedido().getValorTotalFaturamento() : BigDecimal.ZERO);
         pedidoResumo.setStatusPedido(itemPedido.getPedido().getStatusPedido() != null ? itemPedido.getPedido().getStatusPedido() : "Não informado");
 
         return pedidoResumo;

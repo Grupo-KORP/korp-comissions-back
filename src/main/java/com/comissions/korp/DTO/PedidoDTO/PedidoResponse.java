@@ -9,9 +9,9 @@ public class PedidoResponse {
 
     private Integer idPedido;
     private LocalDate dataPedido;
-    private Integer numeroNotaDistribuidor;
-    private Double valorTotalRevenda;
-    private Double valorTotalFaturamento;
+    private String numeroNotaDistribuidor;
+    private java.math.BigDecimal valorTotalDistr;
+    private java.math.BigDecimal valorTotalCliente;
     private String statusPedido;
     private Boolean frete;
     private String transportadora;
@@ -48,28 +48,28 @@ public class PedidoResponse {
         this.dataPedido = dataPedido;
     }
 
-    public Integer getNumeroNotaDistribuidor() {
+    public String getNumeroNotaDistribuidor() {
         return numeroNotaDistribuidor;
     }
 
-    public void setNumeroNotaDistribuidor(Integer numeroNotaDistribuidor) {
+    public void setNumeroNotaDistribuidor(String numeroNotaDistribuidor) {
         this.numeroNotaDistribuidor = numeroNotaDistribuidor;
     }
 
-    public Double getValorTotalRevenda() {
-        return valorTotalRevenda;
+    public java.math.BigDecimal getValorTotalDistr() {
+        return valorTotalDistr;
     }
 
-    public void setValorTotalRevenda(Double valorTotalRevenda) {
-        this.valorTotalRevenda = valorTotalRevenda;
+    public void setValorTotalDistr(java.math.BigDecimal valorTotalDistr) {
+        this.valorTotalDistr = valorTotalDistr;
     }
 
-    public Double getValorTotalFaturamento() {
-        return valorTotalFaturamento;
+    public java.math.BigDecimal getValorTotalCliente() {
+        return valorTotalCliente;
     }
 
-    public void setValorTotalFaturamento(Double valorTotalFaturamento) {
-        this.valorTotalFaturamento = valorTotalFaturamento;
+    public void setValorTotalCliente(java.math.BigDecimal valorTotalCliente) {
+        this.valorTotalCliente = valorTotalCliente;
     }
 
     public String getStatusPedido() {

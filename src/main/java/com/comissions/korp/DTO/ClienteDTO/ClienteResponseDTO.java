@@ -7,6 +7,9 @@ public class ClienteResponseDTO {
     private String cnpj;
     private String telefone;
     private String email;
+    private String inscricaoEstadual;
+    private Boolean ativo;
+    private Integer fkVendedorCadastro;
 
     public String getCnpj() {
         return cnpj;
@@ -54,5 +57,29 @@ public class ClienteResponseDTO {
 
     public void setTelefone(String telefone) {
         this.telefone = telefone;
+    }
+
+    public String getInscricaoEstadual() {
+        return inscricaoEstadual;
+    }
+
+    public void setInscricaoEstadual(String inscricaoEstadual) {
+        this.inscricaoEstadual = inscricaoEstadual;
+    }
+
+    public Boolean getAtivo() {
+        return ativo;
+    }
+
+    public void setAtivo(Boolean ativo) {
+        this.ativo = ativo;
+    }
+
+    public Integer getFkVendedorCadastro() {
+        return fkVendedorCadastro;
+    }
+
+    public void setFkVendedorCadastro(Integer fkVendedorCadastro) {
+        this.fkVendedorCadastro = fkVendedorCadastro;
     }
 }

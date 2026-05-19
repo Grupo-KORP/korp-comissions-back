@@ -7,6 +7,7 @@ import org.hibernate.validator.constraints.Length;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "usuario")
@@ -31,8 +32,8 @@ public class Usuario {
     @Length(min = 10, message = "Formato do numero de telefone deve ser válido (ex: xxxxxxxxxxx).")
     private String telefone;
 
-    @Column(name = "percentual_comissao", precision = 5)
-    private Double percentualComissao;
+    @Column(name = "percentual_comissao", precision = 5, scale = 2)
+    private BigDecimal percentualComissao;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "fk_role")
@@ -42,10 +43,16 @@ public class Usuario {
     @Column(name = "dt_criacao")
     private LocalDateTime dtCriacao;
 
+    @Column(name = "primeiro_acesso", nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
+    private Boolean primeiroAcesso = true;
+
+    @Column(name = "ativo", nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
+    private Boolean ativo = true;
+
     public Usuario() {
     }
 
-    public Usuario(Integer idUsuario, String nome, String email, String senha, String telefone, Double percentualComissao, Role roles, LocalDateTime dtCriacao) {
+    public Usuario(Integer idUsuario, String nome, String email, String senha, String telefone, BigDecimal percentualComissao, Role roles, LocalDateTime dtCriacao) {
         this.idUsuario = idUsuario;
         this.nome = nome;
         this.email = email;
@@ -125,12 +132,28 @@ public class Usuario {
         this.dtCriacao = dtCriacao;
     }
 
-    public Double getPercentualComissao() {
+    public BigDecimal getPercentualComissao() {
         return percentualComissao;
     }
 
-    public void setPercentualComissao(Double percentualComissao) {
+    public void setPercentualComissao(BigDecimal percentualComissao) {
         this.percentualComissao = percentualComissao;
+    }
+
+    public Boolean getPrimeiroAcesso() {
+        return primeiroAcesso;
+    }
+
+    public void setPrimeiroAcesso(Boolean primeiroAcesso) {
+        this.primeiroAcesso = primeiroAcesso;
+    }
+
+    public Boolean getAtivo() {
+        return ativo;
+    }
+
+    public void setAtivo(Boolean ativo) {
+        this.ativo = ativo;
     }
 
 }
