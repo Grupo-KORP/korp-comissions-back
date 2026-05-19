@@ -5,6 +5,7 @@ import com.comissions.korp.entity.ENUM.StatusComissao;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "comissao")
@@ -15,13 +16,14 @@ public class Comissao {
     @Column(name = "id_comissao")
     private Integer id;
 
-    @Column(name = "valor_comissao", nullable = false, precision = 10)
-    private Double valorComissao;
+    @Column(name = "valor_comissao", nullable = false, precision = 10, scale = 2)
+    private BigDecimal valorComissao;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status_comissao", nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'PENDENTE'")
     private StatusComissao statusComissao;
 
+    @Column(name = "data_pagamento")
     private LocalDate dataPagamento;
 
     @ManyToOne
@@ -44,11 +46,11 @@ public class Comissao {
         this.id = id;
     }
 
-    public Double getValorComissao() {
+    public BigDecimal getValorComissao() {
         return valorComissao;
     }
 
-    public void setValorComissao(Double valorComissao) {
+    public void setValorComissao(BigDecimal valorComissao) {
         this.valorComissao = valorComissao;
     }
 

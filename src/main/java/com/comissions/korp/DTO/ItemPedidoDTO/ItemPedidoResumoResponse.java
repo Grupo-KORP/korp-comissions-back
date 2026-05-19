@@ -6,7 +6,10 @@ public class ItemPedidoResumoResponse {
 
     private Integer idItemPedido;
     private Integer quantidade;
-    private Double valorUnitario;
+    private java.math.BigDecimal vlrUnitDistr;
+    private java.math.BigDecimal vlrTotalDistr;
+    private java.math.BigDecimal vlrUnitCliente;
+    private java.math.BigDecimal vlrTotalCliente;
     private ProdutoResponse produto;
 
     public ItemPedidoResumoResponse() {
@@ -28,12 +31,36 @@ public class ItemPedidoResumoResponse {
         this.quantidade = quantidade;
     }
 
-    public Double getValorUnitario() {
-        return valorUnitario;
+    public java.math.BigDecimal getVlrUnitDistr() {
+        return vlrUnitDistr;
     }
 
-    public void setValorUnitario(Double valorUnitario) {
-        this.valorUnitario = valorUnitario;
+    public void setVlrUnitDistr(java.math.BigDecimal vlrUnitDistr) {
+        this.vlrUnitDistr = vlrUnitDistr;
+    }
+
+    public java.math.BigDecimal getVlrTotalDistr() {
+        return vlrTotalDistr;
+    }
+
+    public void setVlrTotalDistr(java.math.BigDecimal vlrTotalDistr) {
+        this.vlrTotalDistr = vlrTotalDistr;
+    }
+
+    public java.math.BigDecimal getVlrUnitCliente() {
+        return vlrUnitCliente;
+    }
+
+    public void setVlrUnitCliente(java.math.BigDecimal vlrUnitCliente) {
+        this.vlrUnitCliente = vlrUnitCliente;
+    }
+
+    public java.math.BigDecimal getVlrTotalCliente() {
+        return vlrTotalCliente;
+    }
+
+    public void setVlrTotalCliente(java.math.BigDecimal vlrTotalCliente) {
+        this.vlrTotalCliente = vlrTotalCliente;
     }
 
     public ProdutoResponse getProduto() {

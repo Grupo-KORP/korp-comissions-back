@@ -7,6 +7,8 @@ public class ContatoResponseDTO {
     private String telefone;
     private Integer idCliente;
     private Integer idDistribuidor;
+    private Boolean ativo;
+    private Integer idVendedorCadastro;
 
     public ContatoResponseDTO() {
     }
@@ -66,5 +68,21 @@ public class ContatoResponseDTO {
 
     public void setIdDistribuidor(Integer idDistribuidor) {
         this.idDistribuidor = idDistribuidor;
+    }
+
+    public Boolean getAtivo() {
+        return ativo;
+    }
+
+    public void setAtivo(Boolean ativo) {
+        this.ativo = ativo;
+    }
+
+    public Integer getIdVendedorCadastro() {
+        return idVendedorCadastro;
+    }
+
+    public void setIdVendedorCadastro(Integer idVendedorCadastro) {
+        this.idVendedorCadastro = idVendedorCadastro;
     }
 }

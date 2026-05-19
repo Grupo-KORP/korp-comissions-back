@@ -5,6 +5,7 @@ import com.comissions.korp.entity.ENUM.StatusParcela;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "parcela")
@@ -18,8 +19,8 @@ public class Parcela {
     @Column(name = "numero_parcela", nullable = false)
     private Integer numeroParcela;
 
-    @Column(name = "valor_parcela", nullable = false, precision = 10)
-    private Double valorParcela;
+    @Column(name = "valor_parcela", nullable = false, precision = 10, scale = 2)
+    private BigDecimal valorParcela;
 
     @Column(name = "data_vencimento",nullable = false)
     private LocalDate dataVencimento;
@@ -51,11 +52,11 @@ public class Parcela {
         this.numeroParcela = numeroParcela;
     }
 
-    public Double getValorParcela() {
+    public BigDecimal getValorParcela() {
         return valorParcela;
     }
 
-    public void setValorParcela(Double valorParcela) {
+    public void setValorParcela(BigDecimal valorParcela) {
         this.valorParcela = valorParcela;
     }
 

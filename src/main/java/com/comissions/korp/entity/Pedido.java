@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "pedido")
@@ -18,14 +19,14 @@ public class Pedido {
     @Column(name = "data_pedido", nullable = false)
     private LocalDate dataPedido;
 
-    @Column(name = "numero_nota_distribuidor")
-    private Integer numeroNotaDistribuidor;
+    @Column(name = "numero_nota_distribuidor", length = 20)
+    private String numeroNotaDistribuidor;
 
-    @Column(name = "valor_total_revenda", nullable = false, precision = 10)
-    private Double valorTotalRevenda;
+    @Column(name = "valor_total_distr", nullable = false, precision = 10, scale = 2)
+    private BigDecimal valorTotalDistr;
 
-    @Column(name = "valor_total_faturamento", nullable = false, precision = 10)
-    private Double valorTotalFaturamento;
+    @Column(name = "valor_total_cliente", nullable = false, precision = 10, scale = 2)
+    private BigDecimal valorTotalCliente;
 
     @Column(name = "status_pedido", nullable = false, length = 50, columnDefinition = "VARCHAR(50) DEFAULT 'PENDENTE'")
     private String statusPedido;
@@ -38,6 +39,9 @@ public class Pedido {
 
     @Column(length = 250)
     private String observacoes;
+
+    @Column(name = "ativo", nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
+    private Boolean ativo = true;
 
     @ManyToOne
     @JoinColumn(name = "fk_vendedor", nullable = false)
@@ -70,11 +74,11 @@ public class Pedido {
         this.dataPedido = dataPedido;
     }
 
-    public Integer getNumeroNotaDistribuidor() {
+    public String getNumeroNotaDistribuidor() {
         return numeroNotaDistribuidor;
     }
 
-    public void setNumeroNotaDistribuidor(Integer numeroNotaDistribuidor) {
+    public void setNumeroNotaDistribuidor(String numeroNotaDistribuidor) {
         this.numeroNotaDistribuidor = numeroNotaDistribuidor;
     }
 
@@ -86,20 +90,20 @@ public class Pedido {
         this.cliente = cliente;
     }
 
-    public Double getValorTotalRevenda() {
-        return valorTotalRevenda;
+    public BigDecimal getValorTotalRevenda() {
+        return valorTotalDistr;
     }
 
-    public void setValorTotalRevenda(Double valorTotalRevenda) {
-        this.valorTotalRevenda = valorTotalRevenda;
+    public void setValorTotalRevenda(BigDecimal valorTotalRevenda) {
+        this.valorTotalDistr = valorTotalRevenda;
     }
 
-    public Double getValorTotalFaturamento() {
-        return valorTotalFaturamento;
+    public BigDecimal getValorTotalFaturamento() {
+        return valorTotalCliente;
     }
 
-    public void setValorTotalFaturamento(Double valorTotalFaturamento) {
-        this.valorTotalFaturamento = valorTotalFaturamento;
+    public void setValorTotalFaturamento(BigDecimal valorTotalFaturamento) {
+        this.valorTotalCliente = valorTotalFaturamento;
     }
 
     public String getStatusPedido() {

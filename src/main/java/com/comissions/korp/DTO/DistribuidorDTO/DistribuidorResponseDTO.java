@@ -7,6 +7,8 @@ public class DistribuidorResponseDTO {
     private String cnpj;
     private String telefone;
     private String email;
+    private String inscricaoEstadual;
+    private Boolean ativo;
 
     public DistribuidorResponseDTO() {
     }
@@ -66,5 +68,21 @@ public class DistribuidorResponseDTO {
 
     public void setTelefone(String telefone) {
         this.telefone = telefone;
+    }
+
+    public String getInscricaoEstadual() {
+        return inscricaoEstadual;
+    }
+
+    public void setInscricaoEstadual(String inscricaoEstadual) {
+        this.inscricaoEstadual = inscricaoEstadual;
+    }
+
+    public Boolean getAtivo() {
+        return ativo;
+    }
+
+    public void setAtivo(Boolean ativo) {
+        this.ativo = ativo;
     }
 }

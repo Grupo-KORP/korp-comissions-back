@@ -14,11 +14,18 @@ public class Contato {
     @Column(name = "nome", length = 250, nullable = false)
     private String nome;
 
-    @Column(name = "email", length = 120, nullable = false)
+    @Column(name = "email", length = 120)
     private String email;
 
     @Column(name = "telefone", length = 20)
     private String telefone;
+
+    @Column(name = "ativo", nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
+    private Boolean ativo = true;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "fk_vendedor_cadastro")
+    private Usuario vendedorCadastro;
 
     // Relacionamento N:1 com Cliente
     @ManyToOne(fetch = FetchType.LAZY)
@@ -87,5 +94,21 @@ public class Contato {
 
     public void setTelefone(String telefone) {
         this.telefone = telefone;
+    }
+
+    public Boolean getAtivo() {
+        return ativo;
+    }
+
+    public void setAtivo(Boolean ativo) {
+        this.ativo = ativo;
+    }
+
+    public Usuario getVendedorCadastro() {
+        return vendedorCadastro;
+    }
+
+    public void setVendedorCadastro(Usuario vendedorCadastro) {
+        this.vendedorCadastro = vendedorCadastro;
     }
 }
