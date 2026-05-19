@@ -1,11 +1,13 @@
 package com.comissions.korp.DTO;
 
+import java.math.BigDecimal;
+
 public class ListarVendedoresResponseDTO {
 
     private String  nome;
     private String  email;
     private String  telefone;
-    private Double  percentualComissao;
+    private BigDecimal  percentualComissao;
     private Integer numeroDePedidos;
     private Integer vendasEfetivadas;   // fixo 0 por ora
     private Integer comissoesPendentes; // fixo 0 por ora
@@ -16,7 +18,7 @@ public class ListarVendedoresResponseDTO {
             String nome,
             String email,
             String telefone,
-            Double percentualComissao,
+            BigDecimal percentualComissao,
             Integer numeroDePedidos,
             Integer vendasEfetivadas,
             Integer comissoesPendentes) {
@@ -32,7 +34,7 @@ public class ListarVendedoresResponseDTO {
     public String  getNome()               { return nome; }
     public String  getEmail()              { return email; }
     public String  getTelefone()           { return telefone; }
-    public Double  getPercentualComissao() { return percentualComissao; }
+    public BigDecimal  getPercentualComissao() { return percentualComissao; }
     public Integer getNumeroDePedidos()    { return numeroDePedidos; }
     public Integer getVendasEfetivadas()   { return vendasEfetivadas; }
     public Integer getComissoesPendentes() { return comissoesPendentes; }

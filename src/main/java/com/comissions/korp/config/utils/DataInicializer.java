@@ -54,7 +54,7 @@ public class DataInicializer implements ApplicationRunner {
 
         if (!usuarioRepository.existsByEmail("vendedor@tndbrasil.com.br")) {
             UsuarioRequestDTO requestDTO = new UsuarioRequestDTO(
-                    null,"Vendedor Padrão","vendedor@tndbrasil.com.br","","119950012321",3,30.0
+                    null,"Vendedor Padrão","vendedor@tndbrasil.com.br","","119950012321",3,BigDecimal.valueOf(30.0)
             );
 
             Optional<Role> role = roleRepository.findById(requestDTO.getRole());
