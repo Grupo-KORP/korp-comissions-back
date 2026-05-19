@@ -7,4 +7,10 @@ import java.util.Optional;
 
 public interface ClienteRepository extends JpaRepository<Cliente, Integer> {
     Optional<Cliente> findByCnpj(String cnpj);
+
+    boolean existsByCnpj(String cnpj);
+
+    boolean existsByTelefone(String telefone);
+
+    boolean existsByEmail(String email);
 }

@@ -29,14 +29,6 @@ public class GlobalExceptionHandler {
             mensagem = "Vendedor não pode ser excluído pois possui pedidos vinculados.";
         }
 
-        // INSERT/UPDATE com duplicidade (UNIQUE constraints)
-        else if (causa.contains("uc_distribuidor_cnpj")) {
-            mensagem = "Já existe um distribuidor cadastrado com este CNPJ.";
-        } else if (causa.contains("uc_cliente_cnpj")) {
-            mensagem = "Já existe um cliente cadastrado com este CNPJ.";
-        } else if (causa.contains("uc_usuario_email")) {
-            mensagem = "Já existe um usuário cadastrado com este e-mail.";
-        }
 
         Map<String, String> response = new HashMap<>();
         response.put("erro", mensagem);
@@ -53,6 +45,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UsuarioJaExistente.class)
     public ResponseEntity<Map<String, String>> handleUsuarioJaExistente(UsuarioJaExistente ex) {
+        System.out.println(ex.getMessage());
         return ResponseEntity
                 .status(HttpStatus.CONFLICT) // 409
                 .body(Map.of("message", ex.getMessage()));
