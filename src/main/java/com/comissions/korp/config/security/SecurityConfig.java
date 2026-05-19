@@ -54,6 +54,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/usuario").permitAll()
                         .requestMatchers(HttpMethod.GET, "/usuario/{id}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/usuario/**").hasRole("FINAN")
+                        .requestMatchers(HttpMethod.GET, "/usuario/**").hasRole("ADMIN")
                         .requestMatchers(ROUTE_PERMIT).permitAll()
 
 

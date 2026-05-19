@@ -24,7 +24,7 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
 
     @Query("""
     SELECT u FROM Usuario u JOIN u.roles r
-    WHERE r.id = 1
+    WHERE r.id = 3
     AND (:busca IS NULL OR
          LOWER(u.nome)  LIKE LOWER(CONCAT('%', :busca, '%')) OR
          LOWER(u.email) LIKE LOWER(CONCAT('%', :busca, '%')))
