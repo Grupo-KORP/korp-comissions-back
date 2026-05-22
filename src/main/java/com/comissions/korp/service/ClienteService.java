@@ -89,6 +89,7 @@ public class ClienteService {
         clienteExistente.setRazaoSocial(requestDTO.getRazaoSocial());
         clienteExistente.setNomeFantasia(requestDTO.getNomeFantasia());
         clienteExistente.setCnpj(requestDTO.getCnpj());
+        clienteExistente.setInscricaoEstadual(requestDTO.getInscricaoEstadual());
         clienteExistente.setTelefone(requestDTO.getTelefone());
         clienteExistente.setEmail(requestDTO.getEmail());
 
@@ -116,6 +117,7 @@ public class ClienteService {
         cliente.setRazaoSocial(dto.getRazaoSocial());
         cliente.setNomeFantasia(dto.getNomeFantasia());
         cliente.setCnpj(dto.getCnpj());
+        cliente.setInscricaoEstadual(dto.getInscricaoEstadual());
         cliente.setTelefone(dto.getTelefone());
         cliente.setEmail(dto.getEmail());
         return cliente;
@@ -128,6 +130,7 @@ public class ClienteService {
         ClienteResponseDTO dto = new ClienteResponseDTO();
         dto.setIdCliente(cliente.getIdCliente());
         dto.setRazaoSocial(cliente.getRazaoSocial());
+        dto.setInscricaoEstadual(cliente.getInscricaoEstadual());
         dto.setNomeFantasia(cliente.getNomeFantasia());
         dto.setCnpj(cliente.getCnpj());
         dto.setTelefone(cliente.getTelefone());

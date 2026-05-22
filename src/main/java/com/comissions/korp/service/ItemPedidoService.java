@@ -88,7 +88,6 @@ public class ItemPedidoService {
         ProdutoResponse produtoResponse = new ProdutoResponse();
         produtoResponse.setIdProduto(itemPedido.getProduto().getIdProduto());
         produtoResponse.setNome(itemPedido.getProduto().getNome() != null ? itemPedido.getProduto().getNome() : "Não informado");
-        produtoResponse.setDescricao(itemPedido.getProduto().getDescricao() != null ? itemPedido.getProduto().getDescricao() : "Não informado");
 
         itemResponse.setProduto(produtoResponse);
         return itemResponse;
