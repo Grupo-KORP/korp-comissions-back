@@ -15,15 +15,12 @@ public class    Produto {
     @Column(name = "nome", nullable = false, length = 150)
     private String nome;
 
-    @Column(name = "descricao", columnDefinition = "TEXT")
-    private String descricao;
+    @Column(name = "codigo_produto", length = 150)
+    private String codigoProduto;
 
     @Column(name = "ativo", nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
     private Boolean ativo = true;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "fk_vendedor_cadastro")
-    private Usuario vendedorCadastro;
 
     public Produto() {
     }
@@ -44,12 +41,12 @@ public class    Produto {
         this.nome = nome;
     }
 
-    public String getDescricao() {
-        return descricao;
+    public String getCodigoProduto() {
+        return codigoProduto;
     }
 
-    public void setDescricao(String descricao) {
-        this.descricao = descricao;
+    public void setCodigoProduto(String codigoProduto) {
+        this.codigoProduto = codigoProduto;
     }
 
     public Boolean getAtivo() {
@@ -60,11 +57,4 @@ public class    Produto {
         this.ativo = ativo;
     }
 
-    public Usuario getVendedorCadastro() {
-        return vendedorCadastro;
-    }
-
-    public void setVendedorCadastro(Usuario vendedorCadastro) {
-        this.vendedorCadastro = vendedorCadastro;
-    }
 }

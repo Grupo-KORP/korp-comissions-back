@@ -61,6 +61,7 @@ public class DistribuidorService {
         distribuidorExistente.setRazaoSocial(requestDTO.getRazaoSocial());
         distribuidorExistente.setNomeFantasia(requestDTO.getNomeFantasia());
         distribuidorExistente.setCnpj(requestDTO.getCnpj());
+        distribuidorExistente.setInscricaoEstadual(requestDTO.getInscricaoEstadual());
         distribuidorExistente.setTelefone(requestDTO.getTelefone());
         distribuidorExistente.setEmail(requestDTO.getEmail());
 
@@ -81,6 +82,7 @@ public class DistribuidorService {
         distribuidor.setRazaoSocial(dto.getRazaoSocial());
         distribuidor.setNomeFantasia(dto.getNomeFantasia());
         distribuidor.setCnpj(dto.getCnpj());
+        distribuidor.setInscricaoEstadual(dto.getInscricaoEstadual());
         distribuidor.setTelefone(dto.getTelefone());
         distribuidor.setEmail(dto.getEmail());
         return distribuidor;
@@ -92,6 +94,7 @@ public class DistribuidorService {
         dto.setRazaoSocial(distribuidor.getRazaoSocial());
         dto.setNomeFantasia(distribuidor.getNomeFantasia());
         dto.setCnpj(distribuidor.getCnpj());
+        dto.setInscricaoEstadual(distribuidor.getInscricaoEstadual());
         dto.setTelefone(distribuidor.getTelefone());
         dto.setEmail(distribuidor.getEmail());
         return dto;

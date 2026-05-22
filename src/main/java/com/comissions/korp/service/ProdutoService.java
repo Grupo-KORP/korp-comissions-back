@@ -1,15 +1,21 @@
 package com.comissions.korp.service;
 
 
+import com.comissions.korp.DTO.ListarVendedoresResponseDTO;
+import com.comissions.korp.DTO.ProdutoDTO.ListarProdutosResponseDTO;
 import com.comissions.korp.DTO.ProdutoDTO.ProdutoRequest;
 import com.comissions.korp.DTO.ProdutoDTO.ProdutoResponse;
 import com.comissions.korp.entity.Produto;
+import com.comissions.korp.entity.Usuario;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.repository.ProdutoRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 
@@ -25,10 +31,16 @@ public class ProdutoService {
 
 
     @Transactional
-    public ProdutoResponse cadastrarProduto(ProdutoRequest produtoRequest){
+    public ProdutoResponse cadastrarProduto(ProdutoRequest produtoRequest) {
         Produto produto = convertToEntity(produtoRequest);
+
         Produto produtoSalvo = produtoRepository.save(produto);
-        return convertToResponseDTO(produtoSalvo);
+
+        produtoSalvo.setCodigoProduto("#P" + String.format("%04d", produtoSalvo.getIdProduto()));
+
+        Produto produtoFinal = produtoRepository.save(produtoSalvo);
+
+        return convertToResponseDTO(produtoFinal);
     }
 
     public List<ProdutoResponse> listarProdutos(){
@@ -66,7 +78,6 @@ public class ProdutoService {
         Produto produto = buscarProdutoPorId(id);
 
         produto.setNome(produtoRequest.getNome());
-        produto.setDescricao(produtoRequest.getDescricao());
         Produto produtoAtt = produtoRepository.save(produto);
         return convertToResponseDTO(produtoAtt);
     }
@@ -75,22 +86,36 @@ public class ProdutoService {
     @Transactional
     public void deletarProduto(Integer id){
         buscarProdutoPorId(id);
-
         produtoRepository.deleteById(id);
     }
 
     public Produto convertToEntity(ProdutoRequest dto) {
         Produto produto = new Produto();
         produto.setNome(dto.getNome());
-        produto.setDescricao(dto.getDescricao());
         return produto;
     }
 
     public ProdutoResponse convertToResponseDTO(Produto produto) {
         ProdutoResponse dto = new ProdutoResponse();
         dto.setIdProduto(produto.getIdProduto());
-        dto.setNome(produto.getNome() != null ? produto.getNome() : "Não informado");
-        dto.setDescricao(produto.getDescricao() != null ? produto.getDescricao() : "Não informado");
+        dto.setNome(produto.getNome());
+        dto.setCodigoProduto(produto.getCodigoProduto());
         return dto;
+    }
+
+
+    /**
+     * Lista todos os Vendedores com paginação
+     */
+    public Page<ListarProdutosResponseDTO> listarTodosProdutos(String busca, Pageable pageable) {
+
+        String filtro = (busca != null && !busca.isBlank()) ? busca : null;
+
+        Page<Produto> paginaProdutos = produtoRepository.findProdutosComFiltro(filtro, pageable);
+
+        return paginaProdutos.map(produto -> new ListarProdutosResponseDTO(
+                produto.getNome(),
+                produto.getCodigoProduto()
+        ));
     }
 }

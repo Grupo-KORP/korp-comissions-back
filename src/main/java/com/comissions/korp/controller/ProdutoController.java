@@ -1,11 +1,16 @@
 package com.comissions.korp.controller;
 
+import com.comissions.korp.DTO.ListarVendedoresResponseDTO;
+import com.comissions.korp.DTO.ProdutoDTO.ListarProdutosResponseDTO;
 import com.comissions.korp.DTO.ProdutoDTO.ProdutoRequest;
 import com.comissions.korp.DTO.ProdutoDTO.ProdutoResponse;
 import com.comissions.korp.service.ProdutoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -91,5 +96,18 @@ public class ProdutoController {
     public ResponseEntity<Void> deletarProduto(@PathVariable Integer id){
         produtoService.deletarProduto(id);
         return ResponseEntity.status(204).build();
+    }
+
+
+    @GetMapping("/listarFiltro")
+    @Operation(summary = "Listar todos os produtos", description = "Retorna todos os produtos cadastrados com paginação.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Produtos listados com sucesso"),
+            @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
+    })
+    public ResponseEntity<Page<ListarProdutosResponseDTO>> listarProdutos(
+            @RequestParam(required = false) String busca,
+            @PageableDefault(size = 5, sort = "nome") Pageable pageable) {
+        return ResponseEntity.ok(produtoService.listarTodosProdutos(busca, pageable));
     }
 }

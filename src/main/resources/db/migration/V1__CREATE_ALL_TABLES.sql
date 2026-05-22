@@ -119,21 +119,6 @@ CREATE TABLE contato (
 -- ------------------------------------------------------------
 -- PRODUTO
 -- ------------------------------------------------------------
-CREATE TABLE produto (
-                         id_produto           INT          AUTO_INCREMENT NOT NULL,
-                         nome                 VARCHAR(150) NOT NULL,
-                         descricao            TEXT         NULL,
-                         ativo                BOOLEAN      NOT NULL DEFAULT TRUE,
-                         fk_vendedor_cadastro INT          NULL,
-                         CONSTRAINT pk_produto          PRIMARY KEY (id_produto),
-                         CONSTRAINT fk_produto_vendedor FOREIGN KEY (fk_vendedor_cadastro)
-                             REFERENCES usuario(id_usuario) ON DELETE SET NULL
-);
-
-
--- ------------------------------------------------------------
--- PEDIDO
--- ------------------------------------------------------------
 CREATE TABLE pedido (
                         id_pedido                INT          AUTO_INCREMENT NOT NULL,
                         data_pedido              DATE         NOT NULL,
@@ -155,6 +140,18 @@ CREATE TABLE pedido (
                             REFERENCES cliente(id_cliente) ON DELETE RESTRICT,
                         CONSTRAINT fk_pedido_distribuidor FOREIGN KEY (fk_distribuidor)
                             REFERENCES distribuidor(id_distribuidor) ON DELETE RESTRICT
+);
+
+
+-- ------------------------------------------------------------
+-- PEDIDO
+-- ------------------------------------------------------------
+CREATE TABLE produto (
+                         id_produto           INT          AUTO_INCREMENT NOT NULL,
+                         nome                 VARCHAR(150) NOT NULL,
+                         codigo_produto       VARCHAR(20)        NULL,
+                         ativo                BOOLEAN            NOT NULL DEFAULT TRUE,
+                         CONSTRAINT pk_produto          PRIMARY KEY (id_produto)
 );
 
 
