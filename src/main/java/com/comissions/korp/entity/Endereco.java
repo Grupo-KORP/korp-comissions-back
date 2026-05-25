@@ -33,10 +33,6 @@ public class Endereco {
     @Column(name = "cep", length = 10, nullable = false)
     private String cep;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "tipo_endereco", nullable = false)
-    private TipoEndereco tipoEndereco;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "fk_cliente")
     private Cliente cliente;
@@ -110,14 +106,6 @@ public class Endereco {
 
     public void setCep(String cep) {
         this.cep = cep;
-    }
-
-    public TipoEndereco getTipoEndereco() {
-        return tipoEndereco;
-    }
-
-    public void setTipoEndereco(TipoEndereco tipoEndereco) {
-        this.tipoEndereco = tipoEndereco;
     }
 
     public Cliente getCliente() {

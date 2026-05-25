@@ -111,9 +111,9 @@ public class PedidoService {
         Pedido pedido = pedidoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontrado("Pedido não encontrado com id: " + id));
 
-        // Para deletar o pedido, precisa del tambem suas amarrações na tbl: Item_pedido
-        itemPedidoRepository.deleteByPedido(pedido);
-        pedidoRepository.deleteById(id);
+        pedido.setAtivo(false);
+
+        pedidoRepository.save(pedido);
     }
 
     //Convertendo entidades em DTO
