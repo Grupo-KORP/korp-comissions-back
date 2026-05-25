@@ -3,6 +3,7 @@ package com.comissions.korp.controller;
 import com.comissions.korp.DTO.ListarVendedoresResponseDTO;
 import com.comissions.korp.DTO.UsuarioRequestDTO;
 import com.comissions.korp.DTO.UsuarioResponseDTO;
+import com.comissions.korp.DTO.UsuarioTrocarSenhaReqDTO;
 import com.comissions.korp.service.UsuarioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -118,5 +119,23 @@ public class UsuarioController {
             @RequestParam(required = false) String busca,
             @PageableDefault(size = 5, sort = "nome") Pageable pageable) {
         return ResponseEntity.ok(usuarioService.listarTodosVendedores(busca, pageable));
+    }
+
+    /**
+     * Trocar senha no primeiro acesso
+     * POST /usuario/trocar-senha-primeiro-acesso
+     */
+    @PostMapping("/trocar-senha-primeiro-acesso")
+    @Operation(summary = "Trocar senha no primeiro acesso", description = "Permite ao usuário trocar sua senha provisória na primeira autenticação.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Senha alterada com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Requisição inválida ou senha antiga incorreta"),
+            @ApiResponse(responseCode = "401", description = "Não autorizado"),
+            @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
+    })
+    public ResponseEntity<Void> trocarSenhaPrimeiroAcesso(
+            @RequestBody UsuarioTrocarSenhaReqDTO usuarioTrocarSenhaReqDTO) {
+        usuarioService.retornoDoPrimeiroAcesso(usuarioTrocarSenhaReqDTO);
+        return ResponseEntity.noContent().build();
     }
 }
