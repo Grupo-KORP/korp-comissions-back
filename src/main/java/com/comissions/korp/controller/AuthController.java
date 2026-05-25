@@ -45,6 +45,6 @@ public class AuthController {
         String token = jwtService.gerarToken(userDetails);
         Usuario usuario = usuarioRepository.findByEmail(request.getEmail()).orElseThrow();
 
-        return ResponseEntity.ok(new LoginResponseDTO(token, usuario.getNome(), usuario.getEmail()));
+        return ResponseEntity.ok(new LoginResponseDTO(token, usuario.getNome(), usuario.getEmail(), usuario.getPrimeiroAcesso()));
     }
 }
