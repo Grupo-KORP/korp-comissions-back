@@ -169,6 +169,8 @@ public class UsuarioService {
 
         usuarioTrocarSenha.setSenha(passwordEncoder.encode(usuarioTrocarSenhaReqDTO.getSenhaNova()));
 
+        usuarioTrocarSenha.setPrimeiroAcesso(false);
+
         usuarioRepository.save(usuarioTrocarSenha);
     }
 
