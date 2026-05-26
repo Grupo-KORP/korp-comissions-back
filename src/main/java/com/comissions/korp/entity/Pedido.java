@@ -153,4 +153,28 @@ public class Pedido {
     public void setUsuario(Usuario usuario) {
         this.usuario = usuario;
     }
+
+    public BigDecimal getValorTotalDistr() {
+        return valorTotalDistr;
+    }
+
+    public void setValorTotalDistr(BigDecimal valorTotalDistr) {
+        this.valorTotalDistr = valorTotalDistr;
+    }
+
+    public BigDecimal getValorTotalCliente() {
+        return valorTotalCliente;
+    }
+
+    public void setValorTotalCliente(BigDecimal valorTotalCliente) {
+        this.valorTotalCliente = valorTotalCliente;
+    }
+
+    public Boolean getAtivo() {
+        return ativo;
+    }
+
+    public void setAtivo(Boolean ativo) {
+        this.ativo = ativo;
+    }
 }

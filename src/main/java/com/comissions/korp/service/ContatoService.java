@@ -1,12 +1,18 @@
 package com.comissions.korp.service;
 
+import com.comissions.korp.DTO.ClienteDTO.ClienteRequestDTO;
+import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorRequestDTO;
 import com.comissions.korp.DTO.ContatoDTO.ContatoRequestDTO;
 import com.comissions.korp.DTO.ContatoDTO.ContatoResponseDTO;
+import com.comissions.korp.config.utils.SecurityUtils;
 import com.comissions.korp.entity.Cliente;
 import com.comissions.korp.entity.Contato;
 import com.comissions.korp.entity.Distribuidor;
+import com.comissions.korp.entity.Usuario;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.repository.ContatoRepository;
+import com.comissions.korp.repository.UsuarioRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,25 +26,85 @@ public class ContatoService {
     private final ContatoRepository contatoRepository;
     private final ClienteService clienteService;
     private final DistribuidorService distribuidorService;
+    private final UsuarioRepository usuarioRepository;
 
-    public ContatoService(ContatoRepository contatoRepository, ClienteService clienteService, DistribuidorService distribuidorService) {
+    @Autowired
+    private SecurityUtils securityUtils;
+
+    public ContatoService(ContatoRepository contatoRepository, ClienteService clienteService, DistribuidorService distribuidorService, UsuarioRepository usuarioRepository) {
         this.contatoRepository = contatoRepository;
         this.clienteService = clienteService;
         this.distribuidorService = distribuidorService;
+        this.usuarioRepository = usuarioRepository;
     }
 
     @Transactional
     public ContatoResponseDTO criar(ContatoRequestDTO requestDTO) {
         Contato contato = convertToEntity(requestDTO);
-        Contato contatoSalvo = contatoRepository.save(contato);
-        return convertToResponseDTO(contatoSalvo);
+        return convertToResponseDTO(contatoRepository.save(contato));
     }
+
+        @Transactional
+        public void criarFromClienteDTO(ClienteRequestDTO requestDTO, Integer id) {
+            ContatoRequestDTO contatoDto = new ContatoRequestDTO();
+            contatoDto.setNome(requestDTO.getNomeContato());
+            contatoDto.setEmail(requestDTO.getEmail());
+            contatoDto.setIdCliente(id);
+            contatoDto.setAtivo(true);
+
+            Contato contato = convertToEntity(contatoDto);
+
+            contatoRepository.save(contato);
+        }
+
+            @Transactional
+            public void atualizarFromClienteDTO(ClienteRequestDTO requestDTO, Integer id) {
+                Cliente cliente = clienteService.buscarClientePorId(id);
+                List<Contato> contatos = contatoRepository.findByCliente(cliente);
+                if (contatos != null && !contatos.isEmpty()) {
+                    Contato contatoExistente = contatos.get(0);
+                    contatoExistente.setNome(requestDTO.getNomeContato());
+                    contatoExistente.setEmail(requestDTO.getEmail());
+                    contatoRepository.save(contatoExistente);
+                } else {
+                    criarFromClienteDTO(requestDTO, id);
+                }
+            }
+
+
 
     public List<ContatoResponseDTO> listarTodos() {
         return contatoRepository.findAll()
                 .stream()
                 .map(this::convertToResponseDTO)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void criarFromDistribuidorDTO(DistribuidorRequestDTO requestDTO, Integer id) {
+        ContatoRequestDTO contatoDto = new ContatoRequestDTO();
+        contatoDto.setNome(requestDTO.getContato());
+        contatoDto.setEmail(requestDTO.getEmail());
+        contatoDto.setIdDistribuidor(id);
+        contatoDto.setAtivo(true);
+
+        Contato contato = convertToEntity(contatoDto);
+
+        contatoRepository.save(contato);
+    }
+
+    @Transactional
+    public void atualizarFromDistribuidorDTO(DistribuidorRequestDTO requestDTO, Integer id) {
+        Distribuidor distribuidor = distribuidorService.buscarDistribuidorPorId(id);
+        java.util.List<Contato> contatos = contatoRepository.findByDistribuidor(distribuidor);
+        if (contatos != null && !contatos.isEmpty()) {
+            Contato contatoExistente = contatos.get(0);
+            contatoExistente.setNome(requestDTO.getContato());
+            contatoExistente.setEmail(requestDTO.getEmail());
+            contatoRepository.save(contatoExistente);
+        } else {
+            criarFromDistribuidorDTO(requestDTO, id);
+        }
     }
 
     public ContatoResponseDTO buscarDtoPorId(Integer id) {
@@ -76,10 +142,9 @@ public class ContatoService {
 
     @Transactional
     public void deletar(Integer id) {
-        if (!contatoRepository.existsById(id)) {
-            throw new RecursoNaoEncontrado("Contato não encontrado com ID: " + id);
-        }
-        contatoRepository.deleteById(id);
+        Contato contato = contatoRepository.findById(id).orElseThrow(() -> new RecursoNaoEncontrado("Contato não encontrado com ID: " + id));
+        contato.setAtivo(false);
+        contatoRepository.save(contato);
     }
 
     private Contato convertToEntity(ContatoRequestDTO dto) {
@@ -98,6 +163,14 @@ public class ContatoService {
             Distribuidor distribuidor = distribuidorService.buscarDistribuidorPorId(dto.getIdDistribuidor());
             contato.setDistribuidor(distribuidor);
         }
+
+        contato.setAtivo(dto.getAtivo() != null ? dto.getAtivo() : true);
+
+        Integer id = securityUtils.getUsuarioIdAutenticado();
+
+        Usuario user = usuarioRepository.findById(id).orElseThrow(() -> new RecursoNaoEncontrado("Usuário autenticado não encontrado com ID: " + id));
+
+        contato.setVendedorCadastro(user);
 
         return contato;
     }

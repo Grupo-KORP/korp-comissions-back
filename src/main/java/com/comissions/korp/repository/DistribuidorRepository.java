@@ -9,4 +9,10 @@ import java.util.Optional;
 @Repository
 public interface DistribuidorRepository extends JpaRepository<Distribuidor, Integer> {
     Optional<Distribuidor> findByCnpj(String cnpj);
+
+    Boolean existsByCnpj(String cnpj);
+
+    boolean existsByTelefone(String telefone);
+
+    boolean existsByEmail(String email);
 }

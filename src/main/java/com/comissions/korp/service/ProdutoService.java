@@ -1,12 +1,9 @@
 package com.comissions.korp.service;
 
-
-import com.comissions.korp.DTO.ListarVendedoresResponseDTO;
 import com.comissions.korp.DTO.ProdutoDTO.ListarProdutosResponseDTO;
 import com.comissions.korp.DTO.ProdutoDTO.ProdutoRequest;
 import com.comissions.korp.DTO.ProdutoDTO.ProdutoResponse;
 import com.comissions.korp.entity.Produto;
-import com.comissions.korp.entity.Usuario;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.repository.ProdutoRepository;
 import jakarta.transaction.Transactional;
@@ -15,14 +12,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 
 @Service
 public class ProdutoService {
 
-    private ProdutoRepository produtoRepository;
+    private final ProdutoRepository produtoRepository;
 
     public ProdutoService(ProdutoRepository produtoRepository) {
         this.produtoRepository = produtoRepository;
@@ -77,7 +73,13 @@ public class ProdutoService {
     public ProdutoResponse atualizarProduto(Integer id, ProdutoRequest produtoRequest){
         Produto produto = buscarProdutoPorId(id);
 
-        produto.setNome(produtoRequest.getNome());
+        if (produtoRequest.getNome() != null && !produtoRequest.getNome().isBlank()) {
+            produto.setNome(produtoRequest.getNome());
+        }
+        if (produtoRequest.getAtivo() != null) {
+            produto.setAtivo(produtoRequest.getAtivo());
+        }
+
         Produto produtoAtt = produtoRepository.save(produto);
         return convertToResponseDTO(produtoAtt);
     }
@@ -85,8 +87,11 @@ public class ProdutoService {
 
     @Transactional
     public void deletarProduto(Integer id){
-        buscarProdutoPorId(id);
-        produtoRepository.deleteById(id);
+        Produto produto = buscarProdutoPorId(id);
+
+        produto.setAtivo(false);
+
+        produtoRepository.save(produto);
     }
 
     public Produto convertToEntity(ProdutoRequest dto) {

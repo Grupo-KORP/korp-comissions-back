@@ -2,11 +2,19 @@ package com.comissions.korp.service;
 
 import com.comissions.korp.DTO.ClienteDTO.ClienteRequestDTO;
 import com.comissions.korp.DTO.ClienteDTO.ClienteResponseDTO;
+import com.comissions.korp.config.utils.SecurityUtils;
 import com.comissions.korp.entity.Cliente;
+import com.comissions.korp.entity.Endereco;
+import com.comissions.korp.entity.Usuario;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.exception.UsuarioJaExistente;
 import com.comissions.korp.repository.ClienteRepository;
+import com.comissions.korp.repository.DistribuidorRepository;
+import com.comissions.korp.repository.EnderecoRepository;
+import com.comissions.korp.repository.UsuarioRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,15 +23,30 @@ import java.util.stream.Collectors;
 @Service
 public class ClienteService {
     private final ClienteRepository clienteRepository;
+    private final DistribuidorRepository distribuidorRepository;
+    private final ContatoService contatoService;
 
-    public ClienteService(ClienteRepository clienteRepository) {
+    @Autowired
+    private SecurityUtils securityUtils;
+
+    @Autowired
+    private EnderecoService enderecoService;
+    @Autowired
+    private EnderecoRepository enderecoRepository;
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    public ClienteService(ClienteRepository clienteRepository, DistribuidorRepository distribuidorRepository, @Lazy ContatoService contatoService) {
         this.clienteRepository = clienteRepository;
+        this.distribuidorRepository = distribuidorRepository;
+        this.contatoService = contatoService;
     }
 
     /**
      * Cria um novo Cliente
      */
 
+    @Transactional(rollbackOn = Exception.class)
     public ClienteResponseDTO criar(ClienteRequestDTO requestDTO) {
         // Verifica se já existe cliente com mesmo email
         if (clienteRepository.existsByEmail((requestDTO.getEmail()))) {
@@ -35,11 +58,24 @@ public class ClienteService {
             throw new UsuarioJaExistente("Já existe um cliente com este CNPJ: " + requestDTO.getCnpj());
         }
 
+        if(distribuidorRepository.existsByCnpj(requestDTO.getCnpj())) {
+            throw new UsuarioJaExistente("Já existe um distribuidor com este CNPJ: " + requestDTO.getCnpj());
+        }
+
         if (clienteRepository.existsByTelefone(((requestDTO.getTelefone())))) {
             throw new UsuarioJaExistente("Já existe um cliente com este telefone: " + requestDTO.getTelefone());
         }
+
         Cliente cliente = convertToEntity(requestDTO);
+
         Cliente clienteSalvo = clienteRepository.save(cliente);
+
+        Endereco endereco = enderecoService.convertToEntityFromClienteRequest(requestDTO, clienteSalvo.getIdCliente());
+
+        enderecoService.criarEndereco(endereco);
+
+        contatoService.criarFromClienteDTO(requestDTO, clienteSalvo.getIdCliente());
+
         return convertToResponseDTO(clienteSalvo);
     }
 
@@ -92,8 +128,36 @@ public class ClienteService {
         clienteExistente.setInscricaoEstadual(requestDTO.getInscricaoEstadual());
         clienteExistente.setTelefone(requestDTO.getTelefone());
         clienteExistente.setEmail(requestDTO.getEmail());
+        if (requestDTO.getAtivo() != null) {
+            clienteExistente.setAtivo(requestDTO.getAtivo());
+        }
+
+        if (requestDTO.getFkVendedorCadastro() != null) {
+            Usuario usuario = usuarioRepository.findById(requestDTO.getFkVendedorCadastro())
+                    .orElseThrow(() -> new RecursoNaoEncontrado("Usuário não encontrado com ID: " + requestDTO.getFkVendedorCadastro()));
+            clienteExistente.setVendedorCadastro(usuario);
+        }
 
         Cliente clienteAtualizado = clienteRepository.save(clienteExistente);
+
+        if (requestDTO.getEndereco() != null || requestDTO.getCep() != null || requestDTO.getCidade() != null || requestDTO.getUf() != null
+                || requestDTO.getNumero() != null || requestDTO.getComplemento() != null || requestDTO.getBairro() != null) {
+            List<Endereco> enderecos = enderecoRepository.findByCliente_IdCliente(id);
+            if (enderecos != null && !enderecos.isEmpty()) {
+                Endereco enderecoExistente = enderecos.getFirst();
+                enderecoExistente.setLogradouro(requestDTO.getEndereco());
+                enderecoExistente.setNumero(requestDTO.getNumero());
+                enderecoExistente.setComplemento(requestDTO.getComplemento());
+                enderecoExistente.setBairro(requestDTO.getBairro());
+                enderecoExistente.setEstado(requestDTO.getUf());
+                enderecoExistente.setCidade(requestDTO.getCidade());
+                enderecoExistente.setCep(requestDTO.getCep());
+                enderecoRepository.save(enderecoExistente);
+            } else {
+                Endereco endereco = enderecoService.convertToEntityFromClienteRequest(requestDTO, clienteAtualizado.getIdCliente());
+                enderecoService.criarEndereco(endereco);
+            }
+        }
         return convertToResponseDTO(clienteAtualizado);
     }
 
@@ -103,10 +167,12 @@ public class ClienteService {
 
     @Transactional
     public void deletar(Integer id) {
-        if (!clienteRepository.existsById(id)) {
-            throw new RecursoNaoEncontrado("Cliente não encontrado com ID: " + id);
-        }
-        clienteRepository.deleteById(id);
+
+        Cliente cliente = clienteRepository.findById(id).orElseThrow(() -> new RecursoNaoEncontrado("Cliente não encontrado com ID: " + id));
+
+        cliente.setAtivo(false);
+
+        clienteRepository.save(cliente);
     }
 
     /**
@@ -120,6 +186,13 @@ public class ClienteService {
         cliente.setInscricaoEstadual(dto.getInscricaoEstadual());
         cliente.setTelefone(dto.getTelefone());
         cliente.setEmail(dto.getEmail());
+
+        Integer id = securityUtils.getUsuarioIdAutenticado();
+
+        Usuario user = usuarioRepository.findById(id).orElseThrow(() -> new RecursoNaoEncontrado("Usuário autenticado não encontrado com ID: " + id));
+
+        cliente.setVendedorCadastro(user);
+
         return cliente;
     }
 

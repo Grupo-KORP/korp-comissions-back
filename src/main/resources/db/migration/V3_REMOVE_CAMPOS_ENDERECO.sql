@@ -1,0 +1,1 @@
+alter table endereco drop column tipo_endereco;
