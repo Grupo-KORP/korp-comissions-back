@@ -1,8 +1,10 @@
 package com.comissions.korp.service;
 
 import com.comissions.korp.DTO.ListarVendedoresResponseDTO;
+import com.comissions.korp.DTO.UsuarioTrocarSenhaReqDTO;
 import com.comissions.korp.DTO.UsuarioRequestDTO;
 import com.comissions.korp.DTO.UsuarioResponseDTO;
+import com.comissions.korp.config.utils.SecurityUtils;
 import com.comissions.korp.entity.Role;
 import com.comissions.korp.entity.Usuario;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
@@ -41,6 +43,9 @@ public class UsuarioService {
     @Autowired
     private EmailService emailService;
 
+    @Autowired
+    private SecurityUtils securityUtils;
+
     /**
      * Cria um novo Usuario
      */
@@ -68,6 +73,7 @@ public class UsuarioService {
         String senhaEncriptada = passwordEncoder.encode(senhaAleatoria);
 
         Usuario usuario = convertToEntity(requestDTO,roleUsuario, senhaEncriptada);
+        usuario.setAtivo(true);
         Usuario usuarioSalvo = usuarioRepository.save(usuario);
         emailService.enviarEmailSenhaProvisoria(usuario, senhaAleatoria);
         return convertToResponseDTO(usuarioSalvo);
@@ -146,10 +152,26 @@ public class UsuarioService {
      * Deleta Usuario por ID
      */
     public void deletar(Integer id) {
-        if (!usuarioRepository.existsById(id)) {
-            throw new RecursoNaoEncontrado("Usuário não encontrado com ID: " + id);
+        Usuario usuarioDeletar = buscarUsuarioPorId(id);
+        usuarioDeletar.setAtivo(false);
+    }
+
+    public void retornoDoPrimeiroAcesso(UsuarioTrocarSenhaReqDTO usuarioTrocarSenhaReqDTO){
+        Integer idUsuario = securityUtils.getUsuarioIdAutenticado();
+
+        Usuario usuarioTrocarSenha = buscarUsuarioPorId(idUsuario);
+
+        Boolean mesmaSenha = passwordEncoder.matches(usuarioTrocarSenhaReqDTO.getSenhaVelha(), usuarioTrocarSenha.getSenha());
+
+        if(!mesmaSenha){
+            throw new RuntimeException("Deu erardo");
         }
-        usuarioRepository.deleteById(id);
+
+        usuarioTrocarSenha.setSenha(passwordEncoder.encode(usuarioTrocarSenhaReqDTO.getSenhaNova()));
+
+        usuarioTrocarSenha.setPrimeiroAcesso(false);
+
+        usuarioRepository.save(usuarioTrocarSenha);
     }
 
     /**
