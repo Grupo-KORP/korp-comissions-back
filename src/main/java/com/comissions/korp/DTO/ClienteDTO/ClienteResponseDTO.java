@@ -1,5 +1,9 @@
 package com.comissions.korp.DTO.ClienteDTO;
 
+import com.comissions.korp.DTO.ContatoDTO.ContatoClienteResponseDTO;
+
+import java.util.List;
+
 public class ClienteResponseDTO {
     private Integer idCliente;
     private String razaoSocial;
@@ -9,6 +13,8 @@ public class ClienteResponseDTO {
     private String email;
     private String inscricaoEstadual;
     private Boolean ativo;
+    private Integer comprasRealizadas;
+    private List<ContatoClienteResponseDTO> contato;
     private Integer fkVendedorCadastro;
 
     public String getCnpj() {
@@ -81,5 +87,21 @@ public class ClienteResponseDTO {
 
     public void setFkVendedorCadastro(Integer fkVendedorCadastro) {
         this.fkVendedorCadastro = fkVendedorCadastro;
+    }
+
+    public Integer getComprasRealizadas() {
+        return comprasRealizadas;
+    }
+
+    public void setComprasRealizadas(Integer comprasRealizadas) {
+        this.comprasRealizadas = comprasRealizadas;
+    }
+
+    public List<ContatoClienteResponseDTO> getContato() {
+        return contato;
+    }
+
+    public void setContato(List<ContatoClienteResponseDTO> contato) {
+        this.contato = contato;
     }
 }

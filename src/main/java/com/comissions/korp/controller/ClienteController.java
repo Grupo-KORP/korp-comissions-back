@@ -1,5 +1,6 @@
 package com.comissions.korp.controller;
 
+import com.comissions.korp.DTO.ClienteDTO.ClientePedidoResponseDTO;
 import com.comissions.korp.DTO.ClienteDTO.ClienteRequestDTO;
 import com.comissions.korp.DTO.ClienteDTO.ClienteResponseDTO;
 import com.comissions.korp.service.ClienteService;
@@ -52,6 +53,18 @@ public class ClienteController {
         List<ClienteResponseDTO> clientes = clienteService.listarTodos();
         return ResponseEntity.ok(clientes);
     }
+
+    @GetMapping("/pedido-dto")
+    @Operation(summary = "Listar clientes na tela de pedidos", description = "Retorna a lista de todos os clientes cadastrados refatorado no DTO de pedidos")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Clientes listados com sucesso"),
+            @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
+    })
+    public ResponseEntity<List<ClientePedidoResponseDTO>> listarTodosPedidoDto() {
+        List<ClientePedidoResponseDTO> clientes = clienteService.listarTodosPedidoDto();
+        return ResponseEntity.ok(clientes);
+    }
+
 
     /**
      * Busca um Cliente por ID
