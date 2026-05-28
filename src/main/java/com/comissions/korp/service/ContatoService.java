@@ -1,6 +1,7 @@
 package com.comissions.korp.service;
 
 import com.comissions.korp.DTO.ClienteDTO.ClienteRequestDTO;
+import com.comissions.korp.DTO.ContatoDTO.ContatoClienteResponseDTO;
 import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorRequestDTO;
 import com.comissions.korp.DTO.ContatoDTO.ContatoRequestDTO;
 import com.comissions.korp.DTO.ContatoDTO.ContatoResponseDTO;
@@ -16,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -44,33 +46,32 @@ public class ContatoService {
         return convertToResponseDTO(contatoRepository.save(contato));
     }
 
-        @Transactional
-        public void criarFromClienteDTO(ClienteRequestDTO requestDTO, Integer id) {
-            ContatoRequestDTO contatoDto = new ContatoRequestDTO();
-            contatoDto.setNome(requestDTO.getNomeContato());
-            contatoDto.setEmail(requestDTO.getEmail());
-            contatoDto.setIdCliente(id);
-            contatoDto.setAtivo(true);
+    @Transactional
+    public void criarFromClienteDTO(ClienteRequestDTO requestDTO, Integer id) {
+        ContatoRequestDTO contatoDto = new ContatoRequestDTO();
+        contatoDto.setNome(requestDTO.getNomeContato());
+        contatoDto.setEmail(requestDTO.getEmail());
+        contatoDto.setIdCliente(id);
+        contatoDto.setAtivo(true);
 
-            Contato contato = convertToEntity(contatoDto);
+        Contato contato = convertToEntity(contatoDto);
 
-            contatoRepository.save(contato);
+        contatoRepository.save(contato);
+    }
+
+    @Transactional
+    public void atualizarFromClienteDTO(ClienteRequestDTO requestDTO, Integer id) {
+        Cliente cliente = clienteService.buscarClientePorId(id);
+        List<Contato> contatos = contatoRepository.findByCliente(cliente);
+        if (contatos != null && !contatos.isEmpty()) {
+            Contato contatoExistente = contatos.get(0);
+            contatoExistente.setNome(requestDTO.getNomeContato());
+            contatoExistente.setEmail(requestDTO.getEmail());
+            contatoRepository.save(contatoExistente);
+        } else {
+            criarFromClienteDTO(requestDTO, id);
         }
-
-            @Transactional
-            public void atualizarFromClienteDTO(ClienteRequestDTO requestDTO, Integer id) {
-                Cliente cliente = clienteService.buscarClientePorId(id);
-                List<Contato> contatos = contatoRepository.findByCliente(cliente);
-                if (contatos != null && !contatos.isEmpty()) {
-                    Contato contatoExistente = contatos.get(0);
-                    contatoExistente.setNome(requestDTO.getNomeContato());
-                    contatoExistente.setEmail(requestDTO.getEmail());
-                    contatoRepository.save(contatoExistente);
-                } else {
-                    criarFromClienteDTO(requestDTO, id);
-                }
-            }
-
+    }
 
 
     public List<ContatoResponseDTO> listarTodos() {
@@ -184,5 +185,21 @@ public class ContatoService {
                 contato.getCliente() != null ? contato.getCliente().getIdCliente() : null,
                 contato.getDistribuidor() != null ? contato.getDistribuidor().getIdDistribuidor() : null
         );
+    }
+
+    public List<ContatoClienteResponseDTO> buscarPorClienteToDto(Cliente cliente) {
+        List<Contato> contatos = contatoRepository.findByCliente(cliente);
+
+        List<ContatoClienteResponseDTO> contatoDtoList = new ArrayList<>();
+
+        contatos.forEach(contato -> {;
+            ContatoClienteResponseDTO contatoDTO = new ContatoClienteResponseDTO();
+            contatoDTO.setIdContato(contato.getIdContato());
+            contatoDTO.setNome(contato.getNome());
+            contatoDTO.setEmail(contato.getEmail());
+            contatoDtoList.add(contatoDTO);
+        });
+
+        return contatoDtoList;
     }
 }

@@ -13,6 +13,8 @@ import com.comissions.korp.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class EnderecoService {
 
@@ -61,5 +63,10 @@ public class EnderecoService {
         Endereco novoEndereco = enderecoRepository.save(endereco);
 
         return novoEndereco;
+    }
+
+    public Endereco buscarEnderecoPorCliente(Integer idCliente) {
+        return enderecoRepository.findByCliente_IdCliente(idCliente)
+                .orElseThrow(() -> new RecursoNaoEncontrado("Endereço não encontrado para o cliente com ID: " + idCliente));
     }
 }

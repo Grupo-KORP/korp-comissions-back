@@ -1,22 +1,23 @@
 package com.comissions.korp.service;
 
+import com.comissions.korp.DTO.ClienteDTO.ClientePedidoResponseDTO;
 import com.comissions.korp.DTO.ClienteDTO.ClienteRequestDTO;
 import com.comissions.korp.DTO.ClienteDTO.ClienteResponseDTO;
+import com.comissions.korp.DTO.ContatoDTO.ContatoClienteResponseDTO;
 import com.comissions.korp.config.utils.SecurityUtils;
 import com.comissions.korp.entity.Cliente;
+import com.comissions.korp.entity.Contato;
 import com.comissions.korp.entity.Endereco;
 import com.comissions.korp.entity.Usuario;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.exception.UsuarioJaExistente;
-import com.comissions.korp.repository.ClienteRepository;
-import com.comissions.korp.repository.DistribuidorRepository;
-import com.comissions.korp.repository.EnderecoRepository;
-import com.comissions.korp.repository.UsuarioRepository;
+import com.comissions.korp.repository.*;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -27,6 +28,9 @@ public class ClienteService {
     private final ContatoService contatoService;
 
     @Autowired
+    private PedidoRepository pedidoRepository;
+
+    @Autowired
     private SecurityUtils securityUtils;
 
     @Autowired
@@ -35,6 +39,8 @@ public class ClienteService {
     private EnderecoRepository enderecoRepository;
     @Autowired
     private UsuarioRepository usuarioRepository;
+    @Autowired
+    private ContatoRepository contatoRepository;
 
     public ClienteService(ClienteRepository clienteRepository, DistribuidorRepository distribuidorRepository, @Lazy ContatoService contatoService) {
         this.clienteRepository = clienteRepository;
@@ -89,6 +95,14 @@ public class ClienteService {
                 .collect(Collectors.toList());
     }
 
+    public List<ClientePedidoResponseDTO> listarTodosPedidoDto() {
+        return clienteRepository.findAll()
+                .stream()
+                .map(this::convertToPedidoResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+
     /**
      * Busca um Cliente por ID
      */
@@ -142,9 +156,9 @@ public class ClienteService {
 
         if (requestDTO.getEndereco() != null || requestDTO.getCep() != null || requestDTO.getCidade() != null || requestDTO.getUf() != null
                 || requestDTO.getNumero() != null || requestDTO.getComplemento() != null || requestDTO.getBairro() != null) {
-            List<Endereco> enderecos = enderecoRepository.findByCliente_IdCliente(id);
-            if (enderecos != null && !enderecos.isEmpty()) {
-                Endereco enderecoExistente = enderecos.getFirst();
+            Endereco enderecos = enderecoService.buscarEnderecoPorCliente(id);
+            if (enderecos != null) {
+                Endereco enderecoExistente = enderecos;
                 enderecoExistente.setLogradouro(requestDTO.getEndereco());
                 enderecoExistente.setNumero(requestDTO.getNumero());
                 enderecoExistente.setComplemento(requestDTO.getComplemento());
@@ -208,6 +222,40 @@ public class ClienteService {
         dto.setCnpj(cliente.getCnpj());
         dto.setTelefone(cliente.getTelefone());
         dto.setEmail(cliente.getEmail());
+
+        // compras realizadas ( pedidos por cliente )
+        Integer comprasRealizadas = pedidoRepository.countByCliente(cliente);
+        dto.setComprasRealizadas(comprasRealizadas);
+
+        List<ContatoClienteResponseDTO> contatoDtoList = contatoService.buscarPorClienteToDto(cliente);
+
+        dto.setContato(contatoDtoList);
+
+        return dto;
+    }
+
+    private ClientePedidoResponseDTO convertToPedidoResponseDTO(Cliente cliente) {
+        ClientePedidoResponseDTO dto = new ClientePedidoResponseDTO();
+
+        // informações cliente
+        dto.setId(cliente.getIdCliente());
+        dto.setNomeFantasia(cliente.getNomeFantasia());
+        dto.setRazaoSocial(cliente.getRazaoSocial());
+        dto.setCnpj(cliente.getCnpj());
+        dto.setEmail(cliente.getEmail());
+        dto.setFone(cliente.getTelefone());
+
+        // informações endereço
+        Endereco endereco = enderecoService.buscarEnderecoPorCliente(cliente.getIdCliente());
+
+        dto.setCidade(endereco.getCidade());
+        dto.setUf(endereco.getEstado());
+        dto.setCep(endereco.getCep());
+        dto.setEndereco(endereco.getLogradouro());
+
+        List<ContatoClienteResponseDTO> contatoDtoList = contatoService.buscarPorClienteToDto(cliente);
+
+        dto.setContatos(contatoDtoList);
 
         return dto;
     }
