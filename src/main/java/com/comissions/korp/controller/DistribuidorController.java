@@ -2,10 +2,15 @@ package com.comissions.korp.controller;
 
 import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorRequestDTO;
 import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorResponseDTO;
+import com.comissions.korp.DTO.DistribuidorDTO.ListarDistribuidoresResponseDTO;
+import com.comissions.korp.DTO.ListarVendedoresResponseDTO;
 import com.comissions.korp.service.DistribuidorService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -98,4 +103,21 @@ public class DistribuidorController {
         distribuidorService.deletar(id);
         return ResponseEntity.noContent().build();
     }
+
+    /**
+     * Lista todos os Distribuidores
+     * GET /distribuidor
+     */
+    @GetMapping("/listarFiltro")
+    @Operation(summary = "Listar todos os distribuidores", description = "Retorna todos os Distribuidores cadastrados com paginação.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Distribuidores listados com sucesso"),
+            @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
+    })
+    public ResponseEntity<Page<ListarDistribuidoresResponseDTO>> listarTodosDistribuidores(
+            @RequestParam(required = false) String busca,
+            @PageableDefault(size = 5, sort = "razaoSocial") Pageable pageable) {
+        return ResponseEntity.ok(distribuidorService.listarTodosDistribuidores(busca, pageable));
+    }
+
 }

@@ -44,15 +44,15 @@ public class Usuario {
     private LocalDateTime dtCriacao;
 
     @Column(name = "primeiro_acesso", nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
-    private Boolean primeiroAcesso = true;
+    private Boolean primeiroAcesso;
 
     @Column(name = "ativo", nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
-    private Boolean ativo = true;
+    private Boolean ativo;
 
     public Usuario() {
     }
 
-    public Usuario(Integer idUsuario, String nome, String email, String senha, String telefone, BigDecimal percentualComissao, Role roles, LocalDateTime dtCriacao) {
+    public Usuario(Integer idUsuario, String nome, String email, String senha, String telefone, BigDecimal percentualComissao, Role roles, LocalDateTime dtCriacao, Boolean primeiroAcesso, Boolean ativo) {
         this.idUsuario = idUsuario;
         this.nome = nome;
         this.email = email;
@@ -61,6 +61,8 @@ public class Usuario {
         this.percentualComissao = percentualComissao;
         this.roles = roles;
         this.dtCriacao = dtCriacao;
+        this.primeiroAcesso = primeiroAcesso;
+        this.ativo = ativo;
     }
 
     public String gerarSenha() {

@@ -1,5 +1,6 @@
 package com.comissions.korp.repository;
 
+import com.comissions.korp.entity.Cliente;
 import com.comissions.korp.entity.Pedido;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -14,6 +15,8 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
         GROUP BY p.usuario.idUsuario
     """)
     List<Object[]> contarPedidosPorVendedor(); // obj[0]=Integer, obj[1]=Long
+
+    Integer countByCliente(Cliente cliente);
 }
 
 

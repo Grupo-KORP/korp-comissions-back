@@ -109,6 +109,10 @@ public class UsuarioController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * Lista todos os Vendedores
+     * GET /usuarioo
+     */
     @GetMapping("/vendedores")
     @Operation(summary = "Listar todos os vendedores", description = "Retorna todos os Vendedores cadastrados com paginação.")
     @ApiResponses(value = {

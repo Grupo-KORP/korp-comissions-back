@@ -1,5 +1,9 @@
 package com.comissions.korp.DTO.ClienteDTO;
 
+import com.comissions.korp.DTO.ContatoDTO.ContatoClienteResponseDTO;
+
+import java.util.List;
+
 public class ClienteResponseDTO {
     private Integer idCliente;
     private String razaoSocial;
@@ -9,7 +13,49 @@ public class ClienteResponseDTO {
     private String email;
     private String inscricaoEstadual;
     private Boolean ativo;
+    private Integer comprasRealizadas;
+    private List<ContatoClienteResponseDTO> contato;
     private Integer fkVendedorCadastro;
+    private String cep;
+    private String bairro;
+    private String endereco;
+    private String numero;
+    private String complemento;
+    private String cidade;
+    private String uf;
+    private String nomeContato;
+
+    public String getCep() {
+        return cep;
+    }
+
+    public String getBairro() {
+        return bairro;
+    }
+
+    public String getEndereco() {
+        return endereco;
+    }
+
+    public String getNumero() {
+        return numero;
+    }
+
+    public String getComplemento() {
+        return complemento;
+    }
+
+    public String getCidade() {
+        return cidade;
+    }
+
+    public String getUf() {
+        return uf;
+    }
+
+    public String getNomeContato() {
+        return nomeContato;
+    }
 
     public String getCnpj() {
         return cnpj;
@@ -81,5 +127,21 @@ public class ClienteResponseDTO {
 
     public void setFkVendedorCadastro(Integer fkVendedorCadastro) {
         this.fkVendedorCadastro = fkVendedorCadastro;
+    }
+
+    public Integer getComprasRealizadas() {
+        return comprasRealizadas;
+    }
+
+    public void setComprasRealizadas(Integer comprasRealizadas) {
+        this.comprasRealizadas = comprasRealizadas;
+    }
+
+    public List<ContatoClienteResponseDTO> getContato() {
+        return contato;
+    }
+
+    public void setContato(List<ContatoClienteResponseDTO> contato) {
+        this.contato = contato;
     }
 }
