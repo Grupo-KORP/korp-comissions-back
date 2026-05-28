@@ -1,8 +1,8 @@
-package com.comissions.korp.DTO.DistribuidorDTO;
+package com.comissions.korp.DTO.ClienteDTO;
 
-public class ListarDistribuidoresResponseDTO {
+public class ListarClientesResponseDTO {
 
-    private Integer idDistribuidor;
+    private Integer idCliente;
     private String razaoSocial;
     private String nomeFantasia;
     private String inscricaoEstadual;
@@ -18,12 +18,11 @@ public class ListarDistribuidoresResponseDTO {
     private String complemento;
     private String bairro;
 
-
-    public ListarDistribuidoresResponseDTO(Integer idDistribuidor, String razaoSocial, String nomeFantasia, String inscricaoEstadual, String cnpj, String contato, String email, Boolean ativo, String cep, String logradouro, String cidade, String uf, String numero, String complemento, String bairro) {
-        this.idDistribuidor = idDistribuidor;
+    public ListarClientesResponseDTO(Integer idCliente, String razaoSocial, String inscricaoEstadual, String nomeFantasia, String cnpj, String contato, String email, Boolean ativo, String cep, String logradouro, String cidade, String uf, String numero, String complemento, String bairro) {
+        this.idCliente = idCliente;
         this.razaoSocial = razaoSocial;
-        this.nomeFantasia = nomeFantasia;
         this.inscricaoEstadual = inscricaoEstadual;
+        this.nomeFantasia = nomeFantasia;
         this.cnpj = cnpj;
         this.contato = contato;
         this.email = email;
@@ -37,10 +36,10 @@ public class ListarDistribuidoresResponseDTO {
         this.bairro = bairro;
     }
 
-    public ListarDistribuidoresResponseDTO() {}
+    public ListarClientesResponseDTO() {}
 
-    public Integer getIdDistribuidor() {
-        return idDistribuidor;
+    public Integer getIdCliente() {
+        return idCliente;
     }
 
     public String getRazaoSocial() {

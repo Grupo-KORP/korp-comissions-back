@@ -3,18 +3,19 @@ package com.comissions.korp.service;
 import com.comissions.korp.DTO.ClienteDTO.ClientePedidoResponseDTO;
 import com.comissions.korp.DTO.ClienteDTO.ClienteRequestDTO;
 import com.comissions.korp.DTO.ClienteDTO.ClienteResponseDTO;
+import com.comissions.korp.DTO.ClienteDTO.ListarClientesResponseDTO;
 import com.comissions.korp.DTO.ContatoDTO.ContatoClienteResponseDTO;
+import com.comissions.korp.DTO.DistribuidorDTO.ListarDistribuidoresResponseDTO;
 import com.comissions.korp.config.utils.SecurityUtils;
-import com.comissions.korp.entity.Cliente;
-import com.comissions.korp.entity.Contato;
-import com.comissions.korp.entity.Endereco;
-import com.comissions.korp.entity.Usuario;
+import com.comissions.korp.entity.*;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.exception.UsuarioJaExistente;
 import com.comissions.korp.repository.*;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -258,5 +259,41 @@ public class ClienteService {
         dto.setContatos(contatoDtoList);
 
         return dto;
+    }
+
+    public Page<ListarClientesResponseDTO> listarTodosClientes(String busca, Pageable pageable) {
+
+        String filtro = (busca != null && !busca.isBlank()) ? busca : null;
+
+        Page<Cliente> paginaClientes = clienteRepository.findClientesComFiltro(filtro, pageable);
+
+        return paginaClientes.map(cliente -> {
+
+            List<Endereco> enderecoCliente = enderecoRepository.findByCliente_IdCliente(cliente.getIdCliente());
+
+            Endereco endereco = enderecoCliente != null && !enderecoCliente.isEmpty()
+                    ? enderecoCliente.getFirst()
+                    : null;
+
+            return new ListarClientesResponseDTO(
+                    cliente.getIdCliente(),
+                    cliente.getRazaoSocial(),
+                    cliente.getInscricaoEstadual(),
+                    cliente.getNomeFantasia(),
+                    cliente.getCnpj(),
+                    cliente.getTelefone(),
+                    cliente.getEmail(),
+                    cliente.getAtivo(),
+                    endereco != null ? endereco.getCep() : null,
+                    endereco != null ? endereco.getLogradouro() : null,
+                    endereco != null ? endereco.getCidade() : null,
+                    endereco != null ? endereco.getEstado() : null,
+                    endereco != null ? endereco.getNumero() : null,
+                    endereco != null ? endereco.getComplemento() : null,
+                    endereco != null ? endereco.getBairro() : null
+
+            );
+        });
+
     }
 }

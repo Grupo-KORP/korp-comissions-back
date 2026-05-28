@@ -109,7 +109,7 @@ public class DistribuidorController {
      * GET /distribuidor
      */
     @GetMapping("/listarFiltro")
-    @Operation(summary = "Listar todos os distribuidores", description = "Retorna todos os Vendedores cadastrados com paginação.")
+    @Operation(summary = "Listar todos os distribuidores", description = "Retorna todos os Distribuidores cadastrados com paginação.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Distribuidores listados com sucesso"),
             @ApiResponse(responseCode = "500", description = "Erro interno do servidor")

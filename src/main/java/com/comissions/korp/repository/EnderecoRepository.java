@@ -7,6 +7,10 @@ import java.util.List;
 import java.util.Optional;
 
 public interface EnderecoRepository extends JpaRepository<Endereco, Integer> {
-	Optional<Endereco> findByCliente_IdCliente(Integer idCliente);
+
+	List<Endereco> findByCliente_IdCliente(Integer idCliente);
+
+	Optional<Endereco> findFirstByCliente_IdCliente(Integer idCliente);
+
 	List<Endereco> findByDistribuidor_IdDistribuidor(Integer idDistribuidor);
 }

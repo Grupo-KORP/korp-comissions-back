@@ -66,7 +66,7 @@ public class EnderecoService {
     }
 
     public Endereco buscarEnderecoPorCliente(Integer idCliente) {
-        return enderecoRepository.findByCliente_IdCliente(idCliente)
+        return enderecoRepository.findFirstByCliente_IdCliente(idCliente)
                 .orElseThrow(() -> new RecursoNaoEncontrado("Endereço não encontrado para o cliente com ID: " + idCliente));
     }
 }

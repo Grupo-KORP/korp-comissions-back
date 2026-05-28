@@ -168,6 +168,7 @@ public class DistribuidorService {
                     distribuidor.getIdDistribuidor(),
                     distribuidor.getRazaoSocial(),
                     distribuidor.getNomeFantasia(),
+                    distribuidor.getInscricaoEstadual(),
                     distribuidor.getCnpj(),
                     distribuidor.getTelefone(),
                     distribuidor.getEmail(),
