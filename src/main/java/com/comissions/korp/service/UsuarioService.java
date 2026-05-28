@@ -7,6 +7,7 @@ import com.comissions.korp.DTO.UsuarioResponseDTO;
 import com.comissions.korp.config.utils.SecurityUtils;
 import com.comissions.korp.entity.Role;
 import com.comissions.korp.entity.Usuario;
+import com.comissions.korp.exception.OperacaoNaoPermitida;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.exception.UsuarioJaExistente;
 import com.comissions.korp.repository.PedidoRepository;
@@ -109,9 +110,26 @@ public class UsuarioService {
         Usuario usuarioExistente = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontrado("Usuário não encontrado com ID: " + id));
 
+        // Verifica conflito de email com OUTRO usuário
+        if (!usuarioExistente.getEmail().equalsIgnoreCase(requestDTO.getEmail()) &&
+                usuarioRepository.existsByEmail(requestDTO.getEmail())) {
+            throw new UsuarioJaExistente("Já existe um usuário com este email: " + requestDTO.getEmail());
+        }
+
+        // Verifica conflito de nome com OUTRO usuário
+        if (!usuarioExistente.getNome().equalsIgnoreCase(requestDTO.getNome()) &&
+                usuarioRepository.existsByNome(requestDTO.getNome())) {
+            throw new UsuarioJaExistente("Já existe um usuário com este nome: " + requestDTO.getNome());
+        }
+
+        // Verifica conflito de telefone com OUTRO usuário
+        if (!usuarioExistente.getTelefone().equals(requestDTO.getTelefone()) &&
+                usuarioRepository.existsByTelefone(requestDTO.getTelefone())) {
+            throw new UsuarioJaExistente("Já existe um usuário com este telefone: " + requestDTO.getTelefone());
+        }
+
         usuarioExistente.setNome(requestDTO.getNome());
         usuarioExistente.setEmail(requestDTO.getEmail());
-        usuarioExistente.setSenha(requestDTO.getSenha());
         usuarioExistente.setTelefone(requestDTO.getTelefone());
 
         Usuario usuarioAtualizado = usuarioRepository.save(usuarioExistente);
@@ -138,13 +156,14 @@ public class UsuarioService {
                 ));
 
         return paginaVendedores.map(vendedor -> new ListarVendedoresResponseDTO(
+                vendedor.getIdUsuario(),
                 vendedor.getNome(),
                 vendedor.getEmail(),
                 vendedor.getTelefone(),
                 vendedor.getPercentualComissao(),
                 mapaPedidos.getOrDefault(vendedor.getIdUsuario(), 0),
                 0, // vendasEfetivadas — implementar quando tiver status de pedido
-                0  // comissoesPendentes — implementar quando tiver lógica de comissão
+                vendedor.getAtivo()
         ));
     }
 
@@ -153,7 +172,11 @@ public class UsuarioService {
      */
     public void deletar(Integer id) {
         Usuario usuarioDeletar = buscarUsuarioPorId(id);
+        if (usuarioDeletar.getAtivo() == false){
+             throw new OperacaoNaoPermitida("O usuário: "  + usuarioDeletar.getNome() + "já foi deletado!");
+        }
         usuarioDeletar.setAtivo(false);
+        usuarioRepository.save(usuarioDeletar);
     }
 
     public void retornoDoPrimeiroAcesso(UsuarioTrocarSenhaReqDTO usuarioTrocarSenhaReqDTO){

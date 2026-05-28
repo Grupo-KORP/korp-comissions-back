@@ -10,6 +10,46 @@ public class ClienteResponseDTO {
     private String inscricaoEstadual;
     private Boolean ativo;
     private Integer fkVendedorCadastro;
+    private String cep;
+    private String bairro;
+    private String endereco;
+    private String numero;
+    private String complemento;
+    private String cidade;
+    private String uf;
+    private String nomeContato;
+
+    public String getCep() {
+        return cep;
+    }
+
+    public String getBairro() {
+        return bairro;
+    }
+
+    public String getEndereco() {
+        return endereco;
+    }
+
+    public String getNumero() {
+        return numero;
+    }
+
+    public String getComplemento() {
+        return complemento;
+    }
+
+    public String getCidade() {
+        return cidade;
+    }
+
+    public String getUf() {
+        return uf;
+    }
+
+    public String getNomeContato() {
+        return nomeContato;
+    }
 
     public String getCnpj() {
         return cnpj;

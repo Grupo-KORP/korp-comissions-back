@@ -2,19 +2,25 @@ package com.comissions.korp.service;
 
 import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorRequestDTO;
 import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorResponseDTO;
+import com.comissions.korp.DTO.DistribuidorDTO.ListarDistribuidoresResponseDTO;
+import com.comissions.korp.DTO.ListarVendedoresResponseDTO;
 import com.comissions.korp.entity.Distribuidor;
 import com.comissions.korp.entity.Endereco;
+import com.comissions.korp.entity.Usuario;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.exception.UsuarioJaExistente;
 import com.comissions.korp.repository.ClienteRepository;
 import com.comissions.korp.repository.DistribuidorRepository;
 import com.comissions.korp.repository.EnderecoRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -139,6 +145,43 @@ public class DistribuidorService {
         distribuidor.setAtivo(false);
 
         distribuidorRepository.save(distribuidor);
+    }
+
+
+    /**
+     * Lista todos os Distribuidores com paginação
+     */
+    public Page<ListarDistribuidoresResponseDTO> listarTodosDistribuidores(String busca, Pageable pageable) {
+
+        String filtro = (busca != null && !busca.isBlank()) ? busca : null;
+
+        Page<Distribuidor> paginaDistribuidores = distribuidorRepository.findDistribuidoresComFiltro(filtro, pageable);
+
+        return paginaDistribuidores.map(distribuidor -> {
+            List<Endereco> enderecoDistribuidor = enderecoRepository.findByDistribuidor_IdDistribuidor(distribuidor.getIdDistribuidor());
+
+            Endereco endereco = enderecoDistribuidor != null && !enderecoDistribuidor.isEmpty()
+                    ? enderecoDistribuidor.getFirst()
+                    : null;
+
+            return new ListarDistribuidoresResponseDTO(
+                    distribuidor.getIdDistribuidor(),
+                    distribuidor.getRazaoSocial(),
+                    distribuidor.getNomeFantasia(),
+                    distribuidor.getCnpj(),
+                    distribuidor.getTelefone(),
+                    distribuidor.getEmail(),
+                    distribuidor.getAtivo(),
+                    endereco != null ? endereco.getCep() : null,
+                    endereco != null ? endereco.getLogradouro() : null,
+                    endereco != null ? endereco.getCidade() : null,
+                    endereco != null ? endereco.getEstado() : null,
+                    endereco != null ? endereco.getNumero() : null,
+                    endereco != null ? endereco.getComplemento() : null,
+                    endereco != null ? endereco.getBairro() : null
+
+            );
+        });
     }
 
     private Distribuidor convertToEntity(DistribuidorRequestDTO dto) {
