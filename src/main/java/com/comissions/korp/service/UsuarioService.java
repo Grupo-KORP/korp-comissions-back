@@ -207,6 +207,8 @@ public class UsuarioService {
         usuario.setEmail(dto.getEmail());
         usuario.setSenha(senha);
         usuario.setTelefone(dto.getTelefone());
+        usuario.setPrimeiroAcesso(true);
+        usuario.setAtivo(true);
         usuario.setPercentualComissao(dto.getPercentualComissao());
         usuario.setDtCriacao(LocalDateTime.now());
         usuario.setRoles(role);

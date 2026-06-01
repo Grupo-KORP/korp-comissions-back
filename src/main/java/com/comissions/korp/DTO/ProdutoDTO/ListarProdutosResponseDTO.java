@@ -1,12 +1,22 @@
 package com.comissions.korp.DTO.ProdutoDTO;
 
 public class ListarProdutosResponseDTO {
+    private Integer idProduto;
     private String nome;
     private String codigoProduto;
 
-    public ListarProdutosResponseDTO(String nome, String codigoProduto) {
+    public ListarProdutosResponseDTO(Integer idProduto, String nome, String codigoProduto) {
+        this.idProduto = idProduto;
         this.nome = nome;
         this.codigoProduto = codigoProduto;
+    }
+
+    public void setIdProduto(Integer idProduto) {
+        this.idProduto = idProduto;
+    }
+
+    public Integer getIdProduto() {
+        return idProduto;
     }
 
     public String getNome() {
