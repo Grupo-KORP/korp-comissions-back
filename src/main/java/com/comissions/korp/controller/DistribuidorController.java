@@ -1,5 +1,7 @@
 package com.comissions.korp.controller;
 
+import com.comissions.korp.DTO.ClienteDTO.ClientePedidoResponseDTO;
+import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorPedidoResponseDTO;
 import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorRequestDTO;
 import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorResponseDTO;
 import com.comissions.korp.DTO.DistribuidorDTO.ListarDistribuidoresResponseDTO;
@@ -118,6 +120,18 @@ public class DistribuidorController {
             @RequestParam(required = false) String busca,
             @PageableDefault(size = 5, sort = "razaoSocial") Pageable pageable) {
         return ResponseEntity.ok(distribuidorService.listarTodosDistribuidores(busca, pageable));
+    }
+
+
+    @GetMapping("/pedido-dto")
+    @Operation(summary = "Listar distribuidores na tela de pedidos", description = "Retorna a lista de todos os distribuidores cadastrados refatorado no DTO de pedidos")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "distribuidores listados com sucesso"),
+            @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
+    })
+    public ResponseEntity<List<DistribuidorPedidoResponseDTO>> listarTodosPedidoDto() {
+        List<DistribuidorPedidoResponseDTO> distribuidores = distribuidorService.listarTodosPedidoDto();
+        return ResponseEntity.ok(distribuidores);
     }
 
 }
