@@ -16,6 +16,7 @@ public class ClientePedidoResponseDTO {
     private String endereco;
     private List<ContatoClienteResponseDTO> contatos;
     private String email;
+    private String inscricaoEstadual;
 
     public String getCnpj() {
         return cnpj;
@@ -103,5 +104,13 @@ public class ClientePedidoResponseDTO {
 
     public void setContatos(List<ContatoClienteResponseDTO> contatos) {
         this.contatos = contatos;
+    }
+
+    public String getInscricaoEstadual() {
+        return inscricaoEstadual;
+    }
+
+    public void setInscricaoEstadual(String inscricaoEstadual) {
+        this.inscricaoEstadual = inscricaoEstadual;
     }
 }

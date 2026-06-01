@@ -245,6 +245,7 @@ public class ClienteService {
         dto.setCnpj(cliente.getCnpj());
         dto.setEmail(cliente.getEmail());
         dto.setFone(cliente.getTelefone());
+        dto.setInscricaoEstadual(cliente.getInscricaoEstadual());
 
         // informações endereço
         Endereco endereco = enderecoService.buscarEnderecoPorCliente(cliente.getIdCliente());
