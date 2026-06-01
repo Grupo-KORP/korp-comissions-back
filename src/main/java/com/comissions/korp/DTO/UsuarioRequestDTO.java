@@ -15,7 +15,7 @@ public class UsuarioRequestDTO{
     private Boolean ativo;
     private String dtCriacao;
 
-    public UsuarioRequestDTO(Integer idUsuario, String nome, String email, String senha, String telefone, Integer role, BigDecimal percentualComissao) {
+    public UsuarioRequestDTO(Integer idUsuario, String nome, String email, String senha, String telefone, Integer role, BigDecimal percentualComissao, Boolean ativo, Boolean primeiroAcesso) {
         this.idUsuario = idUsuario;
         this.nome = nome;
         this.email = email;
@@ -23,6 +23,8 @@ public class UsuarioRequestDTO{
         this.telefone = telefone;
         this.role = role;
         this.percentualComissao = percentualComissao;
+        this.ativo = ativo;
+        this.primeiroAcesso = primeiroAcesso;
     }
 
     public BigDecimal getPercentualComissao() {
