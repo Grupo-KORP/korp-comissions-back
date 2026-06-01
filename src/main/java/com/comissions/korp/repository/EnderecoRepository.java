@@ -13,4 +13,6 @@ public interface EnderecoRepository extends JpaRepository<Endereco, Integer> {
 	Optional<Endereco> findFirstByCliente_IdCliente(Integer idCliente);
 
 	List<Endereco> findByDistribuidor_IdDistribuidor(Integer idDistribuidor);
+
+    Optional<Endereco> findFirstByDistribuidor_IdDistribuidor(Integer idDistribuidor);
 }

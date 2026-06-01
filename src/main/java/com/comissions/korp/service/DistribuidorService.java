@@ -1,5 +1,8 @@
 package com.comissions.korp.service;
 
+import com.comissions.korp.DTO.ClienteDTO.ClientePedidoResponseDTO;
+import com.comissions.korp.DTO.ContatoDTO.ContatoClienteResponseDTO;
+import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorPedidoResponseDTO;
 import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorRequestDTO;
 import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorResponseDTO;
 import com.comissions.korp.DTO.DistribuidorDTO.ListarDistribuidoresResponseDTO;
@@ -185,6 +188,14 @@ public class DistribuidorService {
         });
     }
 
+
+    public List<DistribuidorPedidoResponseDTO> listarTodosPedidoDto() {
+        return distribuidorRepository.findAll()
+                .stream()
+                .map(this::convertToPedidoResponseDTO)
+                .collect(Collectors.toList());
+    }
+
     private Distribuidor convertToEntity(DistribuidorRequestDTO dto) {
         Distribuidor distribuidor = new Distribuidor();
         distribuidor.setRazaoSocial(dto.getRazaoSocial());
@@ -205,6 +216,34 @@ public class DistribuidorService {
         dto.setInscricaoEstadual(distribuidor.getInscricaoEstadual());
         dto.setTelefone(distribuidor.getTelefone());
         dto.setEmail(distribuidor.getEmail());
+        return dto;
+    }
+
+    private DistribuidorPedidoResponseDTO convertToPedidoResponseDTO(Distribuidor distribuidor) {
+        DistribuidorPedidoResponseDTO dto = new DistribuidorPedidoResponseDTO();
+
+        // informações distribuidor
+        dto.setId(distribuidor.getIdDistribuidor());
+        dto.setNomeFantasia(distribuidor.getNomeFantasia());
+        dto.setRazaoSocial(distribuidor.getRazaoSocial());
+        dto.setCnpj(distribuidor.getCnpj());
+        dto.setInscEst(distribuidor.getInscricaoEstadual());
+        dto.setEmail(distribuidor.getEmail());
+        dto.setFone(distribuidor.getTelefone());
+
+        // informações endereço
+        Endereco endereco = enderecoService.buscarEnderecoPorDistribuidor(distribuidor.getIdDistribuidor());
+
+        dto.setCidade(endereco.getCidade());
+        dto.setUf(endereco.getEstado());
+        dto.setCep(endereco.getCep());
+        dto.setEndereco(endereco.getLogradouro());
+
+        // informações contato
+        List<ContatoClienteResponseDTO> contatoDtoList = contatoService.buscarPorDistribuidorToDto(distribuidor);
+
+        dto.setContatos(contatoDtoList);
+
         return dto;
     }
 }

@@ -176,6 +176,22 @@ public class ContatoService {
         return contato;
     }
 
+    public List<ContatoClienteResponseDTO> buscarPorDistribuidorToDto(Distribuidor distribuidor) {
+        List<Contato> contatos = contatoRepository.findByDistribuidor(distribuidor);
+
+        List<ContatoClienteResponseDTO> contatoDtoList = new ArrayList<>();
+
+        contatos.forEach(contato -> {
+            ContatoClienteResponseDTO contatoDTO = new ContatoClienteResponseDTO();
+            contatoDTO.setIdContato(contato.getIdContato());
+            contatoDTO.setNome(contato.getNome());
+            contatoDTO.setEmail(contato.getEmail());
+            contatoDtoList.add(contatoDTO);
+        });
+
+        return contatoDtoList;
+    }
+
     private ContatoResponseDTO convertToResponseDTO(Contato contato) {
         return new ContatoResponseDTO(
                 contato.getIdContato(),
