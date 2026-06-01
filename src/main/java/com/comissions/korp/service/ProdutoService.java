@@ -119,6 +119,7 @@ public class ProdutoService {
         Page<Produto> paginaProdutos = produtoRepository.findProdutosComFiltro(filtro, pageable);
 
         return paginaProdutos.map(produto -> new ListarProdutosResponseDTO(
+                produto.getIdProduto(),
                 produto.getNome(),
                 produto.getCodigoProduto()
         ));

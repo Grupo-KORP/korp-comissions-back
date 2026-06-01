@@ -17,8 +17,11 @@ public interface ProdutoRepository extends JpaRepository<Produto, Integer> {
 
 
     @Query("""
-    SELECT u FROM Produto u
-    WHERE (:busca IS NULL OR LOWER(u.nome) LIKE LOWER(CONCAT('%', :busca, '%')))
+    SELECT p FROM Produto p
+    WHERE (:busca IS NULL OR
+         LOWER(p.nome)  LIKE LOWER(CONCAT('%', :busca, '%')) OR
+         LOWER(p.codigoProduto) LIKE LOWER(CONCAT('%', :busca, '%')))
+    AND p.ativo = true
 """)
     Page<Produto> findProdutosComFiltro(@Param("busca") String busca,
                                         Pageable pageable);
