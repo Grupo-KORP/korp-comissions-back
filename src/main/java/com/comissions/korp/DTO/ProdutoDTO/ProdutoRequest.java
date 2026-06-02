@@ -3,6 +3,7 @@ package com.comissions.korp.DTO.ProdutoDTO;
 public class ProdutoRequest {
 
     private String nome;
+    private String codigoProduto;
     private Boolean ativo;
 
     public ProdutoRequest() {
@@ -22,6 +23,14 @@ public class ProdutoRequest {
 
     public void setAtivo(Boolean ativo) {
         this.ativo = ativo;
+    }
+
+    public String getCodigoProduto() {
+        return codigoProduto;
+    }
+
+    public void setCodigoProduto(String codigoProduto) {
+        this.codigoProduto = codigoProduto;
     }
 
 }

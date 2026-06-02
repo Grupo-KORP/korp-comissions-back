@@ -10,6 +10,8 @@ import com.comissions.korp.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -50,8 +52,8 @@ public class PedidoService {
         Usuario vendedor = usuarioRepository.findById(vendedorId)
                 .orElseThrow(() -> new RuntimeException("Vendedor não encontrado com id: " + vendedorId));
 
-        Cliente cliente = clienteService.buscarClientePorId(pedidoRequest.getFkCliente());
-        Distribuidor distribuidor = distribuidorService.buscarDistribuidorPorId(pedidoRequest.getFkDistribuidor());
+        Cliente cliente = clienteService.buscarClientePorId(pedidoRequest.getCliente().getId());
+        Distribuidor distribuidor = distribuidorService.buscarDistribuidorPorId(pedidoRequest.getDistribuidor().getId());
 
         Pedido pedidoSalvo = pedidoRepository.save(criarPedidoFromRequest(pedidoRequest, cliente, distribuidor, vendedor));
         Map<Integer, Produto> produtoMap = mapearProdutosPorId(pedidoRequest.getItens());
@@ -90,8 +92,8 @@ public class PedidoService {
                 Usuario vendedor = usuarioRepository.findById(vendedorId)
                 .orElseThrow(() -> new RuntimeException("Vendedor não encontrado com id: " + vendedorId));
 
-        Cliente cliente = clienteService.buscarClientePorId(pedidoRequest.getFkCliente());
-        Distribuidor distribuidor = distribuidorService.buscarDistribuidorPorId(pedidoRequest.getFkDistribuidor());
+        Cliente cliente = clienteService.buscarClientePorId(pedidoRequest.getCliente().getId());
+        Distribuidor distribuidor = distribuidorService.buscarDistribuidorPorId(pedidoRequest.getDistribuidor().getId());
 
         atualizarDadosPedido(pedido, pedidoRequest, cliente, distribuidor,vendedor);
 
@@ -143,17 +145,29 @@ public class PedidoService {
     }
 
     private void atualizarDadosPedido(Pedido pedido, PedidoRequest request, Cliente cliente, Distribuidor distribuidor, Usuario vendedor) {
-        pedido.setDataPedido(request.getDataPedido());
-        pedido.setNumeroNotaDistribuidor(request.getNumeroNotaDistribuidor());
-        pedido.setValorTotalRevenda(request.getValorTotalRevenda());
-        pedido.setValorTotalFaturamento(request.getValorTotalFaturamento());
-        pedido.setStatusPedido(request.getStatusPedido());
-        pedido.setFrete(request.getFrete());
-        pedido.setTransportadora(request.getTransportadora());
-        pedido.setObservacoes(request.getObservacoes());
+        pedido.setDataPedido(LocalDate.now());
+        pedido.setNumeroNotaDistribuidor("Aguardando implementação");
+        pedido.setValorTotalRevenda(calcularValorTotalRevenda(request.getItens()));
+        pedido.setValorTotalFaturamento(calcularValorTotalFaturamento(request.getItens()));
+        pedido.setStatusPedido("Aguardando implementação");
+        pedido.setFrete(true);
+        pedido.setTransportadora("Aguardando implementação");
+        pedido.setObservacoes("Aguardando implementação");
         pedido.setUsuario(vendedor);
         pedido.setCliente(cliente);
         pedido.setDistribuidor(distribuidor);
+    }
+
+    public BigDecimal calcularValorTotalRevenda(List<ItemPedidoRequest> itens) {
+        return itens.stream()
+                .map(item -> item.getVlrUnitDistr().multiply(BigDecimal.valueOf(item.getQuantidade())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    public BigDecimal calcularValorTotalFaturamento(List<ItemPedidoRequest> itens) {
+        return itens.stream()
+                .map(item -> item.getVlrUnitCliente().multiply(BigDecimal.valueOf(item.getQuantidade())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
 
