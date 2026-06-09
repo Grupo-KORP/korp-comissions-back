@@ -1,11 +1,11 @@
 package com.comissions.korp.controller;
 
-import com.comissions.korp.DTO.ClienteDTO.ClientePedidoResponseDTO;
+import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorContatosRequestDTO;
 import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorPedidoResponseDTO;
 import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorRequestDTO;
 import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorResponseDTO;
 import com.comissions.korp.DTO.DistribuidorDTO.ListarDistribuidoresResponseDTO;
-import com.comissions.korp.DTO.ListarVendedoresResponseDTO;
+import com.comissions.korp.service.ContatoService;
 import com.comissions.korp.service.DistribuidorService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -24,9 +24,11 @@ import java.util.*;
 public class DistribuidorController {
 
     private final DistribuidorService distribuidorService;
+    private final ContatoService contatoService;
 
-    public DistribuidorController(DistribuidorService distribuidorService) {
+    public DistribuidorController(DistribuidorService distribuidorService, ContatoService contatoService) {
         this.distribuidorService = distribuidorService;
+        this.contatoService = contatoService;
     }
 
     @PostMapping
@@ -132,6 +134,24 @@ public class DistribuidorController {
     public ResponseEntity<List<DistribuidorPedidoResponseDTO>> listarTodosPedidoDto() {
         List<DistribuidorPedidoResponseDTO> distribuidores = distribuidorService.listarTodosPedidoDto();
         return ResponseEntity.ok(distribuidores);
+    }
+
+    /**
+     * Atualiza os contatos de um Distribuidor
+     * PUT /distribuidor/{id}/contatos
+     */
+    @PutMapping("/{id}/contatos")
+    @Operation(summary = "Atualizar contatos do distribuidor")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Contatos atualizados com sucesso"),
+            @ApiResponse(responseCode = "404", description = "Distribuidor não encontrado"),
+            @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
+    })
+    public ResponseEntity<Void> atualizarContatos(
+            @PathVariable Integer id,
+            @RequestBody DistribuidorContatosRequestDTO requestDTO) {
+        contatoService.atualizarContatosDistribuidor(requestDTO, id);
+        return ResponseEntity.noContent().build();
     }
 
 }

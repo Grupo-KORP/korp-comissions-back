@@ -72,4 +72,21 @@ public class ContatoController {
         ContatoResponseDTO responseDTO = contatoService.atualizar(id, requestDTO);
         return ResponseEntity.ok(responseDTO);
     }
+
+    /**
+     * Deleta um Contato
+     * DELETE /contatos/{id}
+     */
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Remover Contato", description = "Remove um Contato existente pelo ID informado.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Contato removido com sucesso"),
+            @ApiResponse(responseCode = "400", description = "ID inválido"),
+            @ApiResponse(responseCode = "404", description = "Contato não encontrado"),
+            @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
+    })
+    public ResponseEntity<Void> deletar(@PathVariable Integer id) {
+        contatoService.deletar(id);
+        return ResponseEntity.noContent().build();
+    }
 }

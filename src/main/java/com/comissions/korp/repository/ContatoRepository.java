@@ -13,4 +13,10 @@ public interface ContatoRepository extends JpaRepository<Contato, Integer> {
     List<Contato> findByCliente(Cliente cliente);
 
     List<Contato> findByDistribuidor(Distribuidor distribuidor);
+
+    List<Contato> findByClienteAndAtivoTrue(Cliente cliente);
+
+    List<Contato> findByDistribuidorAndAtivoTrue(Distribuidor distribuidor);
+
+    Contato findByNomeAndEmail(String nome, String email);
 }

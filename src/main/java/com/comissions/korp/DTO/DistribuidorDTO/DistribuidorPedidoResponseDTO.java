@@ -1,6 +1,7 @@
 package com.comissions.korp.DTO.DistribuidorDTO;
 
 import com.comissions.korp.DTO.ContatoDTO.ContatoClienteResponseDTO;
+import com.comissions.korp.DTO.ContatoDTO.ContatoDistribuidorResponseDTO;
 
 import java.util.List;
 
@@ -17,7 +18,7 @@ public class DistribuidorPedidoResponseDTO {
     private String endereco;
     private String cidade;
     private String uf;
-    private List<ContatoClienteResponseDTO> contatos;
+    private List<ContatoDistribuidorResponseDTO> contatos;
 
     public DistribuidorPedidoResponseDTO() {
     }
@@ -55,7 +56,7 @@ public class DistribuidorPedidoResponseDTO {
     public String getUf() { return uf; }
     public void setUf(String uf) { this.uf = uf; }
 
-    public List<ContatoClienteResponseDTO> getContatos() { return contatos; }
-    public void setContatos(List<ContatoClienteResponseDTO> contatos) { this.contatos = contatos; }
+    public List<ContatoDistribuidorResponseDTO> getContatos() { return contatos; }
+    public void setContatos(List<ContatoDistribuidorResponseDTO> contatos) { this.contatos = contatos; }
 }
 

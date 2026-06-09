@@ -1,11 +1,9 @@
 package com.comissions.korp.controller;
 
-import com.comissions.korp.DTO.ClienteDTO.ClientePedidoResponseDTO;
-import com.comissions.korp.DTO.ClienteDTO.ClienteRequestDTO;
-import com.comissions.korp.DTO.ClienteDTO.ClienteResponseDTO;
-import com.comissions.korp.DTO.ClienteDTO.ListarClientesResponseDTO;
+import com.comissions.korp.DTO.ClienteDTO.*;
 import com.comissions.korp.DTO.DistribuidorDTO.ListarDistribuidoresResponseDTO;
 import com.comissions.korp.service.ClienteService;
+import com.comissions.korp.service.ContatoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -23,9 +21,11 @@ import java.util.List;
 public class ClienteController {
 
     private final ClienteService clienteService;
+    private final ContatoService contatoService;
 
-    public ClienteController(ClienteService clienteService) {
+    public ClienteController(ClienteService clienteService, ContatoService contatoService) {
         this.clienteService = clienteService;
+        this.contatoService = contatoService;
     }
 
     /**
@@ -155,5 +155,23 @@ public class ClienteController {
             @RequestParam(required = false) String busca,
             @PageableDefault(size = 5, sort = "razaoSocial") Pageable pageable) {
         return ResponseEntity.ok(clienteService.listarTodosClientes(busca, pageable));
+    }
+
+    /**
+     * Atualiza os contatos de um Cliente
+     * PUT /cliente/{id}/contatos
+     */
+    @PutMapping("/{id}/contatos")
+    @Operation(summary = "Atualizar contatos do cliente")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Contatos atualizados com sucesso"),
+            @ApiResponse(responseCode = "404", description = "Cliente não encontrado"),
+            @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
+    })
+    public ResponseEntity<Void> atualizarContatos(
+            @PathVariable Integer id,
+            @RequestBody ClienteContatosRequestDTO requestDTO) {
+        contatoService.atualizarContatosCliente(requestDTO, id);
+        return ResponseEntity.noContent().build();
     }
 }

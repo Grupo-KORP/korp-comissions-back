@@ -1,14 +1,19 @@
 package com.comissions.korp.DTO.DistribuidorDTO;
 
+
+import com.comissions.korp.DTO.ContatoDTO.ContatoDistribuidorResponseDTO;
+
+import java.util.List;
+
 public class ListarDistribuidoresResponseDTO {
 
     private Integer idDistribuidor;
     private String razaoSocial;
     private String nomeFantasia;
     private String inscricaoEstadual;
-    private String cnpj;
-    private String contato;
     private String email;
+    private String telefone;
+    private String cnpj;
     private Boolean ativo;
     private String cep;
     private String logradouro;
@@ -17,16 +22,18 @@ public class ListarDistribuidoresResponseDTO {
     private String numero;
     private String complemento;
     private String bairro;
+    private List<ContatoDistribuidorResponseDTO> contatos;
 
+    public ListarDistribuidoresResponseDTO() {}
 
-    public ListarDistribuidoresResponseDTO(Integer idDistribuidor, String razaoSocial, String nomeFantasia, String inscricaoEstadual, String cnpj, String contato, String email, Boolean ativo, String cep, String logradouro, String cidade, String uf, String numero, String complemento, String bairro) {
+    public ListarDistribuidoresResponseDTO(Integer idDistribuidor, String razaoSocial, String nomeFantasia, String inscricaoEstadual, String email, String telefone, String cnpj, Boolean ativo, String cep, String logradouro, String cidade, String uf, String numero, String complemento, String bairro, List<ContatoDistribuidorResponseDTO> contatos) {
         this.idDistribuidor = idDistribuidor;
         this.razaoSocial = razaoSocial;
         this.nomeFantasia = nomeFantasia;
         this.inscricaoEstadual = inscricaoEstadual;
-        this.cnpj = cnpj;
-        this.contato = contato;
         this.email = email;
+        this.telefone = telefone;
+        this.cnpj = cnpj;
         this.ativo = ativo;
         this.cep = cep;
         this.logradouro = logradouro;
@@ -35,9 +42,16 @@ public class ListarDistribuidoresResponseDTO {
         this.numero = numero;
         this.complemento = complemento;
         this.bairro = bairro;
+        this.contatos = contatos;
     }
 
-    public ListarDistribuidoresResponseDTO() {}
+    public String getTelefone() {
+        return telefone;
+    }
+
+    public List<ContatoDistribuidorResponseDTO> getContatos() {
+        return contatos;
+    }
 
     public Integer getIdDistribuidor() {
         return idDistribuidor;
@@ -53,10 +67,6 @@ public class ListarDistribuidoresResponseDTO {
 
     public String getCnpj() {
         return cnpj;
-    }
-
-    public String getContato() {
-        return contato;
     }
 
     public String getEmail() {

@@ -1,11 +1,13 @@
 package com.comissions.korp.DTO.ClienteDTO;
 
+import com.comissions.korp.DTO.ContatoDTO.ContatoRequestDTO;
+import java.util.List;
+
 public class ClienteRequestDTO {
     private String razaoSocial;
     private String nomeFantasia;
     private String cnpj;
     private String telefone;
-    private String email;
     private String inscricaoEstadual;
     private Boolean ativo;
     private Integer fkVendedorCadastro;
@@ -16,33 +18,30 @@ public class ClienteRequestDTO {
     private String complemento;
     private String cidade;
     private String uf;
-    private String nomeContato;
+    private List<ContatoItemClienteDTO> contatos; // nova lista
 
-    public ClienteRequestDTO() {
+    public static class ContatoItemClienteDTO {
+        private String nome;
+        private String email;
+        private String telefone;
+
+        public String getNome()     { return nome; }
+        public String getEmail()    { return email; }
+        public String getTelefone() { return telefone; }
+
+        public void setNome(String nome)         { this.nome = nome; }
+        public void setEmail(String email)       { this.email = email; }
+        public void setTelefone(String telefone) { this.telefone = telefone; }
     }
 
-    public ClienteRequestDTO(String cnpj, String email, String nomeFantasia, String razaoSocial, String telefone) {
-        this.cnpj = cnpj;
-        this.email = email;
-        this.nomeFantasia = nomeFantasia;
+    public ClienteRequestDTO() {}
+
+    public String getRazaoSocial() {
+        return razaoSocial;
+    }
+
+    public void setRazaoSocial(String razaoSocial) {
         this.razaoSocial = razaoSocial;
-        this.telefone = telefone;
-    }
-
-    public String getCnpj() {
-        return cnpj;
-    }
-
-    public void setCnpj(String cnpj) {
-        this.cnpj = cnpj;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
     }
 
     public String getNomeFantasia() {
@@ -53,12 +52,12 @@ public class ClienteRequestDTO {
         this.nomeFantasia = nomeFantasia;
     }
 
-    public String getRazaoSocial() {
-        return razaoSocial;
+    public String getCnpj() {
+        return cnpj;
     }
 
-    public void setRazaoSocial(String razaoSocial) {
-        this.razaoSocial = razaoSocial;
+    public void setCnpj(String cnpj) {
+        this.cnpj = cnpj;
     }
 
     public String getTelefone() {
@@ -101,6 +100,14 @@ public class ClienteRequestDTO {
         this.cep = cep;
     }
 
+    public String getBairro() {
+        return bairro;
+    }
+
+    public void setBairro(String bairro) {
+        this.bairro = bairro;
+    }
+
     public String getEndereco() {
         return endereco;
     }
@@ -141,19 +148,11 @@ public class ClienteRequestDTO {
         this.uf = uf;
     }
 
-    public String getNomeContato() {
-        return nomeContato;
+    public List<ContatoItemClienteDTO> getContatos() {
+        return contatos;
     }
 
-    public void setNomeContato(String nomeContato) {
-        this.nomeContato = nomeContato;
-    }
-
-    public String getBairro() {
-        return bairro;
-    }
-
-    public void setBairro(String bairro) {
-        this.bairro = bairro;
+    public void setContatos(List<ContatoItemClienteDTO> contatos) {
+        this.contatos = contatos;
     }
 }
