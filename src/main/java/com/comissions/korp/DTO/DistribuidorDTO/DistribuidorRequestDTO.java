@@ -1,32 +1,66 @@
 package com.comissions.korp.DTO.DistribuidorDTO;
 
+import com.comissions.korp.DTO.ClienteDTO.ClienteRequestDTO;
+
+import java.util.List;
+
 public class DistribuidorRequestDTO {
 
     private String razaoSocial;
     private String nomeFantasia;
     private String cnpj;
     private String telefone;
-    private String email;
     private String inscricaoEstadual;
     private Boolean ativo;
     private String cep;
+    private String bairro;
     private String endereco;
-    private String cidade;
-    private String uf;
     private String numero;
     private String complemento;
-    private String contato;
-    private String bairro;
+    private String cidade;
+    private String uf;
+    private List<ContatoItemDistribuidorDTO> contatos;
+
+    public static class ContatoItemDistribuidorDTO {
+        private String nome;
+        private String email;
+        private String telefone;
+
+        public String getNome()     { return nome; }
+        public String getEmail()    { return email; }
+        public String getTelefone() { return telefone; }
+
+        public void setNome(String nome)         { this.nome = nome; }
+        public void setEmail(String email)       { this.email = email; }
+        public void setTelefone(String telefone) { this.telefone = telefone; }
+    }
 
     public DistribuidorRequestDTO() {
     }
 
-    public DistribuidorRequestDTO(String cnpj, String email, String nomeFantasia, String razaoSocial, String telefone) {
-        this.cnpj = cnpj;
-        this.email = email;
-        this.nomeFantasia = nomeFantasia;
+    public DistribuidorRequestDTO(String razaoSocial, String nomeFantasia, String cnpj, String telefone, String inscricaoEstadual, Boolean ativo, String cep, String bairro, String endereco, String numero, String complemento, String cidade, String uf, List<ContatoItemDistribuidorDTO> contatos) {
         this.razaoSocial = razaoSocial;
+        this.nomeFantasia = nomeFantasia;
+        this.cnpj = cnpj;
         this.telefone = telefone;
+        this.inscricaoEstadual = inscricaoEstadual;
+        this.ativo = ativo;
+        this.cep = cep;
+        this.bairro = bairro;
+        this.endereco = endereco;
+        this.numero = numero;
+        this.complemento = complemento;
+        this.cidade = cidade;
+        this.uf = uf;
+        this.contatos = contatos;
+    }
+
+    public List<ContatoItemDistribuidorDTO> getContatos() {
+        return contatos;
+    }
+
+    public void setContatos(List<ContatoItemDistribuidorDTO> contatos) {
+        this.contatos = contatos;
     }
 
     public String getCnpj() {
@@ -35,14 +69,6 @@ public class DistribuidorRequestDTO {
 
     public void setCnpj(String cnpj) {
         this.cnpj = cnpj;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
     }
 
     public String getNomeFantasia() {
@@ -131,14 +157,6 @@ public class DistribuidorRequestDTO {
 
     public void setComplemento(String complemento) {
         this.complemento = complemento;
-    }
-
-    public String getContato() {
-        return contato;
-    }
-
-    public void setContato(String contato) {
-        this.contato = contato;
     }
 
     public String getBairro() {

@@ -55,10 +55,6 @@ public class ClienteService {
 
     @Transactional(rollbackOn = Exception.class)
     public ClienteResponseDTO criar(ClienteRequestDTO requestDTO) {
-        // Verifica se já existe cliente com mesmo email
-        if (clienteRepository.existsByEmail((requestDTO.getEmail()))) {
-            throw new UsuarioJaExistente("Já existe um cliente com este email: " + requestDTO.getEmail());
-        }
 
         // Verifica se já existe cliente com mesmo cnpj
         if (clienteRepository.existsByCnpj((requestDTO.getCnpj()))) {
@@ -142,7 +138,6 @@ public class ClienteService {
         clienteExistente.setCnpj(requestDTO.getCnpj());
         clienteExistente.setInscricaoEstadual(requestDTO.getInscricaoEstadual());
         clienteExistente.setTelefone(requestDTO.getTelefone());
-        clienteExistente.setEmail(requestDTO.getEmail());
         if (requestDTO.getAtivo() != null) {
             clienteExistente.setAtivo(requestDTO.getAtivo());
         }
@@ -200,7 +195,6 @@ public class ClienteService {
         cliente.setCnpj(dto.getCnpj());
         cliente.setInscricaoEstadual(dto.getInscricaoEstadual());
         cliente.setTelefone(dto.getTelefone());
-        cliente.setEmail(dto.getEmail());
 
         Integer id = securityUtils.getUsuarioIdAutenticado();
 
@@ -276,23 +270,25 @@ public class ClienteService {
                     ? enderecoCliente.getFirst()
                     : null;
 
+            List<ContatoClienteResponseDTO> contatos = contatoService.buscarPorClienteToDto(cliente);
+
             return new ListarClientesResponseDTO(
                     cliente.getIdCliente(),
                     cliente.getRazaoSocial(),
-                    cliente.getInscricaoEstadual(),
                     cliente.getNomeFantasia(),
-                    cliente.getCnpj(),
-                    cliente.getTelefone(),
+                    cliente.getInscricaoEstadual(),
                     cliente.getEmail(),
+                    cliente.getTelefone(),
+                    cliente.getCnpj(),
                     cliente.getAtivo(),
-                    endereco != null ? endereco.getCep() : null,
+                    endereco != null ? endereco.getCep()        : null,
                     endereco != null ? endereco.getLogradouro() : null,
-                    endereco != null ? endereco.getCidade() : null,
-                    endereco != null ? endereco.getEstado() : null,
-                    endereco != null ? endereco.getNumero() : null,
-                    endereco != null ? endereco.getComplemento() : null,
-                    endereco != null ? endereco.getBairro() : null
-
+                    endereco != null ? endereco.getCidade()     : null,
+                    endereco != null ? endereco.getEstado()     : null,
+                    endereco != null ? endereco.getNumero()     : null,
+                    endereco != null ? endereco.getComplemento(): null,
+                    endereco != null ? endereco.getBairro()     : null,
+                    contatos
             );
         });
 

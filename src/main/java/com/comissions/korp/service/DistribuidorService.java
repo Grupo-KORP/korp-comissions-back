@@ -2,6 +2,7 @@ package com.comissions.korp.service;
 
 import com.comissions.korp.DTO.ClienteDTO.ClientePedidoResponseDTO;
 import com.comissions.korp.DTO.ContatoDTO.ContatoClienteResponseDTO;
+import com.comissions.korp.DTO.ContatoDTO.ContatoDistribuidorResponseDTO;
 import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorPedidoResponseDTO;
 import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorRequestDTO;
 import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorResponseDTO;
@@ -47,9 +48,6 @@ public class DistribuidorService {
 
     @Transactional(rollbackFor = Exception.class)
     public DistribuidorResponseDTO criar(DistribuidorRequestDTO requestDTO) {
-        if (distribuidorRepository.existsByEmail((requestDTO.getEmail()))) {
-            throw new UsuarioJaExistente("Já existe um distribuidor com este email: " + requestDTO.getEmail());
-        }
 
         if (distribuidorRepository.existsByCnpj((requestDTO.getCnpj()))) {
             throw new UsuarioJaExistente("Já existe um distribuidor com este CNPJ: " + requestDTO.getCnpj());
@@ -111,7 +109,6 @@ public class DistribuidorService {
         distribuidorExistente.setCnpj(requestDTO.getCnpj());
         distribuidorExistente.setInscricaoEstadual(requestDTO.getInscricaoEstadual());
         distribuidorExistente.setTelefone(requestDTO.getTelefone());
-        distribuidorExistente.setEmail(requestDTO.getEmail());
         if (requestDTO.getAtivo() != null) {
             distribuidorExistente.setAtivo(requestDTO.getAtivo());
         }
@@ -167,14 +164,16 @@ public class DistribuidorService {
                     ? enderecoDistribuidor.getFirst()
                     : null;
 
+            List<ContatoDistribuidorResponseDTO> contatos = contatoService.buscarPorDistribuidorToDto(distribuidor);
+
             return new ListarDistribuidoresResponseDTO(
                     distribuidor.getIdDistribuidor(),
                     distribuidor.getRazaoSocial(),
                     distribuidor.getNomeFantasia(),
                     distribuidor.getInscricaoEstadual(),
-                    distribuidor.getCnpj(),
-                    distribuidor.getTelefone(),
                     distribuidor.getEmail(),
+                    distribuidor.getTelefone(),
+                    distribuidor.getCnpj(),
                     distribuidor.getAtivo(),
                     endereco != null ? endereco.getCep() : null,
                     endereco != null ? endereco.getLogradouro() : null,
@@ -182,8 +181,8 @@ public class DistribuidorService {
                     endereco != null ? endereco.getEstado() : null,
                     endereco != null ? endereco.getNumero() : null,
                     endereco != null ? endereco.getComplemento() : null,
-                    endereco != null ? endereco.getBairro() : null
-
+                    endereco != null ? endereco.getBairro() : null,
+                    contatos
             );
         });
     }
@@ -203,7 +202,6 @@ public class DistribuidorService {
         distribuidor.setCnpj(dto.getCnpj());
         distribuidor.setInscricaoEstadual(dto.getInscricaoEstadual());
         distribuidor.setTelefone(dto.getTelefone());
-        distribuidor.setEmail(dto.getEmail());
         return distribuidor;
     }
 
@@ -216,6 +214,9 @@ public class DistribuidorService {
         dto.setInscricaoEstadual(distribuidor.getInscricaoEstadual());
         dto.setTelefone(distribuidor.getTelefone());
         dto.setEmail(distribuidor.getEmail());
+        List<ContatoDistribuidorResponseDTO> contatoDtoList = contatoService.buscarPorDistribuidorToDto(distribuidor);
+
+        dto.setContato(contatoDtoList);
         return dto;
     }
 
@@ -240,7 +241,7 @@ public class DistribuidorService {
         dto.setEndereco(endereco.getLogradouro());
 
         // informações contato
-        List<ContatoClienteResponseDTO> contatoDtoList = contatoService.buscarPorDistribuidorToDto(distribuidor);
+        List<ContatoDistribuidorResponseDTO> contatoDtoList = contatoService.buscarPorDistribuidorToDto(distribuidor);
 
         dto.setContatos(contatoDtoList);
 

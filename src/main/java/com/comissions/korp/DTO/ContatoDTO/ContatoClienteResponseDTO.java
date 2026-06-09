@@ -4,16 +4,26 @@ public class ContatoClienteResponseDTO {
     private Integer idContato;
     private String nome;
     private String email;
+    private String telefone;
     private Integer idCliente;
 
     public ContatoClienteResponseDTO() {
     }
 
-    public ContatoClienteResponseDTO(Integer idContato, String nome, String email, String telefone, Integer idCliente, Integer idDistribuidor){
+    public ContatoClienteResponseDTO(Integer idContato, String nome, String email, String telefone, Integer idCliente) {
         this.idContato = idContato;
         this.nome = nome;
         this.email = email;
+        this.telefone = telefone;
         this.idCliente = idCliente;
+    }
+
+    public String getTelefone() {
+        return telefone;
+    }
+
+    public void setTelefone(String telefone) {
+        this.telefone = telefone;
     }
 
     public String getEmail() {
