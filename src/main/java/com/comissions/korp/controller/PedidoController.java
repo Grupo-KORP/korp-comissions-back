@@ -1,6 +1,7 @@
 package com.comissions.korp.controller;
 
 
+import com.comissions.korp.DTO.PagamentoDTO;
 import com.comissions.korp.DTO.PedidoDTO.PedidoRequest;
 import com.comissions.korp.DTO.PedidoDTO.PedidoResponse;
 import com.comissions.korp.config.utils.SecurityUtils;
@@ -35,7 +36,7 @@ public class PedidoController {
     })
     public ResponseEntity<PedidoResponse> cadastrarPedido(@RequestBody PedidoRequest pedidoRequest) {
         Integer usuarioId = securityUtils.getUsuarioIdAutenticado();
-            return ResponseEntity.status(201).body(pedidoService.cadastrarPedido(pedidoRequest, usuarioId));
+        return ResponseEntity.status(201).body(pedidoService.cadastrarPedido(pedidoRequest, usuarioId));
     }
 
     @GetMapping("/listar")
@@ -45,7 +46,7 @@ public class PedidoController {
             @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
     })
     public ResponseEntity<List<PedidoResponse>> listarPedidos() {
-            return ResponseEntity.status(200).body(pedidoService.listarPedidos());
+        return ResponseEntity.status(200).body(pedidoService.listarPedidos());
     }
 
     @GetMapping("/buscar/{id}")
@@ -56,8 +57,8 @@ public class PedidoController {
             @ApiResponse(responseCode = "404", description = "Pedido não encontrado"),
             @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
     })
-    public ResponseEntity<PedidoResponse> buscarPedidoPorId(@PathVariable Integer id){
-            return ResponseEntity.status(200).body(pedidoService.buscarPedidoPorId(id));
+    public ResponseEntity<PedidoResponse> buscarPedidoPorId(@PathVariable Integer id) {
+        return ResponseEntity.status(200).body(pedidoService.buscarPedidoPorId(id));
     }
 
     @PutMapping("/atualizar/{id}")
@@ -71,8 +72,8 @@ public class PedidoController {
     public ResponseEntity<PedidoResponse> atualizarPedido(
             @PathVariable Integer id,
             @RequestBody PedidoRequest pedidoRequest) {
-            Integer vendedorId = securityUtils.getUsuarioIdAutenticado();
-            return ResponseEntity.status(200).body(pedidoService.atualizarPedido(id, pedidoRequest, vendedorId));
+        Integer vendedorId = securityUtils.getUsuarioIdAutenticado();
+        return ResponseEntity.status(200).body(pedidoService.atualizarPedido(id, pedidoRequest, vendedorId));
     }
 
     @DeleteMapping("/deletar/{id}")
@@ -84,7 +85,20 @@ public class PedidoController {
             @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
     })
     public ResponseEntity<?> deletarPedido(@PathVariable Integer id) {
-            pedidoService.deletarPedido(id);
-            return ResponseEntity.status(204).body("Pedido deletado com sucesso!");
-        }
+        pedidoService.deletarPedido(id);
+        return ResponseEntity.status(204).body("Pedido deletado com sucesso!");
     }
+
+    @PostMapping("/{idPedido}/comissao")
+    @Operation(summary = "Cadastrar comissão", description = "Cadastra comissão e parcelas pelo ID informado.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Comissão cadastrada com sucesso"),
+            @ApiResponse(responseCode = "400", description = "ID inválido"),
+            @ApiResponse(responseCode = "404", description = "Pedido não encontrado"),
+            @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
+    })
+    public ResponseEntity<String> criarComissao(@PathVariable Integer idPedido, @RequestBody PagamentoDTO pagamento) {
+        pedidoService.criarComissao(idPedido, pagamento);
+        return ResponseEntity.status(201).body("Pedido finalizado com sucesso!");
+    }
+}
