@@ -2,15 +2,21 @@ package com.comissions.korp.service;
 
 import com.comissions.korp.DTO.ItemPedidoDTO.ItemPedidoRequest;
 import com.comissions.korp.DTO.ItemPedidoDTO.ItemPedidoResumoResponse;
+import com.comissions.korp.DTO.PagamentoDTO;
 import com.comissions.korp.DTO.PedidoDTO.PedidoRequest;
 import com.comissions.korp.DTO.PedidoDTO.PedidoResponse;
 import com.comissions.korp.entity.*;
+import com.comissions.korp.entity.ENUM.MetodoPagamento;
+import com.comissions.korp.entity.ENUM.StatusComissao;
+import com.comissions.korp.entity.ENUM.StatusParcela;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.repository.*;
+import jdk.jshell.Snippet;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,14 +33,18 @@ public class PedidoService {
     private final ClienteService clienteService;
     private final DistribuidorService distribuidorService;
     private final ItemPedidoService itemPedidoService;
+    private final ComissaoService comissaoService;
+    private final PagamentoRepository pagamentoRepository;
+    private final ParcelaRepository parcelaRepository;
+    private final ComissaoRepository comissaoRepository;
 
 
     public PedidoService(PedidoRepository pedidoRepository
-            ,ItemPedidoRepository itemPedidoRepository
-            ,ProdutoRepository produtoRepository
-            ,ClienteService clienteService
-            ,DistribuidorService distribuidorService,
-                         ItemPedidoService itemPedidoService, UsuarioRepository usuarioRepository) {
+            , ItemPedidoRepository itemPedidoRepository
+            , ProdutoRepository produtoRepository
+            , ClienteService clienteService
+            , DistribuidorService distribuidorService,
+                         ItemPedidoService itemPedidoService, UsuarioRepository usuarioRepository, ComissaoService comissaoService, PagamentoRepository pagamentoRepository, ParcelaRepository parcelaRepository, ComissaoRepository comissaoRepository) {
         this.pedidoRepository = pedidoRepository;
         this.itemPedidoRepository = itemPedidoRepository;
         this.produtoRepository = produtoRepository;
@@ -42,6 +52,10 @@ public class PedidoService {
         this.distribuidorService = distribuidorService;
         this.itemPedidoService = itemPedidoService;
         this.usuarioRepository = usuarioRepository;
+        this.comissaoService = comissaoService;
+        this.pagamentoRepository = pagamentoRepository;
+        this.parcelaRepository = parcelaRepository;
+        this.comissaoRepository = comissaoRepository;
     }
 
 
@@ -146,13 +160,13 @@ public class PedidoService {
 
     private void atualizarDadosPedido(Pedido pedido, PedidoRequest request, Cliente cliente, Distribuidor distribuidor, Usuario vendedor) {
         pedido.setDataPedido(LocalDate.now());
-        pedido.setNumeroNotaDistribuidor("Aguardando implementação");
+        pedido.setNumeroNotaDistribuidor(pedido.getNumeroNotaDistribuidor());
         pedido.setValorTotalRevenda(calcularValorTotalRevenda(request.getItens()));
         pedido.setValorTotalFaturamento(calcularValorTotalFaturamento(request.getItens()));
-        pedido.setStatusPedido("Aguardando implementação");
-        pedido.setFrete(true);
-        pedido.setTransportadora("Aguardando implementação");
-        pedido.setObservacoes("Aguardando implementação");
+        pedido.setStatusPedido(pedido.getStatusPedido());
+        pedido.setFrete(pedido.getFrete());
+        pedido.setTransportadora(pedido.getTransportadora());
+        pedido.setObservacoes(pedido.getObservacoes());
         pedido.setUsuario(vendedor);
         pedido.setCliente(cliente);
         pedido.setDistribuidor(distribuidor);
@@ -173,6 +187,7 @@ public class PedidoService {
 
     private Pedido criarPedidoFromRequest(PedidoRequest pedidoRequest, Cliente cliente, Distribuidor distribuidor, Usuario vendedor) {
         Pedido pedido = new Pedido();
+        pedido.setStatusPedido("EM_ANDAMENTO");
         atualizarDadosPedido(pedido, pedidoRequest, cliente, distribuidor, vendedor);
         return pedido;
     }
@@ -230,5 +245,108 @@ public class PedidoService {
         itemPedido.setVlrUnitCliente(itemRequest.getVlrUnitCliente());
         itemPedido.setVlrTotalCliente(itemRequest.getVlrTotalCliente());
         return itemPedido;
+    }
+
+    @Transactional
+    public String criarComissao(Integer idPedido, PagamentoDTO pagamento) {
+        Pedido pedido = pedidoRepository.findById(idPedido)
+                .orElseThrow(() -> new RecursoNaoEncontrado("Pedido não encontrado com id: " + idPedido));
+
+        Pagamento pagamentoPedido = criarPagamentoFromPagamentoDTOAndPedido(pagamento, pedido);
+        pagamentoRepository.save(pagamentoPedido);
+
+        criarParcelasComComissao(pagamentoPedido, pedido);
+
+        pedido.setStatusPedido("EM_ANDAMENTO");
+        pedidoRepository.save(pedido);
+
+        return "Comissão criada com sucesso para o pedido ID: " + idPedido;
+    }
+
+    public Pagamento criarPagamentoFromPagamentoDTOAndPedido(PagamentoDTO pagamento, Pedido pedido) {
+        Pagamento pagamentoPedido = new Pagamento();
+
+        MetodoPagamento metodo = getMetodoPagamentoFromPagamentoDTO(pagamento);
+
+        pagamentoPedido.setPedido(pedido);
+        pagamentoPedido.setParcelado(pagamento.getParcelado());
+        pagamentoPedido.setMetodoPagamento(metodo);
+        pagamentoPedido.setQuantidadeParcelas(pagamento.getQuantidadeParcelas());
+        return pagamentoPedido;
+    }
+
+    public MetodoPagamento getMetodoPagamentoFromPagamentoDTO(PagamentoDTO pagamento) {
+        return pagamento.getMetodoPagamento();
+    }
+
+    public List<Parcela> criarParcelasComComissao(Pagamento pagamento, Pedido pedido) {
+        Integer qtdParcelas = pagamento.getQuantidadeParcelas();
+        if (qtdParcelas == null || qtdParcelas <= 0) {
+            throw new IllegalArgumentException(
+                    "Quantidade de parcelas inválida: deve ser um número inteiro maior que zero."
+            );
+        }
+
+        BigDecimal percentualComissao = comissaoService.pegarComissaoPorUsuario().divide(BigDecimal.valueOf(100));
+        BigDecimal bdQtd = BigDecimal.valueOf(qtdParcelas); // 5
+        BigDecimal valorTotal = pedido.getValorTotalFaturamento(); // 30000
+        BigDecimal valorComissaoBruto = valorTotal.subtract(pedido.getValorTotalDistr());
+
+        List<Parcela> parcelas = new ArrayList<>();
+        List<Comissao> comissoes = new ArrayList<>();
+
+        BigDecimal valorParcela = valorTotal // 6000
+                .divide(bdQtd, 2, RoundingMode.HALF_UP);
+
+        BigDecimal valorTotalComissao = valorComissaoBruto // 9000
+                .multiply(percentualComissao);
+
+        BigDecimal valorComissaoPorParcela = valorTotalComissao
+                .divide(bdQtd, 2, RoundingMode.HALF_UP);
+
+        BigDecimal somaParcelasBase = valorParcela.multiply(bdQtd);
+        BigDecimal remainderParcela = valorTotal.subtract(somaParcelasBase);
+
+        BigDecimal somaComissaoBase = valorComissaoPorParcela.multiply(bdQtd);
+        BigDecimal remainderComissao = valorTotalComissao
+                .setScale(2, RoundingMode.HALF_UP)
+                .subtract(somaComissaoBase);
+
+        for (int i = 1; i <= qtdParcelas; i++) {
+            boolean isUltimaParcela = (i == qtdParcelas);
+
+            BigDecimal valorParcelaFinal = isUltimaParcela
+                    ? valorParcela.add(remainderParcela)
+                    : valorParcela;
+
+            BigDecimal valorComissaoFinal = isUltimaParcela
+                    ? valorComissaoPorParcela.add(remainderComissao)
+                    : valorComissaoPorParcela;
+
+            Parcela parcela = new Parcela();
+            parcela.setPagamento(pagamento);
+            parcela.setStatusParcela(StatusParcela.PENDENTE);
+            parcela.setNumeroParcela(i);
+            parcela.setDataPagamento(null);
+            parcela.setValorParcela(valorParcelaFinal);
+            parcela.setDataVencimento(LocalDate.now().plusMonths(i));
+
+            Comissao comissao = new Comissao();
+            comissao.setPedido(pedido);
+            comissao.setValorComissao(valorComissaoFinal);
+            comissao.setStatusComissao(StatusComissao.PENDENTE);
+            comissao.setUsuario(pedido.getUsuario());
+            comissao.setDataPagamento(null);
+            comissao.setParcela(parcela);
+            comissoes.add(comissao);
+
+            parcelas.add(parcela);
+        }
+
+        parcelaRepository.saveAll(parcelas);
+
+        comissaoRepository.saveAll(comissoes);
+
+        return parcelas;
     }
 }
