@@ -2,23 +2,22 @@ package com.comissions.korp.DTO;
 
 public class UsuarioTrocarSenhaReqDTO {
 
-    private String senhaVelha;
-    private String senhaNova;
+    private String senhaAtual;
+    private String novaSenha;
 
-
-    public String getSenhaVelha() {
-        return senhaVelha;
+    public String getSenhaAtual() {
+        return senhaAtual;
     }
 
-    public void setSenhaVelha(String senhaVelha) {
-        this.senhaVelha = senhaVelha;
+    public void setSenhaAtual(String senhaAtual) {
+        this.senhaAtual = senhaAtual;
     }
 
-    public String getSenhaNova() {
-        return senhaNova;
+    public String getNovaSenha() {
+        return novaSenha;
     }
 
-    public void setSenhaNova(String senhaNova) {
-        this.senhaNova = senhaNova;
+    public void setNovaSenha(String novaSenha) {
+        this.novaSenha = novaSenha;
     }
 }

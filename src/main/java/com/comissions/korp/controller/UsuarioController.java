@@ -1,13 +1,11 @@
 package com.comissions.korp.controller;
 
-import com.comissions.korp.DTO.ListarVendedoresResponseDTO;
-import com.comissions.korp.DTO.UsuarioRequestDTO;
-import com.comissions.korp.DTO.UsuarioResponseDTO;
-import com.comissions.korp.DTO.UsuarioTrocarSenhaReqDTO;
+import com.comissions.korp.DTO.*;
 import com.comissions.korp.service.UsuarioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -141,5 +139,25 @@ public class UsuarioController {
             @RequestBody UsuarioTrocarSenhaReqDTO usuarioTrocarSenhaReqDTO) {
         usuarioService.retornoDoPrimeiroAcesso(usuarioTrocarSenhaReqDTO);
         return ResponseEntity.noContent().build();
+    }
+
+
+    @PostMapping("/esqueci-senha")
+    public ResponseEntity resquestChangePassword(@Valid @RequestBody UsuarioEmailEsqueciSenhaRequestDTO requestDTO){
+
+        usuarioService.solicitacaoTrocaSenha(requestDTO.getEmail());
+
+        return ResponseEntity.noContent().build();
+
+    }
+
+    @PatchMapping("/troca-senha")
+    public ResponseEntity<String> resetPassword(
+            @RequestParam String token,
+            @RequestBody @Valid UsuarioEsqueciSenhaRequestDTO password
+    ) {
+        usuarioService.trocaSenha(token, password);
+
+        return ResponseEntity.ok("Senha alterada com sucesso");
     }
 }

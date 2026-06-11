@@ -1,9 +1,6 @@
 package com.comissions.korp.service;
 
-import com.comissions.korp.DTO.ListarVendedoresResponseDTO;
-import com.comissions.korp.DTO.UsuarioTrocarSenhaReqDTO;
-import com.comissions.korp.DTO.UsuarioRequestDTO;
-import com.comissions.korp.DTO.UsuarioResponseDTO;
+import com.comissions.korp.DTO.*;
 import com.comissions.korp.config.utils.SecurityUtils;
 import com.comissions.korp.entity.Role;
 import com.comissions.korp.entity.Usuario;
@@ -13,6 +10,7 @@ import com.comissions.korp.exception.UsuarioJaExistente;
 import com.comissions.korp.repository.PedidoRepository;
 import com.comissions.korp.repository.RoleRepository;
 import com.comissions.korp.repository.UsuarioRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -184,18 +182,55 @@ public class UsuarioService {
 
         Usuario usuarioTrocarSenha = buscarUsuarioPorId(idUsuario);
 
-        Boolean mesmaSenha = passwordEncoder.matches(usuarioTrocarSenhaReqDTO.getSenhaVelha(), usuarioTrocarSenha.getSenha());
+        Boolean mesmaSenha = passwordEncoder.matches(usuarioTrocarSenhaReqDTO.getSenhaAtual(), usuarioTrocarSenha.getSenha());
 
         if(!mesmaSenha){
             throw new RuntimeException("Deu erardo");
         }
 
-        usuarioTrocarSenha.setSenha(passwordEncoder.encode(usuarioTrocarSenhaReqDTO.getSenhaNova()));
+        usuarioTrocarSenha.setSenha(passwordEncoder.encode(usuarioTrocarSenhaReqDTO.getNovaSenha()));
 
         usuarioTrocarSenha.setPrimeiroAcesso(false);
 
         usuarioRepository.save(usuarioTrocarSenha);
     }
+
+    @Transactional
+    public void solicitacaoTrocaSenha(String email) {
+
+        Optional<Usuario> userFound = usuarioRepository.findByEmail(email);
+
+        if (userFound.isEmpty()) {
+            return;
+        }
+
+        Usuario usuario = userFound.get();
+
+        usuario.gerarToken();
+
+        usuarioRepository.save(usuario);
+
+        emailService.enviarEmailTrocaSenha(usuario);
+    }
+
+    @Transactional
+    public void trocaSenha(String token, UsuarioEsqueciSenhaRequestDTO password) {
+        Usuario userFound = usuarioRepository.findUsuarioByToken(token);
+        LocalDateTime now = LocalDateTime.now();
+
+        if (now.isAfter(userFound.getExpiracaoToken())) {
+            throw new RuntimeException("Token invalido");
+        }
+
+        if (password.getNovaSenha().equals(password.getConfirmaSenha())) {
+                String encryptedPassword = passwordEncoder.encode(password.getNovaSenha());
+                userFound.setSenha(encryptedPassword);
+                userFound.invalidarToken();
+        } else {
+            throw new RuntimeException("As senhas não coincidem");
+        }
+    }
+
 
     /**
      * Converte UsuarioRequestDTO para Entity
@@ -209,6 +244,8 @@ public class UsuarioService {
         usuario.setTelefone(dto.getTelefone());
         usuario.setPrimeiroAcesso(true);
         usuario.setAtivo(true);
+        usuario.setExpiracaoToken(null);
+        usuario.setToken(null);
         usuario.setPercentualComissao(dto.getPercentualComissao());
         usuario.setDtCriacao(LocalDateTime.now());
         usuario.setRoles(role);
@@ -225,7 +262,12 @@ public class UsuarioService {
                 usuario.getEmail(),
                 usuario.getSenha(),
                 usuario.getTelefone(),
-                usuario.getPercentualComissao()
+                usuario.getPercentualComissao(),
+                usuario.getPrimeiroAcesso(),
+                usuario.getAtivo(),
+                usuario.getDtCriacao(),
+                usuario.getExpiracaoToken(),
+                usuario.getToken()
         );
     }
 
