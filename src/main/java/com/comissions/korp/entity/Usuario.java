@@ -8,6 +8,7 @@ import org.hibernate.validator.constraints.Length;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Entity
 @Table(name = "usuario")
@@ -49,10 +50,16 @@ public class Usuario {
     @Column(name = "ativo", nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
     private Boolean ativo;
 
+    @Column(name = "token")
+    private String token;
+
+    @Column(name = "expiracao_token")
+    private LocalDateTime expiracaoToken;
+
     public Usuario() {
     }
 
-    public Usuario(Integer idUsuario, String nome, String email, String senha, String telefone, BigDecimal percentualComissao, Role roles, LocalDateTime dtCriacao, Boolean primeiroAcesso, Boolean ativo) {
+    public Usuario(Integer idUsuario, String nome, String email, String senha, String telefone, BigDecimal percentualComissao, Role roles, LocalDateTime dtCriacao, Boolean primeiroAcesso, Boolean ativo, String token, LocalDateTime expiracaoToken) {
         this.idUsuario = idUsuario;
         this.nome = nome;
         this.email = email;
@@ -63,6 +70,8 @@ public class Usuario {
         this.dtCriacao = dtCriacao;
         this.primeiroAcesso = primeiroAcesso;
         this.ativo = ativo;
+        this.token = token;
+        this.expiracaoToken = expiracaoToken;
     }
 
     public String gerarSenha() {
@@ -77,6 +86,17 @@ public class Usuario {
 
         return senhaGerada.toString();
     }
+
+    public void gerarToken() {
+        this.token = UUID.randomUUID().toString();
+        this.expiracaoToken = LocalDateTime.now().plusMinutes(15);
+    }
+
+    public void invalidarToken() {
+        this.token = null;
+        this.expiracaoToken = null;
+    }
+
 
     public Role getRoles() {
         return roles;
@@ -158,6 +178,19 @@ public class Usuario {
         this.ativo = ativo;
     }
 
+    public String getToken() {
+        return token;
+    }
 
+    public void setToken(String token) {
+        this.token = token;
+    }
 
+    public LocalDateTime getExpiracaoToken() {
+        return expiracaoToken;
+    }
+
+    public void setExpiracaoToken(LocalDateTime expiracaoToken) {
+        this.expiracaoToken = expiracaoToken;
+    }
 }

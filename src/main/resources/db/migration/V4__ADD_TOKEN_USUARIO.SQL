@@ -1,0 +1,3 @@
+ALTER TABLE usuario
+    ADD COLUMN token VARCHAR(255) NULL,
+    ADD COLUMN expiracao_token DATETIME NULL;

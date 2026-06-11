@@ -36,7 +36,7 @@ public class DataInicializer implements ApplicationRunner {
         // Verifica se já existe usuário com mesmo email
         if (!usuarioRepository.existsByEmail("janderson@tndbrasil.com.br")) {
             UsuarioRequestDTO requestDTO = new UsuarioRequestDTO(
-                    null,"Janderson Mira","janderson@tndbrasil.com.br","","119950012322",2, BigDecimal.valueOf(0.0), true, true
+                    null,"Janderson Mira","janderson@tndbrasil.com.br","","119950012322",2, BigDecimal.valueOf(0.0), false, true, null, null, null
             );
 
             Optional<Role> role = roleRepository.findById(requestDTO.getRole());
@@ -54,7 +54,7 @@ public class DataInicializer implements ApplicationRunner {
 
         if (!usuarioRepository.existsByEmail("vendedor@tndbrasil.com.br")) {
             UsuarioRequestDTO requestDTO = new UsuarioRequestDTO(
-                    null,"Vendedor Padrão","vendedor@tndbrasil.com.br","","119950012321",3,BigDecimal.valueOf(30.0), true, true
+                    null,"Vendedor Padrão","vendedor@tndbrasil.com.br","","119950012321",3,BigDecimal.valueOf(30.0), false, true,null,null, null
             );
 
             Optional<Role> role = roleRepository.findById(requestDTO.getRole());
