@@ -13,8 +13,17 @@ public class PedidoRequest {
     private ClientePedidoResponseDTO cliente;
     private DistribuidorPedidoResponseDTO distribuidor;
     private List<ItemPedidoRequest> itens;
+    private String pdfBase64;
 
     public PedidoRequest() {
+    }
+
+    public String getPdfBase64() {
+        return pdfBase64;
+    }
+
+    public void setPdfBase64(String pdfBase64) {
+        this.pdfBase64 = pdfBase64;
     }
 
     public ClientePedidoResponseDTO getCliente() {

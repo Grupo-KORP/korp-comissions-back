@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -36,6 +37,7 @@ public class PedidoService {
     private final DistribuidorService distribuidorService;
     private final ItemPedidoService itemPedidoService;
     private final ComissaoService comissaoService;
+    private final EmailService emailService;
     private final PagamentoRepository pagamentoRepository;
     private final ParcelaRepository parcelaRepository;
     private final ComissaoRepository comissaoRepository;
@@ -48,7 +50,7 @@ public class PedidoService {
             , ProdutoRepository produtoRepository
             , ClienteService clienteService
             , DistribuidorService distribuidorService,
-                         ItemPedidoService itemPedidoService, UsuarioRepository usuarioRepository, ComissaoService comissaoService, PagamentoRepository pagamentoRepository, ParcelaRepository parcelaRepository, ComissaoRepository comissaoRepository, ClienteRepository clienteRepository, DistribuidorRepository distribuidorRepository) {
+                         ItemPedidoService itemPedidoService, UsuarioRepository usuarioRepository, ComissaoService comissaoService,EmailService emailService, PagamentoRepository pagamentoRepository, ParcelaRepository parcelaRepository, ComissaoRepository comissaoRepository, ClienteRepository clienteRepository, DistribuidorRepository distribuidorRepository) {
         this.pedidoRepository = pedidoRepository;
         this.itemPedidoRepository = itemPedidoRepository;
         this.produtoRepository = produtoRepository;
@@ -57,13 +59,13 @@ public class PedidoService {
         this.itemPedidoService = itemPedidoService;
         this.usuarioRepository = usuarioRepository;
         this.comissaoService = comissaoService;
+        this.emailService = emailService;
         this.pagamentoRepository = pagamentoRepository;
         this.parcelaRepository = parcelaRepository;
         this.comissaoRepository = comissaoRepository;
         this.clienteRepository = clienteRepository;
         this.distribuidorRepository = distribuidorRepository;
     }
-
 
     @Transactional
     public PedidoResponse cadastrarPedido(PedidoRequest pedidoRequest, Integer vendedorId) {
@@ -77,6 +79,20 @@ public class PedidoService {
         Pedido pedidoSalvo = pedidoRepository.save(criarPedidoFromRequest(pedidoRequest, cliente, distribuidor, vendedor));
         Map<Integer, Produto> produtoMap = mapearProdutosPorId(pedidoRequest.getItens());
         List<ItemPedido> itensSalvos = salvarItensDoPedido(pedidoSalvo, pedidoRequest.getItens(), produtoMap);
+
+        if ( pedidoRequest.getPdfBase64() != null
+                && pedidoRequest.getDistribuidor().getEmail() != null) {
+
+            byte[] pdfBytes = Base64.getDecoder().decode(pedidoRequest.getPdfBase64());
+
+            emailService.enviarPedidoDistribuidor(
+                    pedidoRequest.getDistribuidor().getEmail(),
+                    pedidoRequest.getDistribuidor().getNomeFantasia(),
+                    String.valueOf(pedidoSalvo.getIdPedido()),
+                    pedidoRequest.getCliente().getRazaoSocial(),
+                    pdfBytes
+            );
+        }
 
         return convertToPedidoResponse(pedidoSalvo, itensSalvos);
     }
@@ -102,18 +118,19 @@ public class PedidoService {
     }
 
 
+
     @Transactional
     public PedidoResponse atualizarPedido(Integer id, PedidoRequest pedidoRequest, Integer vendedorId) {
         Pedido pedido = pedidoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontrado("Pedido não encontrado com id: " + id));
 
-        Usuario vendedor = usuarioRepository.findById(vendedorId)
+                Usuario vendedor = usuarioRepository.findById(vendedorId)
                 .orElseThrow(() -> new RuntimeException("Vendedor não encontrado com id: " + vendedorId));
 
         Cliente cliente = clienteService.buscarClientePorId(pedidoRequest.getCliente().getId());
         Distribuidor distribuidor = distribuidorService.buscarDistribuidorPorId(pedidoRequest.getDistribuidor().getId());
 
-        atualizarDadosPedido(pedido, pedidoRequest, cliente, distribuidor, vendedor);
+        atualizarDadosPedido(pedido, pedidoRequest, cliente, distribuidor,vendedor);
 
         Pedido pedidoAtualizado = pedidoRepository.save(pedido);
 
@@ -149,7 +166,7 @@ public class PedidoService {
         pedidoResponse.setFrete(pedido.getFrete());
         pedidoResponse.setTransportadora(pedido.getTransportadora());
         pedidoResponse.setObservacoes(pedido.getObservacoes());
-        pedidoResponse.setFkVendedor(pedido.getUsuario() != null ? pedido.getUsuario().getIdUsuario() : null);
+        pedidoResponse.setFkVendedor(pedido.getUsuario() != null ? pedido.getUsuario().getIdUsuario(): null);
         pedidoResponse.setFkCliente(pedido.getCliente() != null ? pedido.getCliente().getIdCliente() : null);
         pedidoResponse.setFkDistribuidor(pedido.getDistribuidor() != null ? pedido.getDistribuidor().getIdDistribuidor() : null);
 
@@ -208,7 +225,7 @@ public class PedidoService {
     }
 
     public List<ItemPedido> salvarItensDoPedido(Pedido pedido, List<ItemPedidoRequest> itensRequest,
-                                                Map<Integer, Produto> produtoMap) {
+                                                  Map<Integer, Produto> produtoMap) {
         List<ItemPedido> itensSalvos = new ArrayList<>();
 
         for (ItemPedidoRequest itemRequest : itensRequest) {
@@ -273,6 +290,7 @@ public class PedidoService {
 
         return "Comissão criada com sucesso para o pedido ID: " + idPedido;
     }
+
     public Pagamento criarPagamentoFromPagamentoDTOAndPedido(PagamentoDTO pagamento, Pedido pedido) {
         Pagamento pagamentoPedido = new Pagamento();
 
