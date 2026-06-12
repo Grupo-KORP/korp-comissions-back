@@ -3,6 +3,7 @@ package com.comissions.korp.controller;
 import com.comissions.korp.DTO.AuthDTO.LoginRequestDTO;
 import com.comissions.korp.DTO.AuthDTO.LoginResponseDTO;
 import com.comissions.korp.entity.Usuario;
+import com.comissions.korp.exception.UsuarioInativoException;
 import com.comissions.korp.repository.UsuarioRepository;
 import com.comissions.korp.config.security.JwtService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -40,10 +41,13 @@ public class AuthController {
         Authentication auth = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getSenha())
         );
+        Usuario usuario = usuarioRepository.findByEmail(request.getEmail()).orElseThrow();
 
+        if (!Boolean.TRUE.equals(usuario.getAtivo())) {
+            throw new UsuarioInativoException("Usuário inativo. Entre em contato com o administrador.");
+        }
         UserDetails userDetails = (UserDetails) auth.getPrincipal();
         String token = jwtService.gerarToken(userDetails);
-        Usuario usuario = usuarioRepository.findByEmail(request.getEmail()).orElseThrow();
 
         return ResponseEntity.ok(new LoginResponseDTO(token, usuario.getNome(), usuario.getEmail(), usuario.getPrimeiroAcesso()));
     }

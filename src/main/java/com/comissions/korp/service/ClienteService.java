@@ -95,6 +95,7 @@ public class ClienteService {
     public List<ClientePedidoResponseDTO> listarTodosPedidoDto() {
         return clienteRepository.findAll()
                 .stream()
+                .filter(cliente -> cliente.getAtivo() != null && cliente.getAtivo())
                 .map(this::convertToPedidoResponseDTO)
                 .collect(Collectors.toList());
     }

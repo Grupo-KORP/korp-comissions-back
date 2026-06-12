@@ -191,6 +191,7 @@ public class DistribuidorService {
     public List<DistribuidorPedidoResponseDTO> listarTodosPedidoDto() {
         return distribuidorRepository.findAll()
                 .stream()
+                .filter(distribuidor -> distribuidor.getAtivo() != null && distribuidor.getAtivo())
                 .map(this::convertToPedidoResponseDTO)
                 .collect(Collectors.toList());
     }

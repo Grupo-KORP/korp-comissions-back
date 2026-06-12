@@ -22,11 +22,15 @@ public interface DistribuidorRepository extends JpaRepository<Distribuidor, Inte
     boolean existsByEmail(String email);
 
     @Query("""
-    SELECT d FROM Distribuidor d where 
-    :busca IS NULL OR
-         LOWER(d.razaoSocial)  LIKE LOWER(CONCAT('%', :busca, '%')) OR
-         LOWER(d.nomeFantasia) LIKE LOWER(CONCAT('%', :busca, '%')) OR
-         LOWER(d.email) LIKE LOWER(CONCAT('%', :busca, '%'))
+    SELECT d
+    FROM Distribuidor d
+    WHERE d.ativo = true
+    AND (
+        :busca IS NULL OR
+        LOWER(d.razaoSocial) LIKE LOWER(CONCAT('%', :busca, '%')) OR
+        LOWER(d.nomeFantasia) LIKE LOWER(CONCAT('%', :busca, '%')) OR
+        LOWER(d.email) LIKE LOWER(CONCAT('%', :busca, '%'))
+    )
 """)
     Page<Distribuidor> findDistribuidoresComFiltro(
             @Param("busca") String busca,
