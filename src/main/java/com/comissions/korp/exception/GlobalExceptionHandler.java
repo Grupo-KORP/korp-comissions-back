@@ -50,4 +50,12 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.CONFLICT) // 409
                 .body(Map.of("message", ex.getMessage()));
     }
+
+    @ExceptionHandler(UsuarioInativoException.class)
+    public ResponseEntity<Map<String, String>> handleUsuarioInativo(UsuarioInativoException ex) {
+        System.out.println(ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(Map.of("message", ex.getMessage()));
+    }
 }

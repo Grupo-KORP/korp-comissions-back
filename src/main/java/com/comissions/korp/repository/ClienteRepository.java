@@ -20,11 +20,15 @@ public interface ClienteRepository extends JpaRepository<Cliente, Integer> {
     boolean existsByEmail(String email);
 
     @Query("""
-    SELECT c FROM Cliente c where 
-    :busca IS NULL OR
-         LOWER(c.razaoSocial)  LIKE LOWER(CONCAT('%', :busca, '%')) OR
-         LOWER(c.nomeFantasia) LIKE LOWER(CONCAT('%', :busca, '%')) OR
-         LOWER(c.email) LIKE LOWER(CONCAT('%', :busca, '%'))
+    SELECT c
+    FROM Cliente c
+    WHERE c.ativo = true
+    AND (
+        :busca IS NULL OR
+        LOWER(c.razaoSocial) LIKE LOWER(CONCAT('%', :busca, '%')) OR
+        LOWER(c.nomeFantasia) LIKE LOWER(CONCAT('%', :busca, '%')) OR
+        LOWER(c.email) LIKE LOWER(CONCAT('%', :busca, '%'))
+    )
 """)
     Page<Cliente> findClientesComFiltro(
             @Param("busca") String busca,

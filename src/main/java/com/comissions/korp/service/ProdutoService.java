@@ -42,6 +42,7 @@ public class ProdutoService {
     public List<ProdutoResponse> listarProdutos(){
         return produtoRepository.findAll()
                 .stream()
+                .filter(produto -> produto.getAtivo() != null && produto.getAtivo())
                 .map(this::convertToResponseDTO)
                 .collect(Collectors.toList());
     }
