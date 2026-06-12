@@ -37,9 +37,10 @@ public class HomeVendedorController {
     })
     public ResponseEntity<HomeVendedorResponseDTO> buscarPainel(
             @RequestParam(required = false) Integer ano,
-            @RequestParam(required = false) Integer mes
+            @RequestParam(required = false) Integer mes,
+            @RequestParam(required = false) Integer dia
     ) {
         Integer idVendedor = securityUtils.getUsuarioIdAutenticado();
-        return ResponseEntity.ok(homeVendedorService.buscarPainel(idVendedor, ano, mes));
+        return ResponseEntity.ok(homeVendedorService.buscarPainel(idVendedor, ano, mes, dia));
     }
 }
