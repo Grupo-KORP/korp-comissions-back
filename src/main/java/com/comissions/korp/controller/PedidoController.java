@@ -2,10 +2,10 @@ package com.comissions.korp.controller;
 
 
 import com.comissions.korp.DTO.PagamentoDTO;
+import com.comissions.korp.DTO.PedidoDTO.PedidoEditRequest;
 import com.comissions.korp.DTO.PedidoDTO.PedidoRequest;
 import com.comissions.korp.DTO.PedidoDTO.PedidoResponse;
 import com.comissions.korp.config.utils.SecurityUtils;
-import com.comissions.korp.entity.Pedido;
 import com.comissions.korp.service.PedidoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -71,9 +71,9 @@ public class PedidoController {
     })
     public ResponseEntity<PedidoResponse> atualizarPedido(
             @PathVariable Integer id,
-            @RequestBody PedidoRequest pedidoRequest) {
-        Integer vendedorId = securityUtils.getUsuarioIdAutenticado();
-        return ResponseEntity.status(200).body(pedidoService.atualizarPedido(id, pedidoRequest, vendedorId));
+            @RequestBody PedidoEditRequest pedidoEditRequest) {
+        pedidoEditRequest.setIdPedido(id);
+        return ResponseEntity.status(200).body(pedidoService.editarPedidoFromPedidoEditRequest(pedidoEditRequest));
     }
 
     @DeleteMapping("/deletar/{id}")
