@@ -1,6 +1,7 @@
 package com.comissions.korp.DTO.HomeVendedorDTO;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -205,7 +206,16 @@ public class HomeVendedorResponseDTO {
         private BigDecimal valor;
         private Integer numeroParcela;
         private Integer totalParcelas;
+        private LocalDate dataVencimento;
         private String status;
+
+        public LocalDate getDataVencimento() {
+            return dataVencimento;
+        }
+
+        public void setDataVencimento(LocalDate dataVencimento) {
+            this.dataVencimento = dataVencimento;
+        }
 
         public Integer getIdParcela() {
             return idParcela;

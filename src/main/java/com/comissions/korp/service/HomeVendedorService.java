@@ -75,10 +75,11 @@ public class HomeVendedorService {
     }
 
     @Transactional(readOnly = true)
-    public HomeVendedorResponseDTO buscarPainel(Integer idVendedor, Integer ano, Integer mes) {
+    public HomeVendedorResponseDTO buscarPainel(Integer idVendedor, Integer ano, Integer mes, Integer dia) {
         YearMonth periodo = resolverPeriodo(ano, mes);
-        LocalDate inicio = periodo.atDay(1);
-        LocalDate fim = periodo.atEndOfMonth();
+        boolean diaExiste = dia != null;
+        LocalDate inicio = periodo.atDay(diaExiste ? dia : 1);
+        LocalDate fim = diaExiste ? periodo.atDay(dia) : periodo.atEndOfMonth();
 
         List<Comissao> comissoes = comissaoRepository.buscarComissoesDoPainelPorVencimento(idVendedor, inicio, fim);
         List<Pedido> pedidosComComissaoNoPeriodo = comissoes.stream()
@@ -290,6 +291,7 @@ public class HomeVendedorService {
         dto.setLabel("Parcela " + parcela.getNumeroParcela() + "/" + pagamento.getQuantidadeParcelas());
         dto.setValor(comissao.getValorComissao());
         dto.setStatus(comissao.getStatusComissao().name());
+        dto.setDataVencimento(parcela.getDataVencimento());
         return dto;
     }
 
