@@ -4,6 +4,7 @@ import com.comissions.korp.entity.Usuario;
 import com.comissions.korp.exception.EmailNotSendException;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
@@ -117,7 +118,7 @@ public class EmailService {
         enviarEmail(usuario.getEmail(), assunto, conteudo);
     }
 
-
+    @Async
     public void enviarEmailTrocaSenha(Usuario usuario) {
 
         String assunto = "Aqui está seu link para Alterar a senha";
@@ -185,6 +186,82 @@ public class EmailService {
         );
 
         enviarEmail(usuario.getEmail(), assunto, conteudo);
+    }
+
+    @Async
+    public void enviarPedidoDistribuidor(String emailDistribuidor, String nomeDistribuidor,
+                                         String codigoPedido, String nomeCliente,
+                                         byte[] pdfBytes) {
+
+        String assunto = "Novo Pedido Registrado - Código: " + codigoPedido;
+
+        String conteudo =
+                "<div style=\"font-family: Arial, sans-serif; background-color: #f4f4f7; padding: 40px 20px; color: #1b1b1b;\">" +
+                        "  <div style=\"max-width: 600px; margin: auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);\">" +
+
+                        // HEADER
+                        "    <div style=\"background: linear-gradient(90deg, #132B7A, #4D87C7); padding: 30px; text-align: center;\">" +
+                        "      <h1 style=\"color: white; margin: 0; font-size: 28px;\">TND Brasil</h1>" +
+                        "      <p style=\"color: #dfe9ff; margin-top: 8px; font-size: 14px; letter-spacing: 1px;\">Sistema de Comissões</p>" +
+                        "    </div>" +
+
+                        // CONTEÚDO
+                        "    <div style=\"padding: 40px 35px;\">" +
+                        "      <h2 style=\"color: #132B7A; margin-top: 0; font-size: 24px;\">Olá, " + nomeDistribuidor + " 👋</h2>" +
+
+                        "      <p style=\"font-size: 16px; color: #555;\">" +
+                        "        Um novo pedido foi registrado no <strong>Sistema de Comissões da TND</strong> e está associado à sua distribuidora." +
+                        "      </p>" +
+
+                        // CARD DO PEDIDO
+                        "      <div style=\"background-color: #eef3ff; border: 2px dashed #2F5BFF; border-radius: 12px; padding: 20px; margin: 30px 0;\">" +
+                        "        <p style=\"margin: 0 0 8px; font-size: 13px; color: #666; text-transform: uppercase; letter-spacing: 1px;\">Código do Pedido</p>" +
+                        "        <span style=\"font-size: 26px; font-weight: bold; color: #132B7A; letter-spacing: 3px;\">" + codigoPedido + "</span>" +
+                        "        <hr style=\"border: none; border-top: 1px solid #c8d6f5; margin: 16px 0;\">" +
+                        "        <p style=\"margin: 0; font-size: 15px; color: #444;\">Cliente: <strong>" + nomeCliente + "</strong></p>" +
+                        "      </div>" +
+
+                        "      <p style=\"font-size: 15px; color: #555;\">" +
+                        "        O PDF completo do pedido está anexado a este e-mail para sua referência." +
+                        "      </p>" +
+
+                        // AVISO
+                        "      <div style=\"margin-top: 20px; padding: 18px; background-color: #f8f9fc; border-left: 4px solid #2F5BFF; border-radius: 8px;\">" +
+                        "        <p style=\"margin: 0; color: #555; font-size: 14px;\">" +
+                        "          Caso tenha dúvidas sobre este pedido, entre em contato com a equipe responsável." +
+                        "        </p>" +
+                        "      </div>" +
+
+                        "      <p style=\"margin-top: 40px; font-size: 15px; color: #444;\">" +
+                        "        Atenciosamente,<br>" +
+                        "        <strong style=\"color: #132B7A;\">Equipe TND Brasil</strong>" +
+                        "      </p>" +
+                        "    </div>" +
+
+                        // FOOTER
+                        "    <div style=\"background-color: #f1f4fa; text-align: center; padding: 18px; font-size: 12px; color: #888;\">" +
+                        "      © 2026 TND Brasil • Sistema de Comissões" +
+                        "    </div>" +
+                        "  </div>" +
+                        "</div>";
+
+        try {
+            MimeMessage message = enviadorEmail.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8"); // true = multipart
+
+            helper.setFrom(EMAIL_ORIGEM, NOME_ENVIADOR);
+            helper.setTo(emailDistribuidor);
+            helper.setSubject(assunto);
+            helper.setText(conteudo, true);
+            helper.addAttachment("pedido-" + codigoPedido + ".pdf",
+                    new ByteArrayResource(pdfBytes),
+                    "application/pdf");
+
+            enviadorEmail.send(message);
+
+        } catch (MessagingException | UnsupportedEncodingException e) {
+            throw new EmailNotSendException("Erro ao enviar e-mail ao distribuidor: " + e.getMessage());
+        }
     }
 }
 

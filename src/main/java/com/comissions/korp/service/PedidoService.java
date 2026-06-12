@@ -19,6 +19,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -34,31 +35,26 @@ public class PedidoService {
     private final DistribuidorService distribuidorService;
     private final ItemPedidoService itemPedidoService;
     private final ComissaoService comissaoService;
+    private final EmailService emailService;
     private final PagamentoRepository pagamentoRepository;
     private final ParcelaRepository parcelaRepository;
     private final ComissaoRepository comissaoRepository;
 
 
-    public PedidoService(PedidoRepository pedidoRepository
-            , ItemPedidoRepository itemPedidoRepository
-            , ProdutoRepository produtoRepository
-            , ClienteService clienteService
-            , DistribuidorService distribuidorService,
-                         ItemPedidoService itemPedidoService, UsuarioRepository usuarioRepository, ComissaoService comissaoService, PagamentoRepository pagamentoRepository, ParcelaRepository parcelaRepository, ComissaoRepository comissaoRepository) {
+    public PedidoService(PedidoRepository pedidoRepository, ItemPedidoRepository itemPedidoRepository, ProdutoRepository produtoRepository, UsuarioRepository usuarioRepository, ClienteService clienteService, DistribuidorService distribuidorService, ItemPedidoService itemPedidoService, ComissaoService comissaoService, EmailService emailService, PagamentoRepository pagamentoRepository, ParcelaRepository parcelaRepository, ComissaoRepository comissaoRepository) {
         this.pedidoRepository = pedidoRepository;
         this.itemPedidoRepository = itemPedidoRepository;
         this.produtoRepository = produtoRepository;
+        this.usuarioRepository = usuarioRepository;
         this.clienteService = clienteService;
         this.distribuidorService = distribuidorService;
         this.itemPedidoService = itemPedidoService;
-        this.usuarioRepository = usuarioRepository;
         this.comissaoService = comissaoService;
+        this.emailService = emailService;
         this.pagamentoRepository = pagamentoRepository;
         this.parcelaRepository = parcelaRepository;
         this.comissaoRepository = comissaoRepository;
     }
-
-
 
     @Transactional
     public PedidoResponse cadastrarPedido(PedidoRequest pedidoRequest, Integer vendedorId) {
@@ -72,6 +68,20 @@ public class PedidoService {
         Pedido pedidoSalvo = pedidoRepository.save(criarPedidoFromRequest(pedidoRequest, cliente, distribuidor, vendedor));
         Map<Integer, Produto> produtoMap = mapearProdutosPorId(pedidoRequest.getItens());
         List<ItemPedido> itensSalvos = salvarItensDoPedido(pedidoSalvo, pedidoRequest.getItens(), produtoMap);
+
+        if ( pedidoRequest.getPdfBase64() != null
+                && pedidoRequest.getDistribuidor().getEmail() != null) {
+
+            byte[] pdfBytes = Base64.getDecoder().decode(pedidoRequest.getPdfBase64());
+
+            emailService.enviarPedidoDistribuidor(
+                    pedidoRequest.getDistribuidor().getEmail(),
+                    pedidoRequest.getDistribuidor().getNomeFantasia(),
+                    String.valueOf(pedidoSalvo.getIdPedido()),
+                    pedidoRequest.getCliente().getRazaoSocial(),
+                    pdfBytes
+            );
+        }
 
         return convertToPedidoResponse(pedidoSalvo, itensSalvos);
     }
