@@ -357,7 +357,7 @@ public class PedidoService {
             parcela.setNumeroParcela(i);
             parcela.setDataPagamento(null);
             parcela.setValorParcela(valorParcelaFinal);
-            parcela.setDataVencimento(LocalDate.now().plusMonths(i));
+            parcela.setDataVencimento(LocalDate.now().plusMonths(5));
 
             Comissao comissao = new Comissao();
             comissao.setPedido(pedido);
