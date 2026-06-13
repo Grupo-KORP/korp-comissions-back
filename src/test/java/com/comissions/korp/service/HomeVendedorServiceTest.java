@@ -70,7 +70,7 @@ class HomeVendedorServiceTest {
     @Test
     void buscarPainel_deveFalhar_quandoMesEhInvalido() {
         // Arrange / Act / Assert
-        assertThatThrownBy(() -> homeVendedorService.buscarPainel(99, 2026, 13))
+        assertThatThrownBy(() -> homeVendedorService.buscarPainel(99, 2026, 13, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("12");
 
@@ -87,7 +87,7 @@ class HomeVendedorServiceTest {
                 .thenReturn(List.of());
 
         // Act
-        HomeVendedorResponseDTO response = homeVendedorService.buscarPainel(99, 2026, 6);
+        HomeVendedorResponseDTO response = homeVendedorService.buscarPainel(99, 2026, 6, null);
 
         // Assert
         assertThat(response.getAno()).isEqualTo(2026);
@@ -131,7 +131,7 @@ class HomeVendedorServiceTest {
         when(pagamentoRepository.findByPedido_IdPedido(2)).thenReturn(Optional.empty());
 
         // Act
-        HomeVendedorResponseDTO response = homeVendedorService.buscarPainel(99, 2026, 6);
+        HomeVendedorResponseDTO response = homeVendedorService.buscarPainel(99, 2026, 6, null);
 
         // Assert
         assertThat(response.getTotalVendas()).isEqualTo(2);

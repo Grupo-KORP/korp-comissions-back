@@ -68,6 +68,8 @@ class PedidoServiceTest {
     @Mock
     private ComissaoService comissaoService;
     @Mock
+    private EmailService emailService;
+    @Mock
     private PagamentoRepository pagamentoRepository;
     @Mock
     private ParcelaRepository parcelaRepository;
@@ -91,6 +93,7 @@ class PedidoServiceTest {
                 itemPedidoService,
                 usuarioRepository,
                 comissaoService,
+                emailService,
                 pagamentoRepository,
                 parcelaRepository,
                 comissaoRepository,
