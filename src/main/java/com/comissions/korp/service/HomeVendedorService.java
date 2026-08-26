@@ -22,6 +22,8 @@ import com.comissions.korp.repository.EnderecoRepository;
 import com.comissions.korp.repository.ItemPedidoRepository;
 import com.comissions.korp.repository.PagamentoRepository;
 import com.comissions.korp.repository.PedidoRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -75,41 +77,28 @@ public class HomeVendedorService {
     }
 
     @Transactional(readOnly = true)
-    public HomeVendedorResponseDTO buscarPainel(Integer idVendedor, Integer ano, Integer mes, Integer dia) {
+    public HomeVendedorResponseDTO buscarPainel(Integer idVendedor, Integer ano, Integer mes, Integer dia,
+                                                String filtro, Pageable pageable) {
         YearMonth periodo = resolverPeriodo(ano, mes);
         boolean diaExiste = dia != null;
         LocalDate inicio = periodo.atDay(diaExiste ? dia : 1);
         LocalDate fim = diaExiste ? periodo.atDay(dia) : periodo.atEndOfMonth();
+        String statusFiltro = normalizarFiltro(filtro);
 
-        List<Comissao> comissoes = comissaoRepository.buscarComissoesDoPainelPorVencimento(idVendedor, inicio, fim);
-        List<Pedido> pedidosComComissaoNoPeriodo = comissoes.stream()
-                .map(Comissao::getPedido)
-                .collect(Collectors.toMap(
-                        Pedido::getIdPedido,
-                        pedido -> pedido,
-                        (pedidoExistente, pedidoDuplicado) -> pedidoExistente,
-                        LinkedHashMap::new
-                ))
-                .values()
-                .stream()
-                .toList();
-        List<Pedido> pedidosEmAndamento = pedidoRepository
-                .findByUsuario_IdUsuarioAndAtivoTrueAndStatusPedidoAndDataPedidoBetweenOrderByDataPedidoDescIdPedidoDesc(
-                        idVendedor,
-                        "EM_ANDAMENTO",
-                        inicio,
-                        fim
-                );
-        List<Pedido> pedidos = combinarPedidos(pedidosComComissaoNoPeriodo, pedidosEmAndamento);
+        Page<Pedido> paginaPedidos = pedidoRepository.buscarPedidosDoPainel(idVendedor, inicio, fim, statusFiltro, pageable);
+        List<Pedido> pedidos = paginaPedidos.getContent();
 
+        List<Comissao> comissoesDoPeriodo = pedidos.isEmpty()
+                ? List.of()
+                : comissaoRepository.findByPedidoInAndParcela_DataVencimentoBetween(pedidos, inicio, fim);
         List<Comissao> todasComissoesDosPedidos = pedidos.isEmpty()
                 ? List.of()
                 : comissaoRepository.findByPedidoIn(pedidos);
 
-        Map<Integer, List<Comissao>> comissoesPorPedido = comissoes.stream()
-                .collect(Collectors.groupingBy(comissao -> comissao.getPedido().getIdPedido()));
+        Map<Integer, List<Comissao>> comissoesPorPedido = comissoesDoPeriodo.stream()
+                .collect(Collectors.groupingBy(c -> c.getPedido().getIdPedido()));
         Map<Integer, List<Comissao>> todasComissoesPorPedido = todasComissoesDosPedidos.stream()
-                .collect(Collectors.groupingBy(comissao -> comissao.getPedido().getIdPedido()));
+                .collect(Collectors.groupingBy(c -> c.getPedido().getIdPedido()));
 
         List<VendaResumoDTO> vendas = new ArrayList<>();
         Map<String, DetalheVendaDTO> detalhesVenda = new HashMap<>();
@@ -118,36 +107,50 @@ public class HomeVendedorService {
             List<Comissao> comissoesDoPedido = comissoesPorPedido.getOrDefault(pedido.getIdPedido(), List.of());
             List<Comissao> todasComissoesDoPedido = todasComissoesPorPedido.getOrDefault(pedido.getIdPedido(), List.of());
             List<ItemPedido> itens = itemPedidoRepository.findByPedido(pedido);
+
             VendaResumoDTO venda = criarVendaResumo(pedido, comissoesDoPedido, todasComissoesDoPedido);
             vendas.add(venda);
             detalhesVenda.put(periodoKey(periodo, venda.getId()), criarDetalheVenda(pedido, itens));
         }
 
-        BigDecimal projecao = somaComissoesPorStatus(comissoes, StatusComissao.LIBERADA);
+        BigDecimal projecao = comissaoRepository.somarComissoesPorStatus(idVendedor, inicio, fim, StatusComissao.LIBERADA);
         BigDecimal projecaoMesAnterior = buscarProjecaoMesAnterior(idVendedor, periodo);
+        long comissoesLiberadas = comissaoRepository.contarComissoesPorStatus(
+                idVendedor, inicio, fim, List.of(StatusComissao.LIBERADA, StatusComissao.PAGA));
+        long comissoesPendentes = comissaoRepository.contarComissoesPorStatus(
+                idVendedor, inicio, fim, List.of(StatusComissao.PENDENTE));
 
         HomeVendedorResponseDTO response = new HomeVendedorResponseDTO();
-        response.setAno(periodo.getYear());
-        response.setMes(periodo.getMonthValue());
-        response.setNomeMes(nomeMes(periodo));
-        response.setTotalVendas(pedidos.size());
-        response.setComissoesLiberadas(contarComissoesLiberadas(comissoes));
-        response.setPagamentosPendentes(contarComissoesPendentes(comissoes));
+        response.setTotalVendas((int) paginaPedidos.getTotalElements());
+        response.setComissoesLiberadas((int) comissoesLiberadas);
+        response.setPagamentosPendentes((int) comissoesPendentes);
         response.setProjecao(projecao);
-        response.setParcelas(contarComissoesPendentes(comissoes));
+        response.setParcelas((int) comissoesPendentes);
         response.setTendencia(calcularTendencia(projecao, projecaoMesAnterior));
         response.setVendas(vendas);
         response.setDetalhesVenda(detalhesVenda);
 
+        response.setPaginaAtual(paginaPedidos.getNumber());
+        response.setTamanhoPagina(paginaPedidos.getSize());
+        response.setTotalPaginasVendas(paginaPedidos.getTotalPages());
+        response.setTotalVendasFiltradas(paginaPedidos.getTotalElements());
+
         return response;
     }
 
-    private List<Pedido> combinarPedidos(List<Pedido> pedidosComComissaoNoPeriodo, List<Pedido> pedidosEmAndamento) {
-        Map<Integer, Pedido> pedidos = new LinkedHashMap<>();
-        pedidosComComissaoNoPeriodo.forEach(pedido -> pedidos.put(pedido.getIdPedido(), pedido));
-        pedidosEmAndamento.forEach(pedido -> pedidos.putIfAbsent(pedido.getIdPedido(), pedido));
-        return new ArrayList<>(pedidos.values());
+    private String normalizarFiltro(String filtro) {
+        if (filtro == null || filtro.isBlank()) {
+            return null;
+        }
+        return filtro.trim().toUpperCase(Locale.ROOT);
     }
+
+    private BigDecimal buscarProjecaoMesAnterior(Integer idVendedor, YearMonth periodo) {
+        YearMonth anterior = periodo.minusMonths(1);
+        return comissaoRepository.somarComissoesPorStatus(
+                idVendedor, anterior.atDay(1), anterior.atEndOfMonth(), StatusComissao.LIBERADA);
+    }
+
 
     private YearMonth resolverPeriodo(Integer ano, Integer mes) {
         LocalDate hoje = LocalDate.now();
@@ -390,39 +393,10 @@ public class HomeVendedorService {
                 .collect(Collectors.joining(", "));
     }
 
-    private BigDecimal buscarProjecaoMesAnterior(Integer idVendedor, YearMonth periodo) {
-        YearMonth anterior = periodo.minusMonths(1);
-        List<Comissao> comissoesAnteriores = comissaoRepository.buscarComissoesDoPainelPorVencimento(
-                idVendedor,
-                anterior.atDay(1),
-                anterior.atEndOfMonth()
-        );
-        return somaComissoesPorStatus(comissoesAnteriores, StatusComissao.LIBERADA);
-    }
-
-    private BigDecimal somaComissoesPorStatus(List<Comissao> comissoes, StatusComissao status) {
-        return comissoes.stream()
-                .filter(comissao -> comissao.getStatusComissao() == status)
-                .map(Comissao::getValorComissao)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
     private BigDecimal somarComissoes(List<Comissao> comissoes) {
         return comissoes.stream()
                 .map(Comissao::getValorComissao)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    private Integer contarComissoesPendentes(List<Comissao> comissoes) {
-        return (int) comissoes.stream()
-                .filter(comissao -> comissao.getStatusComissao() == StatusComissao.PENDENTE)
-                .count();
-    }
-
-    private Integer contarComissoesLiberadas(List<Comissao> comissoes) {
-        return (int) comissoes.stream()
-                .filter(this::isComissaoLiberada)
-                .count();
     }
 
     private boolean isComissaoLiberada(Comissao comissao) {

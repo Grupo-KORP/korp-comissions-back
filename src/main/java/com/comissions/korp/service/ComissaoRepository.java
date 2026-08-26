@@ -1,11 +1,13 @@
 package com.comissions.korp.service;
 
 import com.comissions.korp.entity.Comissao;
+import com.comissions.korp.entity.ENUM.StatusComissao;
 import com.comissions.korp.entity.Pedido;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -29,4 +31,30 @@ public interface ComissaoRepository extends JpaRepository<Comissao, Integer> {
     );
 
     List<Comissao> findByPedidoIn(List<Pedido> pedidos);
+
+    @Query("""
+    SELECT COALESCE(SUM(c.valorComissao), 0)
+    FROM Comissao c
+    WHERE c.usuario.idUsuario = :idVendedor
+      AND c.parcela.dataVencimento BETWEEN :inicio AND :fim
+      AND c.statusComissao = :status
+""")
+    BigDecimal somarComissoesPorStatus(@Param("idVendedor") Integer idVendedor,
+                                       @Param("inicio") LocalDate inicio,
+                                       @Param("fim") LocalDate fim,
+                                       @Param("status") StatusComissao status);
+
+    @Query("""
+    SELECT COUNT(c)
+    FROM Comissao c
+    WHERE c.usuario.idUsuario = :idVendedor
+      AND c.parcela.dataVencimento BETWEEN :inicio AND :fim
+      AND c.statusComissao IN :status
+""")
+    long contarComissoesPorStatus(@Param("idVendedor") Integer idVendedor,
+                                  @Param("inicio") LocalDate inicio,
+                                  @Param("fim") LocalDate fim,
+                                  @Param("status") List<StatusComissao> status);
+
+    List<Comissao> findByPedidoInAndParcela_DataVencimentoBetween(List<Pedido> pedidos, LocalDate inicio, LocalDate fim);
 }

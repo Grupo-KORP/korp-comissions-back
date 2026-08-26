@@ -18,6 +18,22 @@ public class HomeVendedorResponseDTO {
     private String tendencia;
     private List<VendaResumoDTO> vendas;
     private Map<String, DetalheVendaDTO> detalhesVenda;
+    private Integer paginaAtual;
+    private Integer tamanhoPagina;
+    private Integer totalPaginasVendas;
+    private Long totalVendasFiltradas;
+
+    public Integer getPaginaAtual() { return paginaAtual; }
+    public void setPaginaAtual(Integer paginaAtual) { this.paginaAtual = paginaAtual; }
+
+    public Integer getTamanhoPagina() { return tamanhoPagina; }
+    public void setTamanhoPagina(Integer tamanhoPagina) { this.tamanhoPagina = tamanhoPagina; }
+
+    public Integer getTotalPaginasVendas() { return totalPaginasVendas; }
+    public void setTotalPaginasVendas(Integer totalPaginasVendas) { this.totalPaginasVendas = totalPaginasVendas; }
+
+    public Long getTotalVendasFiltradas() { return totalVendasFiltradas; }
+    public void setTotalVendasFiltradas(Long totalVendasFiltradas) { this.totalVendasFiltradas = totalVendasFiltradas; }
 
     public Integer getAno() {
         return ano;
@@ -118,6 +134,7 @@ public class HomeVendedorResponseDTO {
         private String tipo;
         private List<ParcelaDTO> parcelas;
         private List<ParcelaDTO> parcelasDaVenda;
+
 
         public String getId() {
             return id;
