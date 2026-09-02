@@ -13,7 +13,7 @@ import com.comissions.korp.entity.ENUM.StatusParcela;
 import com.comissions.korp.exception.OperacaoNaoPermitida;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.repository.*;
-import jdk.jshell.Snippet;
+import com.comissions.korp.service.Email.EmailService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
