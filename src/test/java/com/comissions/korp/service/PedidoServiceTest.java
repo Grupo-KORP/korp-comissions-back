@@ -28,6 +28,7 @@ import com.comissions.korp.repository.PagamentoRepository;
 import com.comissions.korp.repository.PedidoRepository;
 import com.comissions.korp.repository.ProdutoRepository;
 import com.comissions.korp.repository.UsuarioRepository;
+import com.comissions.korp.service.Email.EmailService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
