@@ -10,6 +10,7 @@ import com.comissions.korp.exception.UsuarioJaExistente;
 import com.comissions.korp.repository.PedidoRepository;
 import com.comissions.korp.repository.RoleRepository;
 import com.comissions.korp.repository.UsuarioRepository;
+import com.comissions.korp.service.Email.EmailService;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
