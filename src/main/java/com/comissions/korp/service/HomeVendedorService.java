@@ -1,27 +1,32 @@
 package com.comissions.korp.service;
 
-import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorResponseDTO;
+import com.comissions.korp.DTO.HomeVendedorDTO.FiltroStatusVenda;
+import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorPainelDTO;
+import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorPainelDTO.ResumoDTO;
 import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorResponseDTO.DetalheVendaDTO;
 import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorResponseDTO.ParcelaDTO;
-import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorResponseDTO.PessoaDTO;
 import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorResponseDTO.PedidoVendaDTO;
+import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorResponseDTO.PessoaDTO;
 import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorResponseDTO.ProdutoVendaDTO;
 import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorResponseDTO.VendaResumoDTO;
+import com.comissions.korp.DTO.HomeVendedorDTO.ResumoStatusDTO;
 import com.comissions.korp.entity.Cliente;
 import com.comissions.korp.entity.Comissao;
 import com.comissions.korp.entity.Contato;
 import com.comissions.korp.entity.Distribuidor;
-import com.comissions.korp.entity.Endereco;
 import com.comissions.korp.entity.ENUM.StatusComissao;
+import com.comissions.korp.entity.ENUM.StatusParcela;
+import com.comissions.korp.entity.Endereco;
 import com.comissions.korp.entity.ItemPedido;
 import com.comissions.korp.entity.Pagamento;
 import com.comissions.korp.entity.Parcela;
 import com.comissions.korp.entity.Pedido;
-import com.comissions.korp.repository.ContatoRepository;
-import com.comissions.korp.repository.EnderecoRepository;
-import com.comissions.korp.repository.ItemPedidoRepository;
-import com.comissions.korp.repository.PagamentoRepository;
-import com.comissions.korp.repository.PedidoRepository;
+import com.comissions.korp.exception.RecursoNaoEncontrado;
+import com.comissions.korp.repository.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,12 +38,11 @@ import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -51,7 +55,14 @@ public class HomeVendedorService {
             "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
     };
 
-    private final PedidoRepository pedidoRepository;
+    /** Teto de itens por página (o front usa 5; o PDF pede páginas maiores). */
+    private static final int TAMANHO_MAXIMO_PAGINA = 100;
+    /** Ordenação fixa: o cliente não escolhe o campo, só a página e o tamanho. */
+    private static final Sort ORDENACAO_VENDAS = Sort.by(Sort.Direction.DESC, "dataPedido", "idPedido");
+
+    private static final List<StatusComissao> STATUS_LIBERADAS = FiltroStatusVenda.LIBERADAS.getStatusComissoes();
+
+    private final PedidoRepository pedidoPainelRepository;
     private final ItemPedidoRepository itemPedidoRepository;
     private final ComissaoRepository comissaoRepository;
     private final EnderecoRepository enderecoRepository;
@@ -59,14 +70,14 @@ public class HomeVendedorService {
     private final PagamentoRepository pagamentoRepository;
 
     public HomeVendedorService(
-            PedidoRepository pedidoRepository,
+            PedidoRepository pedidoPainelRepository,
             ItemPedidoRepository itemPedidoRepository,
             ComissaoRepository comissaoRepository,
             EnderecoRepository enderecoRepository,
             ContatoRepository contatoRepository,
             PagamentoRepository pagamentoRepository
     ) {
-        this.pedidoRepository = pedidoRepository;
+        this.pedidoPainelRepository = pedidoPainelRepository;
         this.itemPedidoRepository = itemPedidoRepository;
         this.comissaoRepository = comissaoRepository;
         this.enderecoRepository = enderecoRepository;
@@ -74,80 +85,109 @@ public class HomeVendedorService {
         this.pagamentoRepository = pagamentoRepository;
     }
 
+    private record Intervalo(LocalDate inicio, LocalDate fim) {
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Painel (listagem paginada + resumo)
+    // ═══════════════════════════════════════════════════════════════════════════
+
     @Transactional(readOnly = true)
-    public HomeVendedorResponseDTO buscarPainel(Integer idVendedor, Integer ano, Integer mes, Integer dia) {
+    public HomeVendedorPainelDTO buscarPainel(
+            Integer idVendedor,
+            Integer ano,
+            Integer mes,
+            Integer dia,
+            FiltroStatusVenda filtro,
+            Pageable pageable
+    ) {
         YearMonth periodo = resolverPeriodo(ano, mes);
-        boolean diaExiste = dia != null;
-        LocalDate inicio = periodo.atDay(diaExiste ? dia : 1);
-        LocalDate fim = diaExiste ? periodo.atDay(dia) : periodo.atEndOfMonth();
+        Intervalo intervalo = resolverIntervalo(periodo, dia);
 
-        List<Comissao> comissoes = comissaoRepository.buscarComissoesDoPainelPorVencimento(idVendedor, inicio, fim);
-        List<Pedido> pedidosComComissaoNoPeriodo = comissoes.stream()
-                .map(Comissao::getPedido)
-                .collect(Collectors.toMap(
-                        Pedido::getIdPedido,
-                        pedido -> pedido,
-                        (pedidoExistente, pedidoDuplicado) -> pedidoExistente,
-                        LinkedHashMap::new
-                ))
-                .values()
-                .stream()
-                .toList();
-        List<Pedido> pedidosEmAndamento = pedidoRepository
-                .findByUsuario_IdUsuarioAndAtivoTrueAndStatusPedidoAndDataPedidoBetweenOrderByDataPedidoDescIdPedidoDesc(
+        Pageable paginacao = PageRequest.of(
+                Math.max(pageable.getPageNumber(), 0),
+                Math.min(Math.max(pageable.getPageSize(), 1), TAMANHO_MAXIMO_PAGINA),
+                ORDENACAO_VENDAS
+        );
+
+        // 1 query: só os pedidos da página (count vem do countQuery do repositório)
+        Page<Pedido> paginaPedidos = pedidoPainelRepository.buscarPedidosDoPainel(
+                idVendedor,
+                intervalo.inicio(),
+                intervalo.fim(),
+                filtro.getStatusComissoes(),
+                StatusParcela.CANCELADO,
+                filtro.isIncluiEmAndamento(),
+                paginacao
+        );
+
+        // 1 query: comissões/parcelas de todos os pedidos da página
+        Map<Integer, List<Comissao>> comissoesPorPedido = buscarComissoesPorPedido(idVendedor, paginaPedidos.getContent());
+
+        Page<VendaResumoDTO> vendas = paginaPedidos.map(pedido -> {
+            List<Comissao> todasDoPedido = comissoesPorPedido.getOrDefault(pedido.getIdPedido(), List.of());
+            List<Comissao> doPainel = todasDoPedido.stream()
+                    .filter(comissao -> comissaoEntraNoPainel(comissao, intervalo, filtro))
+                    .toList();
+            return criarVendaResumo(pedido, doPainel, todasDoPedido);
+        });
+
+        long totalVendas = filtro == FiltroStatusVenda.TODAS
+                ? paginaPedidos.getTotalElements()
+                : pedidoPainelRepository.contarPedidosDoPainel(
+                idVendedor,
+                intervalo.inicio(),
+                intervalo.fim(),
+                FiltroStatusVenda.TODAS.getStatusComissoes(),
+                StatusParcela.CANCELADO,
+                FiltroStatusVenda.TODAS.isIncluiEmAndamento()
+        );
+
+        ResumoDTO resumo = montarResumo(idVendedor, periodo, intervalo, totalVendas);
+
+        List<ParcelaDTO> parcelasLiberadas = comissaoRepository
+                .buscarComissoesPorStatusNoPeriodo(
                         idVendedor,
-                        "EM_ANDAMENTO",
-                        inicio,
-                        fim
-                );
-        List<Pedido> pedidos = combinarPedidos(pedidosComComissaoNoPeriodo, pedidosEmAndamento);
+                        STATUS_LIBERADAS,
+                        intervalo.inicio(),
+                        intervalo.fim(),
+                        StatusParcela.CANCELADO
+                )
+                .stream()
+                .map(this::criarParcela)
+                .toList();
 
-        List<Comissao> todasComissoesDosPedidos = pedidos.isEmpty()
-                ? List.of()
-                : comissaoRepository.findByPedidoIn(pedidos);
-
-        Map<Integer, List<Comissao>> comissoesPorPedido = comissoes.stream()
-                .collect(Collectors.groupingBy(comissao -> comissao.getPedido().getIdPedido()));
-        Map<Integer, List<Comissao>> todasComissoesPorPedido = todasComissoesDosPedidos.stream()
-                .collect(Collectors.groupingBy(comissao -> comissao.getPedido().getIdPedido()));
-
-        List<VendaResumoDTO> vendas = new ArrayList<>();
-        Map<String, DetalheVendaDTO> detalhesVenda = new HashMap<>();
-
-        for (Pedido pedido : pedidos) {
-            List<Comissao> comissoesDoPedido = comissoesPorPedido.getOrDefault(pedido.getIdPedido(), List.of());
-            List<Comissao> todasComissoesDoPedido = todasComissoesPorPedido.getOrDefault(pedido.getIdPedido(), List.of());
-            List<ItemPedido> itens = itemPedidoRepository.findByPedido(pedido);
-            VendaResumoDTO venda = criarVendaResumo(pedido, comissoesDoPedido, todasComissoesDoPedido);
-            vendas.add(venda);
-            detalhesVenda.put(periodoKey(periodo, venda.getId()), criarDetalheVenda(pedido, itens));
-        }
-
-        BigDecimal projecao = somaComissoesPorStatus(comissoes, StatusComissao.LIBERADA);
-        BigDecimal projecaoMesAnterior = buscarProjecaoMesAnterior(idVendedor, periodo);
-
-        HomeVendedorResponseDTO response = new HomeVendedorResponseDTO();
-        response.setAno(periodo.getYear());
-        response.setMes(periodo.getMonthValue());
-        response.setNomeMes(nomeMes(periodo));
-        response.setTotalVendas(pedidos.size());
-        response.setComissoesLiberadas(contarComissoesLiberadas(comissoes));
-        response.setPagamentosPendentes(contarComissoesPendentes(comissoes));
-        response.setProjecao(projecao);
-        response.setParcelas(contarComissoesPendentes(comissoes));
-        response.setTendencia(calcularTendencia(projecao, projecaoMesAnterior));
-        response.setVendas(vendas);
-        response.setDetalhesVenda(detalhesVenda);
-
-        return response;
+        return new HomeVendedorPainelDTO(
+                periodo.getYear(),
+                periodo.getMonthValue(),
+                nomeMes(periodo),
+                resumo,
+                parcelasLiberadas,
+                vendas
+        );
     }
 
-    private List<Pedido> combinarPedidos(List<Pedido> pedidosComComissaoNoPeriodo, List<Pedido> pedidosEmAndamento) {
-        Map<Integer, Pedido> pedidos = new LinkedHashMap<>();
-        pedidosComComissaoNoPeriodo.forEach(pedido -> pedidos.put(pedido.getIdPedido(), pedido));
-        pedidosEmAndamento.forEach(pedido -> pedidos.putIfAbsent(pedido.getIdPedido(), pedido));
-        return new ArrayList<>(pedidos.values());
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Detalhe de uma venda (carregado só ao abrir o modal)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    @Transactional(readOnly = true)
+    public DetalheVendaDTO buscarDetalheVenda(Integer idVendedor, Integer idPedido) {
+        boolean pertenceAoVendedor = pedidoPainelRepository.existsByIdPedidoAndUsuario_IdUsuario(idPedido, idVendedor)
+                || comissaoRepository.existsByPedido_IdPedidoAndUsuario_IdUsuario(idPedido, idVendedor);
+
+        // 404 também quando a venda é de outro vendedor, para não expor que ela existe
+        Pedido pedido = pedidoPainelRepository.findByIdPedidoAndAtivoTrue(idPedido)
+                .filter(p -> pertenceAoVendedor)
+                .orElseThrow(() -> new RecursoNaoEncontrado("Venda não encontrada com ID: " + idPedido));
+
+        List<ItemPedido> itens = itemPedidoRepository.findByPedido(pedido);
+        return criarDetalheVenda(pedido, itens);
     }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Período e filtros
+    // ═══════════════════════════════════════════════════════════════════════════
 
     private YearMonth resolverPeriodo(Integer ano, Integer mes) {
         LocalDate hoje = LocalDate.now();
@@ -160,6 +200,84 @@ public class HomeVendedorService {
 
         return YearMonth.of(anoResolvido, mesResolvido);
     }
+
+    private Intervalo resolverIntervalo(YearMonth periodo, Integer dia) {
+        if (dia == null) {
+            return new Intervalo(periodo.atDay(1), periodo.atEndOfMonth());
+        }
+        if (dia < 1 || dia > periodo.lengthOfMonth()) {
+            throw new IllegalArgumentException("Dia inválido: informe um valor entre 1 e " + periodo.lengthOfMonth() + ".");
+        }
+        LocalDate data = periodo.atDay(dia);
+        return new Intervalo(data, data);
+    }
+
+    private Map<Integer, List<Comissao>> buscarComissoesPorPedido(Integer idVendedor, List<Pedido> pedidos) {
+        if (pedidos.isEmpty()) {
+            return Map.of();
+        }
+        List<Integer> ids = pedidos.stream().map(Pedido::getIdPedido).toList();
+        return comissaoRepository.buscarComissoesDosPedidos(ids, idVendedor).stream()
+                .collect(Collectors.groupingBy(comissao -> comissao.getPedido().getIdPedido()));
+    }
+
+    /** Mesma regra do EXISTS da query paginada, aplicada em memória às comissões dos 5 pedidos da página. */
+    private boolean comissaoEntraNoPainel(Comissao comissao, Intervalo intervalo, FiltroStatusVenda filtro) {
+        Parcela parcela = comissao.getParcela();
+        LocalDate vencimento = parcela.getDataVencimento();
+        return !vencimento.isBefore(intervalo.inicio())
+                && !vencimento.isAfter(intervalo.fim())
+                && parcela.getStatusParcela() != StatusParcela.CANCELADO
+                && filtro.getStatusComissoes().contains(comissao.getStatusComissao());
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Resumo (cards / projeção / tendência) — agregado no banco, sem carregar entidades
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    private ResumoDTO montarResumo(Integer idVendedor, YearMonth periodo, Intervalo intervalo, long totalVendas) {
+        Map<StatusComissao, ResumoStatusDTO> atual = resumirPorStatus(idVendedor, intervalo);
+
+        YearMonth anterior = periodo.minusMonths(1);
+        Map<StatusComissao, ResumoStatusDTO> mesAnterior = resumirPorStatus(
+                idVendedor,
+                new Intervalo(anterior.atDay(1), anterior.atEndOfMonth())
+        );
+
+        BigDecimal projecao = total(atual, StatusComissao.LIBERADA);
+        BigDecimal projecaoMesAnterior = total(mesAnterior, StatusComissao.LIBERADA);
+        int pendentes = (int) quantidade(atual, StatusComissao.PENDENTE);
+
+        return new ResumoDTO(
+                (int) totalVendas,
+                (int) (quantidade(atual, StatusComissao.LIBERADA) + quantidade(atual, StatusComissao.PAGA)),
+                pendentes,
+                projecao,
+                pendentes,
+                calcularTendencia(projecao, projecaoMesAnterior)
+        );
+    }
+
+    private Map<StatusComissao, ResumoStatusDTO> resumirPorStatus(Integer idVendedor, Intervalo intervalo) {
+        return comissaoRepository
+                .resumirPorStatus(idVendedor, intervalo.inicio(), intervalo.fim(), StatusParcela.CANCELADO)
+                .stream()
+                .collect(Collectors.toMap(ResumoStatusDTO::status, Function.identity()));
+    }
+
+    private long quantidade(Map<StatusComissao, ResumoStatusDTO> resumo, StatusComissao status) {
+        ResumoStatusDTO linha = resumo.get(status);
+        return linha == null || linha.quantidade() == null ? 0L : linha.quantidade();
+    }
+
+    private BigDecimal total(Map<StatusComissao, ResumoStatusDTO> resumo, StatusComissao status) {
+        ResumoStatusDTO linha = resumo.get(status);
+        return linha == null || linha.total() == null ? BigDecimal.ZERO : linha.total();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Montagem de DTOs
+    // ═══════════════════════════════════════════════════════════════════════════
 
     private VendaResumoDTO criarVendaResumo(Pedido pedido, List<Comissao> comissoes, List<Comissao> todasComissoesDoPedido) {
         BigDecimal totalComissao = somarComissoes(comissoes);
@@ -286,6 +404,7 @@ public class HomeVendedorService {
 
         ParcelaDTO dto = new ParcelaDTO();
         dto.setIdParcela(parcela.getId());
+        dto.setPedidoId(comissao.getPedido().getIdPedido());
         dto.setNumeroParcela(parcela.getNumeroParcela());
         dto.setTotalParcelas(pagamento.getQuantidadeParcelas());
         dto.setLabel("Parcela " + parcela.getNumeroParcela() + "/" + pagamento.getQuantidadeParcelas());
@@ -390,39 +509,10 @@ public class HomeVendedorService {
                 .collect(Collectors.joining(", "));
     }
 
-    private BigDecimal buscarProjecaoMesAnterior(Integer idVendedor, YearMonth periodo) {
-        YearMonth anterior = periodo.minusMonths(1);
-        List<Comissao> comissoesAnteriores = comissaoRepository.buscarComissoesDoPainelPorVencimento(
-                idVendedor,
-                anterior.atDay(1),
-                anterior.atEndOfMonth()
-        );
-        return somaComissoesPorStatus(comissoesAnteriores, StatusComissao.LIBERADA);
-    }
-
-    private BigDecimal somaComissoesPorStatus(List<Comissao> comissoes, StatusComissao status) {
-        return comissoes.stream()
-                .filter(comissao -> comissao.getStatusComissao() == status)
-                .map(Comissao::getValorComissao)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
     private BigDecimal somarComissoes(List<Comissao> comissoes) {
         return comissoes.stream()
                 .map(Comissao::getValorComissao)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    private Integer contarComissoesPendentes(List<Comissao> comissoes) {
-        return (int) comissoes.stream()
-                .filter(comissao -> comissao.getStatusComissao() == StatusComissao.PENDENTE)
-                .count();
-    }
-
-    private Integer contarComissoesLiberadas(List<Comissao> comissoes) {
-        return (int) comissoes.stream()
-                .filter(this::isComissaoLiberada)
-                .count();
     }
 
     private boolean isComissaoLiberada(Comissao comissao) {
@@ -448,10 +538,6 @@ public class HomeVendedorService {
 
     private String formatarMoeda(BigDecimal valor) {
         return NumberFormat.getCurrencyInstance(LOCALE_BR).format(valor == null ? BigDecimal.ZERO : valor);
-    }
-
-    private String periodoKey(YearMonth periodo, String idVenda) {
-        return nomeMes(periodo) + "-" + idVenda;
     }
 
     private String nomeMes(YearMonth periodo) {
