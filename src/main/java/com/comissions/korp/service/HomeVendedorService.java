@@ -118,6 +118,7 @@ public class HomeVendedorService {
                 filtro.getStatusComissoes(),
                 StatusParcela.CANCELADO,
                 filtro.isIncluiEmAndamento(),
+                filtro.isIncluiVendaDoPeriodo(),
                 paginacao
         );
 
@@ -140,7 +141,8 @@ public class HomeVendedorService {
                 intervalo.fim(),
                 FiltroStatusVenda.TODAS.getStatusComissoes(),
                 StatusParcela.CANCELADO,
-                FiltroStatusVenda.TODAS.isIncluiEmAndamento()
+                FiltroStatusVenda.TODAS.isIncluiEmAndamento(),
+                FiltroStatusVenda.TODAS.isIncluiVendaDoPeriodo()
         );
 
         ResumoDTO resumo = montarResumo(idVendedor, periodo, intervalo, totalVendas);
@@ -281,12 +283,6 @@ public class HomeVendedorService {
 
     private VendaResumoDTO criarVendaResumo(Pedido pedido, List<Comissao> comissoes, List<Comissao> todasComissoesDoPedido) {
         BigDecimal totalComissao = somarComissoes(comissoes);
-        long parcelasPagas = comissoes.stream()
-                .filter(this::isComissaoPaga)
-                .count();
-        long parcelasLiberadas = comissoes.stream()
-                .filter(this::isComissaoLiberada)
-                .count();
 
         VendaResumoDTO venda = new VendaResumoDTO();
         venda.setId("V" + pedido.getIdPedido());
@@ -294,12 +290,36 @@ public class HomeVendedorService {
         venda.setNome("VENDA " + pedido.getIdPedido());
         venda.setCliente(criarNomeClienteTabela(pedido.getCliente()));
         venda.setValorComissao(totalComissao);
-        venda.setComissao(criarTextoComissao(totalComissao, comissoes));
-        venda.setStatus(criarStatusVenda(comissoes, parcelasLiberadas, parcelasPagas));
-        venda.setTipo(criarTipoVenda(parcelasLiberadas, parcelasPagas));
+        // A linha "Venda" mostra o total do período; o detalhamento por parcela agora é
+        // uma linha "Pagamento" própria no front (ver criarParcelas/criarParcela abaixo).
+        venda.setComissao(formatarMoeda(totalComissao));
+        // Status da linha "Venda" reflete o pedido em si, não mais o status das comissões
+        // (isso agora aparece separado, em cada linha "Pagamento").
+        venda.setStatus(statusPedidoLabel(pedido));
+        venda.setTipo(tipoPedido(pedido));
+        venda.setDataVenda(pedido.getDataPedido());
         venda.setParcelas(criarParcelas(comissoes));
         venda.setParcelasDaVenda(criarParcelas(todasComissoesDoPedido));
         return venda;
+    }
+
+    /**
+     * PedidoService só atribui dois valores a statusPedido: "EM_ANDAMENTO" na criação
+     * (criarPedidoFromRequest) e "APROVADO" quando a comissão é criada (criarComissao /
+     * editarPedidoFromPedidoEditRequest). O default 'PENDENTE' do banco nunca é usado na
+     * prática, pois o service sempre sobrescreve para EM_ANDAMENTO. Por isso o fallback
+     * abaixo cobre diretamente o caso APROVADO.
+     */
+    private String statusPedidoLabel(Pedido pedido) {
+        return isEmAndamento(pedido) ? "Em andamento" : "Aprovada";
+    }
+
+    private String tipoPedido(Pedido pedido) {
+        return isEmAndamento(pedido) ? "andamento" : "aprovada";
+    }
+
+    private boolean isEmAndamento(Pedido pedido) {
+        return "EM_ANDAMENTO".equalsIgnoreCase(pedido.getStatusPedido());
     }
 
     private DetalheVendaDTO criarDetalheVenda(Pedido pedido, List<ItemPedido> itens) {
@@ -401,14 +421,19 @@ public class HomeVendedorService {
     private ParcelaDTO criarParcela(Comissao comissao) {
         Parcela parcela = comissao.getParcela();
         Pagamento pagamento = parcela.getPagamento();
+        Integer totalParcelas = pagamento.getQuantidadeParcelas();
 
         ParcelaDTO dto = new ParcelaDTO();
         dto.setIdParcela(parcela.getId());
         dto.setPedidoId(comissao.getPedido().getIdPedido());
         dto.setNumeroParcela(parcela.getNumeroParcela());
-        dto.setTotalParcelas(pagamento.getQuantidadeParcelas());
-        dto.setLabel("Parcela " + parcela.getNumeroParcela() + "/" + pagamento.getQuantidadeParcelas());
+        dto.setTotalParcelas(totalParcelas);
+        dto.setLabel(totalParcelas == null || totalParcelas <= 1
+                ? "À vista"
+                : "Parcela " + parcela.getNumeroParcela() + "/" + totalParcelas);
         dto.setValor(comissao.getValorComissao());
+        // Status bruto do enum (PENDENTE/LIBERADA/PAGA); o rótulo em português
+        // e a cor de cada linha "Pagamento" ficam a cargo do front.
         dto.setStatus(comissao.getStatusComissao().name());
         dto.setDataVencimento(parcela.getDataVencimento());
         return dto;
@@ -428,51 +453,6 @@ public class HomeVendedorService {
         }
 
         return contato + " - " + empresa;
-    }
-
-    private String criarTextoComissao(BigDecimal totalComissao, List<Comissao> comissoes) {
-        String valor = formatarMoeda(totalComissao);
-        if (comissoes.size() == 1) {
-            Parcela parcela = comissoes.get(0).getParcela();
-            Integer totalParcelas = parcela.getPagamento().getQuantidadeParcelas();
-            return parcela.getNumeroParcela() + "/" + totalParcelas + " - " + valor;
-        }
-        if (comissoes.size() > 1) {
-            return comissoes.size() + " parcelas - " + valor;
-        }
-        return valor;
-    }
-
-    private String criarStatusVenda(List<Comissao> comissoes, long parcelasLiberadas, long parcelasPagas) {
-        if (comissoes.isEmpty()) {
-            return "AGUARDANDO";
-        }
-
-        if (parcelasPagas > 0) {
-            if (comissoes.size() == 1) {
-                return "PAGO " + comissoes.get(0).getParcela().getNumeroParcela() + "ª PARCELA";
-            }
-            return "PAGO " + parcelasPagas + " PARCELAS";
-        }
-
-        if (parcelasLiberadas > 0) {
-            if (comissoes.size() == 1) {
-                return "LIBERADA " + comissoes.get(0).getParcela().getNumeroParcela() + "ª PARCELA";
-            }
-            return "LIBERADA " + parcelasLiberadas + " PARCELAS";
-        }
-
-        return "AGUARDANDO";
-    }
-
-    private String criarTipoVenda(long parcelasLiberadas, long parcelasPagas) {
-        if (parcelasPagas > 0) {
-            return "paga";
-        }
-        if (parcelasLiberadas > 0) {
-            return "liberada";
-        }
-        return "pendente";
     }
 
     private void preencherEndereco(PessoaDTO pessoa, Endereco endereco) {
@@ -513,15 +493,6 @@ public class HomeVendedorService {
         return comissoes.stream()
                 .map(Comissao::getValorComissao)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    private boolean isComissaoLiberada(Comissao comissao) {
-        return comissao.getStatusComissao() == StatusComissao.LIBERADA
-                || comissao.getStatusComissao() == StatusComissao.PAGA;
-    }
-
-    private boolean isComissaoPaga(Comissao comissao) {
-        return comissao.getStatusComissao() == StatusComissao.PAGA;
     }
 
     private String calcularTendencia(BigDecimal atual, BigDecimal anterior) {

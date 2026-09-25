@@ -116,6 +116,7 @@ public class HomeVendedorResponseDTO {
         private BigDecimal valorComissao;
         private String status;
         private String tipo;
+        private LocalDate dataVenda;
         private List<ParcelaDTO> parcelas;
         private List<ParcelaDTO> parcelasDaVenda;
 
@@ -197,6 +198,14 @@ public class HomeVendedorResponseDTO {
 
         public void setParcelasDaVenda(List<ParcelaDTO> parcelasDaVenda) {
             this.parcelasDaVenda = parcelasDaVenda;
+        }
+
+        public LocalDate getDataVenda() {
+            return dataVenda;
+        }
+
+        public void setDataVenda(LocalDate dataVenda) {
+            this.dataVenda = dataVenda;
         }
     }
 

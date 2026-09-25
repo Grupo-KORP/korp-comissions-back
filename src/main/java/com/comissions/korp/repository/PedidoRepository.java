@@ -40,25 +40,30 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
      */
 
     String FILTRO_PAINEL = """
-            p.ativo = true
-            AND (
-                EXISTS (
-                    SELECT 1
-                    FROM Comissao c
-                    WHERE c.pedido = p
-                      AND c.usuario.idUsuario = :idVendedor
-                      AND c.statusComissao IN :statusComissoes
-                      AND c.parcela.dataVencimento BETWEEN :inicio AND :fim
-                      AND c.parcela.statusParcela <> :parcelaCancelada
-                )
-                OR (
-                    :incluirEmAndamento = true
-                    AND p.usuario.idUsuario = :idVendedor
-                    AND p.statusPedido = 'EM_ANDAMENTO'
-                    AND p.dataPedido BETWEEN :inicio AND :fim
-                )
+        p.ativo = true
+        AND (
+            EXISTS (
+                SELECT 1
+                FROM Comissao c
+                WHERE c.pedido = p
+                  AND c.usuario.idUsuario = :idVendedor
+                  AND c.statusComissao IN :statusComissoes
+                  AND c.parcela.dataVencimento BETWEEN :inicio AND :fim
+                  AND c.parcela.statusParcela <> :parcelaCancelada
             )
-            """;
+            OR (
+                :incluirVendaDoPeriodo = true
+                AND p.usuario.idUsuario = :idVendedor
+                AND p.dataPedido BETWEEN :inicio AND :fim
+            )
+            OR (
+                :incluirEmAndamento = true
+                AND p.usuario.idUsuario = :idVendedor
+                AND p.statusPedido = 'EM_ANDAMENTO'
+                AND p.dataPedido BETWEEN :inicio AND :fim
+            )
+        )
+        """;
 
     @Query(
             value = "SELECT p FROM Pedido p JOIN FETCH p.cliente WHERE " + FILTRO_PAINEL,
@@ -71,6 +76,7 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
             @Param("statusComissoes") List<StatusComissao> statusComissoes,
             @Param("parcelaCancelada") StatusParcela parcelaCancelada,
             @Param("incluirEmAndamento") boolean incluirEmAndamento,
+            @Param("incluirVendaDoPeriodo") boolean incluirVendaDoPeriodo,
             Pageable pageable
     );
 
@@ -81,7 +87,8 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
             @Param("fim") LocalDate fim,
             @Param("statusComissoes") List<StatusComissao> statusComissoes,
             @Param("parcelaCancelada") StatusParcela parcelaCancelada,
-            @Param("incluirEmAndamento") boolean incluirEmAndamento
+            @Param("incluirEmAndamento") boolean incluirEmAndamento,
+            @Param("incluirVendaDoPeriodo") boolean incluirVendaDoPeriodo
     );
 
     Optional<Pedido> findByIdPedidoAndAtivoTrue(Integer idPedido);

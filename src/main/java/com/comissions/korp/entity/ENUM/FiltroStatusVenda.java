@@ -13,16 +13,36 @@ import java.util.List;
  */
 public enum FiltroStatusVenda {
 
-    TODAS(List.of(StatusComissao.PENDENTE, StatusComissao.LIBERADA, StatusComissao.PAGA), true),
-    LIBERADAS(List.of(StatusComissao.LIBERADA, StatusComissao.PAGA), false),
-    PENDENTES(List.of(StatusComissao.PENDENTE), true);
+    TODAS(
+            List.of(StatusComissao.PENDENTE, StatusComissao.LIBERADA, StatusComissao.PAGA),
+            true,
+            true
+    ),
+
+    LIBERADAS(
+            List.of(StatusComissao.LIBERADA, StatusComissao.PAGA),
+            false,
+            false
+    ),
+
+    PENDENTES(
+            List.of(StatusComissao.PENDENTE),
+            true,
+            false
+    );
 
     private final List<StatusComissao> statusComissoes;
     private final boolean incluiEmAndamento;
+    private final boolean incluiVendaDoPeriodo;
 
-    FiltroStatusVenda(List<StatusComissao> statusComissoes, boolean incluiEmAndamento) {
+    FiltroStatusVenda(
+            List<StatusComissao> statusComissoes,
+            boolean incluiEmAndamento,
+            boolean incluiVendaDoPeriodo
+    ) {
         this.statusComissoes = statusComissoes;
         this.incluiEmAndamento = incluiEmAndamento;
+        this.incluiVendaDoPeriodo = incluiVendaDoPeriodo;
     }
 
     public List<StatusComissao> getStatusComissoes() {
@@ -31,5 +51,9 @@ public enum FiltroStatusVenda {
 
     public boolean isIncluiEmAndamento() {
         return incluiEmAndamento;
+    }
+
+    public boolean isIncluiVendaDoPeriodo() {
+        return incluiVendaDoPeriodo;
     }
 }
