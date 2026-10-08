@@ -30,7 +30,7 @@ import java.util.List;
  * ano/mes opcionais (sem nada: mês atual; mes sem ano: ano atual).
  */
 @RestController
-@RequestMapping("/financeiro/home")
+@RequestMapping("/api/financeiro/home")
 public class HomeFinanceiroController {
 
     private final ResumoFinanceiroService resumoService;

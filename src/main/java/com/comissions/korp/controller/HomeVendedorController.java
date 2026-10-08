@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/vendedor/home")
+@RequestMapping("/api/vendedor/home")
 public class HomeVendedorController {
 
     private final HomeVendedorService homeVendedorService;
