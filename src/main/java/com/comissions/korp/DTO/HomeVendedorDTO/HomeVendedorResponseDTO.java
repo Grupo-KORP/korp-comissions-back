@@ -116,6 +116,7 @@ public class HomeVendedorResponseDTO {
         private BigDecimal valorComissao;
         private String status;
         private String tipo;
+        private LocalDate dataVenda;
         private List<ParcelaDTO> parcelas;
         private List<ParcelaDTO> parcelasDaVenda;
 
@@ -198,10 +199,19 @@ public class HomeVendedorResponseDTO {
         public void setParcelasDaVenda(List<ParcelaDTO> parcelasDaVenda) {
             this.parcelasDaVenda = parcelasDaVenda;
         }
+
+        public LocalDate getDataVenda() {
+            return dataVenda;
+        }
+
+        public void setDataVenda(LocalDate dataVenda) {
+            this.dataVenda = dataVenda;
+        }
     }
 
     public static class ParcelaDTO {
         private Integer idParcela;
+        private Integer pedidoId;
         private String label;
         private BigDecimal valor;
         private Integer numeroParcela;
@@ -263,6 +273,14 @@ public class HomeVendedorResponseDTO {
 
         public void setStatus(String status) {
             this.status = status;
+        }
+
+        public Integer getPedidoId() {
+            return pedidoId;
+        }
+
+        public void setPedidoId(Integer pedidoId) {
+            this.pedidoId = pedidoId;
         }
     }
 

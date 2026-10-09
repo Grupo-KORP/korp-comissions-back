@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 
 @RestController
-@RequestMapping("/distribuidor")
+@RequestMapping("/api/distribuidor")
 public class DistribuidorController {
 
     private final DistribuidorService distribuidorService;
