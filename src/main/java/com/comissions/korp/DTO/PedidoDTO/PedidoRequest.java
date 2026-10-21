@@ -3,6 +3,7 @@ package com.comissions.korp.DTO.PedidoDTO;
 import com.comissions.korp.DTO.ClienteDTO.ClientePedidoResponseDTO;
 import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorPedidoResponseDTO;
 import com.comissions.korp.DTO.ItemPedidoDTO.ItemPedidoRequest;
+import com.comissions.korp.entity.ENUM.MetodoPagamento;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -14,8 +15,17 @@ public class PedidoRequest {
     private DistribuidorPedidoResponseDTO distribuidor;
     private List<ItemPedidoRequest> itens;
     private String pdfBase64;
+    private MetodoPagamento metodoPagamento;
 
     public PedidoRequest() {
+    }
+
+    public MetodoPagamento getMetodoPagamento() {
+        return metodoPagamento;
+    }
+
+    public void setMetodoPagamento(MetodoPagamento metodoPagamento) {
+        this.metodoPagamento = metodoPagamento;
     }
 
     public String getPdfBase64() {

@@ -28,6 +28,9 @@ public class Parcela {
     @Column(name = "data_pagamento")
     private LocalDate dataPagamento;
 
+    @Column(name = "prazo_dias")
+    private Integer prazoDias;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status_parcela", nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'PENDENTE'")
     private StatusParcela statusParcela;
@@ -74,6 +77,14 @@ public class Parcela {
 
     public void setDataPagamento(LocalDate dataPagamento) {
         this.dataPagamento = dataPagamento;
+    }
+
+    public Integer getPrazoDias() {
+        return prazoDias;
+    }
+
+    public void setPrazoDias(Integer prazoDias) {
+        this.prazoDias = prazoDias;
     }
 
     public Pagamento getPagamento() {

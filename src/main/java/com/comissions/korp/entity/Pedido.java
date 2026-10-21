@@ -1,6 +1,7 @@
 package com.comissions.korp.entity;
 
 
+import com.comissions.korp.entity.ENUM.MetodoPagamento;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;
@@ -39,6 +40,10 @@ public class Pedido {
 
     @Column(length = 250)
     private String observacoes;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "metodo_pagamento", length = 20)
+    private MetodoPagamento metodoPagamento;
 
     @Column(name = "ativo", nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
     private Boolean ativo = true;
@@ -136,6 +141,14 @@ public class Pedido {
 
     public void setObservacoes(String observacoes) {
         this.observacoes = observacoes;
+    }
+
+    public MetodoPagamento getMetodoPagamento() {
+        return metodoPagamento;
+    }
+
+    public void setMetodoPagamento(MetodoPagamento metodoPagamento) {
+        this.metodoPagamento = metodoPagamento;
     }
 
     public Distribuidor getDistribuidor() {
