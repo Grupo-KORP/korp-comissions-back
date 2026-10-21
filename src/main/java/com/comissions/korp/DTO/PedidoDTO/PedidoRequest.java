@@ -14,8 +14,18 @@ public class PedidoRequest {
     private DistribuidorPedidoResponseDTO distribuidor;
     private List<ItemPedidoRequest> itens;
     private String pdfBase64;
+    private Integer idRascunho;
 
     public PedidoRequest() {
+    }
+
+    /** Rascunho que originou o pedido; é apagado junto com a criação. */
+    public Integer getIdRascunho() {
+        return idRascunho;
+    }
+
+    public void setIdRascunho(Integer idRascunho) {
+        this.idRascunho = idRascunho;
     }
 
     public String getPdfBase64() {

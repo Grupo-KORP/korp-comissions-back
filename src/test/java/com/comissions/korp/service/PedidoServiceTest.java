@@ -5,6 +5,7 @@ import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorPedidoResponseDTO;
 import com.comissions.korp.DTO.ItemPedidoDTO.ItemPedidoRequest;
 import com.comissions.korp.DTO.ItemPedidoDTO.ItemPedidoResumoResponse;
 import com.comissions.korp.DTO.PagamentoDTO;
+import com.comissions.korp.DTO.PedidoDTO.PedidoEditRequest;
 import com.comissions.korp.DTO.PedidoDTO.PedidoRequest;
 import com.comissions.korp.DTO.PedidoDTO.PedidoResponse;
 import com.comissions.korp.entity.Cliente;
@@ -21,6 +22,7 @@ import com.comissions.korp.entity.Produto;
 import com.comissions.korp.entity.Usuario;
 import com.comissions.korp.exception.OperacaoNaoPermitida;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
+import com.comissions.korp.exception.RequisicaoInvalida;
 import com.comissions.korp.repository.ClienteRepository;
 import com.comissions.korp.repository.DistribuidorRepository;
 import com.comissions.korp.repository.ItemPedidoRepository;
@@ -80,6 +82,8 @@ class PedidoServiceTest {
     private ClienteRepository clienteRepository;
     @Mock
     private DistribuidorRepository distribuidorRepository;
+    @Mock
+    private PedidoRascunhoService rascunhoService;
 
     private PedidoService pedidoService;
 
@@ -99,7 +103,8 @@ class PedidoServiceTest {
                 parcelaRepository,
                 comissaoRepository,
                 clienteRepository,
-                distribuidorRepository
+                distribuidorRepository,
+                rascunhoService
         );
     }
 
@@ -137,6 +142,71 @@ class PedidoServiceTest {
         verify(itemPedidoRepository).save(itemCaptor.capture());
         assertThat(itemCaptor.getValue().getPedido().getIdPedido()).isEqualTo(30);
         assertThat(itemCaptor.getValue().getProduto()).isSameAs(produto);
+    }
+
+    @Test
+    void cadastrarPedido_deveExcluirRascunhoDeOrigem_quandoRequestTemIdRascunho() {
+        // Arrange
+        PedidoRequest request = pedidoRequest(List.of(itemRequest(1, 2, "10.00", "10.00")));
+        request.setIdRascunho(7);
+
+        when(usuarioRepository.findById(99)).thenReturn(Optional.of(usuario(99)));
+        when(clienteService.buscarClientePorId(10)).thenReturn(cliente(10));
+        when(distribuidorService.buscarDistribuidorPorId(20)).thenReturn(distribuidor(20));
+        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(produtoRepository.findByIdProdutoIn(List.of(1))).thenReturn(List.of(produto(1)));
+        when(itemPedidoRepository.save(any(ItemPedido.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(itemPedidoService.convertToItemPedidoResumoResponse(any(ItemPedido.class))).thenReturn(new ItemPedidoResumoResponse());
+
+        // Act (valor faturado igual ao do distribuidor é permitido)
+        pedidoService.cadastrarPedido(request, 99);
+
+        // Assert
+        verify(rascunhoService).excluirAposCriarPedido(99, 7);
+    }
+
+    @Test
+    void cadastrarPedido_deveFalhar_quandoValorFaturadoMenorQueValorDoDistribuidor() {
+        // Arrange
+        PedidoRequest request = pedidoRequest(List.of(
+                itemRequest(1, 2, "10.00", "15.00"),
+                itemRequest(2, 1, "20.00", "19.99")));
+
+        // Act / Assert
+        assertThatThrownBy(() -> pedidoService.cadastrarPedido(request, 99))
+                .isInstanceOf(RequisicaoInvalida.class)
+                .hasMessageContaining("Item 2")
+                .hasMessageContaining("não pode ser menor");
+
+        verify(pedidoRepository, never()).save(any());
+        verify(rascunhoService, never()).excluirAposCriarPedido(any(), any());
+    }
+
+    @Test
+    void editarPedido_deveFalhar_quandoItemDoPedidoTemValorFaturadoMenorQueDoDistribuidor() {
+        // Arrange
+        Pedido pedido = pedido(30, "EM_ANDAMENTO");
+        ItemPedido item = new ItemPedido();
+        item.setProduto(produto(1));
+        item.setVlrUnitDistr(new BigDecimal("10.00"));
+        item.setVlrUnitCliente(new BigDecimal("9.00"));
+
+        PedidoEditRequest edicao = new PedidoEditRequest();
+        edicao.setIdPedido(30);
+        edicao.setIdCliente(10);
+        edicao.setIdDistribuidor(20);
+
+        when(pedidoRepository.findById(30)).thenReturn(Optional.of(pedido));
+        when(clienteService.buscarClientePorId(10)).thenReturn(cliente(10));
+        when(distribuidorService.buscarDistribuidorPorId(20)).thenReturn(distribuidor(20));
+        when(itemPedidoRepository.findByPedido(pedido)).thenReturn(List.of(item));
+
+        // Act / Assert
+        assertThatThrownBy(() -> pedidoService.editarPedidoFromPedidoEditRequest(edicao))
+                .isInstanceOf(RequisicaoInvalida.class)
+                .hasMessageContaining("Produto 1");
+
+        verify(pedidoRepository, never()).save(any());
     }
 
     @Test

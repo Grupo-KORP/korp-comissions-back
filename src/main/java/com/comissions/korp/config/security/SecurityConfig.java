@@ -58,6 +58,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/usuario/**").hasRole("ADMIN")
                         .requestMatchers(ROUTE_PERMIT).permitAll()
                         .requestMatchers("/financeiro/**").hasAnyRole("FINAN", "ADMIN")
+                        .requestMatchers("/api/pedidos/rascunhos", "/api/pedidos/rascunhos/**").hasRole("VEND")
 
 
                         // Descomente para proteger por role:
