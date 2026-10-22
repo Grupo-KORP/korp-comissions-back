@@ -14,6 +14,7 @@ import com.comissions.korp.entity.Cliente;
 import com.comissions.korp.entity.Comissao;
 import com.comissions.korp.entity.Contato;
 import com.comissions.korp.entity.Distribuidor;
+import com.comissions.korp.entity.ENUM.MetodoPagamento;
 import com.comissions.korp.entity.ENUM.StatusComissao;
 import com.comissions.korp.entity.ENUM.StatusParcela;
 import com.comissions.korp.entity.Endereco;
@@ -41,6 +42,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -184,7 +186,8 @@ public class HomeVendedorService {
                 .orElseThrow(() -> new RecursoNaoEncontrado("Venda não encontrada com ID: " + idPedido));
 
         List<ItemPedido> itens = itemPedidoRepository.findByPedido(pedido);
-        return criarDetalheVenda(pedido, itens);
+        List<Comissao> comissoes = comissaoRepository.buscarComissoesDosPedidos(List.of(idPedido), idVendedor);
+        return criarDetalheVenda(pedido, itens, comissoes);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -322,26 +325,37 @@ public class HomeVendedorService {
         return "EM_ANDAMENTO".equalsIgnoreCase(pedido.getStatusPedido());
     }
 
-    private DetalheVendaDTO criarDetalheVenda(Pedido pedido, List<ItemPedido> itens) {
+    private DetalheVendaDTO criarDetalheVenda(Pedido pedido, List<ItemPedido> itens, List<Comissao> comissoes) {
         DetalheVendaDTO detalhe = new DetalheVendaDTO();
         detalhe.setCliente(criarPessoaCliente(pedido.getCliente()));
         detalhe.setDistribuidor(criarPessoaDistribuidor(pedido.getDistribuidor()));
         detalhe.setProduto(criarProdutoVenda(pedido, itens));
-        detalhe.setPedido(criarPedidoVenda(pedido));
+        detalhe.setPedido(criarPedidoVenda(pedido, comissoes));
         return detalhe;
     }
 
-    private PedidoVendaDTO criarPedidoVenda(Pedido pedido) {
+    private PedidoVendaDTO criarPedidoVenda(Pedido pedido, List<Comissao> comissoes) {
         PedidoVendaDTO dto = new PedidoVendaDTO();
         dto.setIdPedido(pedido.getIdPedido());
         dto.setStatusPedido(pedido.getStatusPedido());
         dto.setNumeroNotaDistribuidor(pedido.getNumeroNotaDistribuidor());
         dto.setObservacoes(pedido.getObservacoes());
+        dto.setDatasPagamento(List.of());
+
+        if (pedido.getMetodoPagamento() != null) {
+            dto.setMetodoPagamento(pedido.getMetodoPagamento().name());
+        }
 
         pagamentoRepository.findByPedido_IdPedido(pedido.getIdPedido()).ifPresent(pagamento -> {
             dto.setMetodoPagamento(pagamento.getMetodoPagamento().name());
             dto.setParcelado(pagamento.getParcelado());
             dto.setQuantidadeParcelas(pagamento.getQuantidadeParcelas());
+            dto.setDatasPagamento(comissoes.stream()
+                    .map(Comissao::getParcela)
+                    .sorted(Comparator.comparing(Parcela::getNumeroParcela))
+                    .map(Parcela::getPrazoDias)
+                    .filter(Objects::nonNull)
+                    .toList());
         });
 
         return dto;
@@ -428,7 +442,7 @@ public class HomeVendedorService {
         dto.setPedidoId(comissao.getPedido().getIdPedido());
         dto.setNumeroParcela(parcela.getNumeroParcela());
         dto.setTotalParcelas(totalParcelas);
-        dto.setLabel(totalParcelas == null || totalParcelas <= 1
+        dto.setLabel(totalParcelas == null || (totalParcelas <= 1 && pagamento.getMetodoPagamento() != MetodoPagamento.BOLETO)
                 ? "À vista"
                 : "Parcela " + parcela.getNumeroParcela() + "/" + totalParcelas);
         dto.setValor(comissao.getValorComissao());

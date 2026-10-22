@@ -2,6 +2,8 @@ package com.comissions.korp.DTO.PedidoDTO;
 
 import com.comissions.korp.entity.ENUM.MetodoPagamento;
 
+import java.util.List;
+
 public class PedidoEditRequest {
     private Integer idPedido;
     private Integer idCliente;
@@ -13,8 +15,7 @@ public class PedidoEditRequest {
     private String numeroNotaDistribuidor;
     private String observacoes;
     private MetodoPagamento metodoPagamento;
-    private Boolean parcelado;
-    private Integer quantidadeParcelas;
+    private List<Integer> datasPagamento;
     private Boolean finalizarPedido;
 
     public Integer getIdPedido() {
@@ -97,20 +98,13 @@ public class PedidoEditRequest {
         this.metodoPagamento = metodoPagamento;
     }
 
-    public Boolean getParcelado() {
-        return parcelado;
+    /** Prazo, em dias após a finalização do pedido, de cada parcela. */
+    public List<Integer> getDatasPagamento() {
+        return datasPagamento;
     }
 
-    public void setParcelado(Boolean parcelado) {
-        this.parcelado = parcelado;
-    }
-
-    public Integer getQuantidadeParcelas() {
-        return quantidadeParcelas;
-    }
-
-    public void setQuantidadeParcelas(Integer quantidadeParcelas) {
-        this.quantidadeParcelas = quantidadeParcelas;
+    public void setDatasPagamento(List<Integer> datasPagamento) {
+        this.datasPagamento = datasPagamento;
     }
 
     public Boolean getFinalizarPedido() {

@@ -5,6 +5,7 @@ import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorPedidoResponseDTO;
 import com.comissions.korp.DTO.ItemPedidoDTO.ItemPedidoRequest;
 import com.comissions.korp.DTO.ItemPedidoDTO.ItemPedidoResumoResponse;
 import com.comissions.korp.DTO.PagamentoDTO;
+import com.comissions.korp.DTO.PedidoDTO.PedidoEditRequest;
 import com.comissions.korp.DTO.PedidoDTO.PedidoRequest;
 import com.comissions.korp.DTO.PedidoDTO.PedidoResponse;
 import com.comissions.korp.entity.Cliente;
@@ -67,8 +68,6 @@ class PedidoServiceTest {
     @Mock
     private ItemPedidoService itemPedidoService;
     @Mock
-    private ComissaoService comissaoService;
-    @Mock
     private EmailService emailService;
     @Mock
     private PagamentoRepository pagamentoRepository;
@@ -93,7 +92,6 @@ class PedidoServiceTest {
                 distribuidorService,
                 itemPedidoService,
                 usuarioRepository,
-                comissaoService,
                 emailService,
                 pagamentoRepository,
                 parcelaRepository,
@@ -130,6 +128,7 @@ class PedidoServiceTest {
         // Assert
         assertThat(response.getIdPedido()).isEqualTo(30);
         assertThat(response.getStatusPedido()).isEqualTo("EM_ANDAMENTO");
+        assertThat(response.getMetodoPagamento()).isEqualTo(MetodoPagamento.BOLETO);
         assertThat(response.getValorTotalDistr()).isEqualByComparingTo("20.00");
         assertThat(response.getValorTotalCliente()).isEqualByComparingTo("30.00");
 
@@ -137,6 +136,43 @@ class PedidoServiceTest {
         verify(itemPedidoRepository).save(itemCaptor.capture());
         assertThat(itemCaptor.getValue().getPedido().getIdPedido()).isEqualTo(30);
         assertThat(itemCaptor.getValue().getProduto()).isSameAs(produto);
+    }
+
+    @Test
+    void cadastrarPedido_deveFalhar_quandoMetodoPagamentoNaoInformado() {
+        // Arrange
+        PedidoRequest request = pedidoRequest(List.of(itemRequest(1, 2, "10.00", "15.00")));
+        request.setMetodoPagamento(null);
+
+        // Act / Assert
+        assertThatThrownBy(() -> pedidoService.cadastrarPedido(request, 99))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("método de pagamento");
+
+        verify(pedidoRepository, never()).save(any());
+    }
+
+    @Test
+    void cadastrarPedido_deveGravarMetodoPagamentoNoPedido() {
+        // Arrange
+        PedidoRequest request = pedidoRequest(List.of(itemRequest(1, 2, "10.00", "15.00")));
+        request.setMetodoPagamento(MetodoPagamento.AVISTA);
+
+        when(usuarioRepository.findById(99)).thenReturn(Optional.of(usuario(99)));
+        when(clienteService.buscarClientePorId(10)).thenReturn(cliente(10));
+        when(distribuidorService.buscarDistribuidorPorId(20)).thenReturn(distribuidor(20));
+        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(produtoRepository.findByIdProdutoIn(List.of(1))).thenReturn(List.of(produto(1)));
+        when(itemPedidoRepository.save(any(ItemPedido.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(itemPedidoService.convertToItemPedidoResumoResponse(any(ItemPedido.class))).thenReturn(new ItemPedidoResumoResponse());
+
+        // Act
+        pedidoService.cadastrarPedido(request, 99);
+
+        // Assert
+        ArgumentCaptor<Pedido> pedidoCaptor = ArgumentCaptor.forClass(Pedido.class);
+        verify(pedidoRepository).save(pedidoCaptor.capture());
+        assertThat(pedidoCaptor.getValue().getMetodoPagamento()).isEqualTo(MetodoPagamento.AVISTA);
     }
 
     @Test
@@ -174,12 +210,11 @@ class PedidoServiceTest {
     void criarComissao_deveCriarPagamentoParcelasEComissoesEAprovarPedido_quandoPedidoEstaEmAndamento() {
         // Arrange
         Pedido pedido = pedido(30, "EM_ANDAMENTO");
-        PagamentoDTO pagamentoDTO = pagamentoDTO(3);
+        PagamentoDTO pagamentoDTO = pagamentoDTO(MetodoPagamento.BOLETO, 10, 30, 60);
 
         when(pedidoRepository.findById(30)).thenReturn(Optional.of(pedido));
         when(pagamentoRepository.existsByPedido_IdPedido(30)).thenReturn(false);
         when(pagamentoRepository.save(any(Pagamento.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(comissaoService.pegarComissaoPorUsuario()).thenReturn(new BigDecimal("10"));
 
         // Act
         String mensagem = pedidoService.criarComissao(30, pagamentoDTO);
@@ -187,6 +222,7 @@ class PedidoServiceTest {
         // Assert
         assertThat(mensagem).contains("30");
         assertThat(pedido.getStatusPedido()).isEqualTo("APROVADO");
+        assertThat(pedido.getMetodoPagamento()).isEqualTo(MetodoPagamento.BOLETO);
         verify(pedidoRepository).save(pedido);
 
         ArgumentCaptor<List<Parcela>> parcelasCaptor = ArgumentCaptor.forClass(List.class);
@@ -198,6 +234,9 @@ class PedidoServiceTest {
         List<Comissao> comissoes = comissoesCaptor.getValue();
         assertThat(parcelas).hasSize(3);
         assertThat(parcelas).extracting(Parcela::getNumeroParcela).containsExactly(1, 2, 3);
+        assertThat(parcelas).extracting(Parcela::getPrazoDias).containsExactly(10, 30, 60);
+        assertThat(parcelas).extracting(Parcela::getDataVencimento).containsExactly(
+                LocalDate.now().plusDays(10), LocalDate.now().plusDays(30), LocalDate.now().plusDays(60));
         assertThat(parcelas).allSatisfy(parcela -> assertThat(parcela.getStatusParcela()).isEqualTo(StatusParcela.PENDENTE));
         assertThat(comissoes).hasSize(3);
         assertThat(comissoes).allSatisfy(comissao -> {
@@ -214,7 +253,7 @@ class PedidoServiceTest {
         when(pedidoRepository.findById(30)).thenReturn(Optional.of(pedido));
 
         // Act / Assert
-        assertThatThrownBy(() -> pedidoService.criarComissao(30, pagamentoDTO(2)))
+        assertThatThrownBy(() -> pedidoService.criarComissao(30, pagamentoDTO(MetodoPagamento.BOLETO, 30, 60)))
                 .isInstanceOf(OperacaoNaoPermitida.class)
                 .hasMessageContaining("em andamento");
 
@@ -229,7 +268,7 @@ class PedidoServiceTest {
         when(pagamentoRepository.existsByPedido_IdPedido(30)).thenReturn(true);
 
         // Act / Assert
-        assertThatThrownBy(() -> pedidoService.criarComissao(30, pagamentoDTO(2)))
+        assertThatThrownBy(() -> pedidoService.criarComissao(30, pagamentoDTO(MetodoPagamento.BOLETO, 30, 60)))
                 .isInstanceOf(OperacaoNaoPermitida.class)
                 .hasMessageContaining("pagamento");
 
@@ -237,15 +276,156 @@ class PedidoServiceTest {
     }
 
     @Test
-    void criarParcelasComComissao_deveFalhar_quandoQuantidadeParcelasEhInvalida() {
+    void criarComissao_deveCriarUmaParcelaComPrazoInformado_quandoPagamentoAVista() {
+        // Arrange
+        Pedido pedido = pedido(30, "EM_ANDAMENTO");
+
+        when(pedidoRepository.findById(30)).thenReturn(Optional.of(pedido));
+        when(pagamentoRepository.existsByPedido_IdPedido(30)).thenReturn(false);
+        when(pagamentoRepository.save(any(Pagamento.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        pedidoService.criarComissao(30, pagamentoDTO(MetodoPagamento.AVISTA, 0));
+
+        // Assert
+        ArgumentCaptor<List<Parcela>> parcelasCaptor = ArgumentCaptor.forClass(List.class);
+        verify(parcelaRepository).saveAll(parcelasCaptor.capture());
+        List<Parcela> parcelas = parcelasCaptor.getValue();
+        assertThat(parcelas).hasSize(1);
+        assertThat(parcelas.getFirst().getDataVencimento()).isEqualTo(LocalDate.now());
+        assertThat(parcelas.getFirst().getValorParcela()).isEqualByComparingTo("100.00");
+        assertThat(pedido.getMetodoPagamento()).isEqualTo(MetodoPagamento.AVISTA);
+    }
+
+    @Test
+    void criarComissao_deveUsarPercentualDoVendedorDoPedido() {
+        // Arrange
+        Pedido pedido = pedido(30, "EM_ANDAMENTO");
+        pedido.getUsuario().setPercentualComissao(new BigDecimal("20"));
+
+        when(pedidoRepository.findById(30)).thenReturn(Optional.of(pedido));
+        when(pagamentoRepository.existsByPedido_IdPedido(30)).thenReturn(false);
+        when(pagamentoRepository.save(any(Pagamento.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        pedidoService.criarComissao(30, pagamentoDTO(MetodoPagamento.BOLETO, 30, 60));
+
+        // Assert
+        ArgumentCaptor<List<Comissao>> comissoesCaptor = ArgumentCaptor.forClass(List.class);
+        verify(comissaoRepository).saveAll(comissoesCaptor.capture());
+        assertThat(comissoesCaptor.getValue()).extracting(Comissao::getValorComissao)
+                .allSatisfy(valor -> assertThat(valor).isEqualByComparingTo("3.00"));
+    }
+
+    @Test
+    void validarPrazosPagamento_deveAceitarBoletoComAteDezPrazosCrescentesIncluindoZero() {
+        pedidoService.validarPrazosPagamento(MetodoPagamento.BOLETO, List.of(0, 10, 30, 60, 90, 120, 150, 180, 360, 999));
+    }
+
+    @Test
+    void validarPrazosPagamento_deveFalhar_quandoPrazosInvalidos() {
+        assertThatThrownBy(() -> pedidoService.validarPrazosPagamento(MetodoPagamento.BOLETO, List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("máximo");
+        assertThatThrownBy(() -> pedidoService.validarPrazosPagamento(MetodoPagamento.BOLETO, List.of(30, 10)))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("crescentes");
+        assertThatThrownBy(() -> pedidoService.validarPrazosPagamento(MetodoPagamento.BOLETO, List.of(30, 30)))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("crescentes");
+        assertThatThrownBy(() -> pedidoService.validarPrazosPagamento(MetodoPagamento.BOLETO, List.of(1000)))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("entre 0 e 999");
+        assertThatThrownBy(() -> pedidoService.validarPrazosPagamento(MetodoPagamento.BOLETO, List.of(-1)))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("entre 0 e 999");
+        assertThatThrownBy(() -> pedidoService.validarPrazosPagamento(MetodoPagamento.BOLETO, List.of()))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("ao menos um");
+        assertThatThrownBy(() -> pedidoService.validarPrazosPagamento(MetodoPagamento.AVISTA, List.of(10, 20)))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("exatamente um");
+        assertThatThrownBy(() -> pedidoService.validarPrazosPagamento(null, List.of(10)))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("método de pagamento");
+    }
+
+    @Test
+    void criarParcelasComComissao_deveFalhar_quandoNaoHaPrazos() {
         // Arrange
         Pagamento pagamento = new Pagamento();
-        pagamento.setQuantidadeParcelas(0);
 
         // Act / Assert
-        assertThatThrownBy(() -> pedidoService.criarParcelasComComissao(pagamento, pedido(30, "EM_ANDAMENTO")))
+        assertThatThrownBy(() -> pedidoService.criarParcelasComComissao(pagamento, pedido(30, "EM_ANDAMENTO"), List.of()))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("maior que zero");
+                .hasMessageContaining("prazo");
+    }
+
+    @Test
+    void editarPedido_deveTrocarMetodoEFinalizarComPrazosVariados() {
+        // Arrange
+        Pedido pedido = pedido(30, "EM_ANDAMENTO");
+        pedido.setMetodoPagamento(MetodoPagamento.AVISTA);
+        ItemPedido item = new ItemPedido();
+        item.setVlrTotalDistr(new BigDecimal("70.00"));
+        item.setVlrTotalCliente(new BigDecimal("100.00"));
+
+        PedidoEditRequest edicao = new PedidoEditRequest();
+        edicao.setIdPedido(30);
+        edicao.setIdCliente(10);
+        edicao.setIdDistribuidor(20);
+        edicao.setNumeroNotaDistribuidor("NF-1");
+        edicao.setObservacoes("Obs");
+        edicao.setMetodoPagamento(MetodoPagamento.BOLETO);
+        edicao.setDatasPagamento(List.of(10, 30, 60, 120, 180));
+        edicao.setFinalizarPedido(true);
+
+        when(pedidoRepository.findById(30)).thenReturn(Optional.of(pedido));
+        when(clienteService.buscarClientePorId(10)).thenReturn(cliente(10));
+        when(distribuidorService.buscarDistribuidorPorId(20)).thenReturn(distribuidor(20));
+        when(itemPedidoRepository.findByPedido(pedido)).thenReturn(List.of(item));
+        when(pagamentoRepository.existsByPedido_IdPedido(30)).thenReturn(false);
+        when(pagamentoRepository.save(any(Pagamento.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(itemPedidoService.convertToItemPedidoResumoResponse(any(ItemPedido.class))).thenReturn(new ItemPedidoResumoResponse());
+
+        // Act
+        PedidoResponse response = pedidoService.editarPedidoFromPedidoEditRequest(edicao);
+
+        // Assert
+        assertThat(response.getStatusPedido()).isEqualTo("APROVADO");
+        assertThat(response.getMetodoPagamento()).isEqualTo(MetodoPagamento.BOLETO);
+
+        ArgumentCaptor<Pagamento> pagamentoCaptor = ArgumentCaptor.forClass(Pagamento.class);
+        verify(pagamentoRepository).save(pagamentoCaptor.capture());
+        assertThat(pagamentoCaptor.getValue().getQuantidadeParcelas()).isEqualTo(5);
+        assertThat(pagamentoCaptor.getValue().getParcelado()).isTrue();
+
+        ArgumentCaptor<List<Parcela>> parcelasCaptor = ArgumentCaptor.forClass(List.class);
+        verify(parcelaRepository).saveAll(parcelasCaptor.capture());
+        assertThat(parcelasCaptor.getValue()).extracting(Parcela::getPrazoDias).containsExactly(10, 30, 60, 120, 180);
+    }
+
+    @Test
+    void editarPedido_deveFalhar_quandoFinalizaSemMetodoDePagamentoNoPedido() {
+        // Arrange
+        Pedido pedido = pedido(30, "EM_ANDAMENTO");
+        ItemPedido item = new ItemPedido();
+        item.setVlrTotalDistr(new BigDecimal("70.00"));
+        item.setVlrTotalCliente(new BigDecimal("100.00"));
+
+        PedidoEditRequest edicao = new PedidoEditRequest();
+        edicao.setIdPedido(30);
+        edicao.setIdCliente(10);
+        edicao.setIdDistribuidor(20);
+        edicao.setNumeroNotaDistribuidor("NF-1");
+        edicao.setObservacoes("Obs");
+        edicao.setDatasPagamento(List.of(10));
+        edicao.setFinalizarPedido(true);
+
+        when(pedidoRepository.findById(30)).thenReturn(Optional.of(pedido));
+        when(clienteService.buscarClientePorId(10)).thenReturn(cliente(10));
+        when(distribuidorService.buscarDistribuidorPorId(20)).thenReturn(distribuidor(20));
+        when(itemPedidoRepository.findByPedido(pedido)).thenReturn(List.of(item));
+        when(pagamentoRepository.existsByPedido_IdPedido(30)).thenReturn(false);
+
+        // Act / Assert
+        assertThatThrownBy(() -> pedidoService.editarPedidoFromPedidoEditRequest(edicao))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("método de pagamento");
+
+        verify(pagamentoRepository, never()).save(any());
     }
 
     private PedidoRequest pedidoRequest(List<ItemPedidoRequest> itens) {
@@ -259,6 +439,7 @@ class PedidoServiceTest {
         request.setCliente(clienteDTO);
         request.setDistribuidor(distribuidorDTO);
         request.setItens(itens);
+        request.setMetodoPagamento(MetodoPagamento.BOLETO);
         return request;
     }
 
@@ -286,11 +467,10 @@ class PedidoServiceTest {
         return pedido;
     }
 
-    private PagamentoDTO pagamentoDTO(Integer quantidadeParcelas) {
+    private PagamentoDTO pagamentoDTO(MetodoPagamento metodo, Integer... prazos) {
         PagamentoDTO pagamento = new PagamentoDTO();
-        pagamento.setMetodoPagamento(MetodoPagamento.BOLETO);
-        pagamento.setParcelado(true);
-        pagamento.setQuantidadeParcelas(quantidadeParcelas);
+        pagamento.setMetodoPagamento(metodo);
+        pagamento.setDatasPagamento(List.of(prazos));
         return pagamento;
     }
 
@@ -306,6 +486,7 @@ class PedidoServiceTest {
         Usuario usuario = new Usuario();
         usuario.setIdUsuario(id);
         usuario.setNome("Vendedor");
+        usuario.setPercentualComissao(new BigDecimal("10"));
         return usuario;
     }
 

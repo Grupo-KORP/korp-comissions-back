@@ -1,6 +1,7 @@
 package com.comissions.korp.DTO.PedidoDTO;
 
 import com.comissions.korp.DTO.ItemPedidoDTO.ItemPedidoResumoResponse;
+import com.comissions.korp.entity.ENUM.MetodoPagamento;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -16,6 +17,7 @@ public class PedidoResponse {
     private Boolean frete;
     private String transportadora;
     private String observacoes;
+    private MetodoPagamento metodoPagamento;
     private Integer fkCliente;
     private Integer fkDistribuidor;
     private Integer fkVendedor;
@@ -102,6 +104,14 @@ public class PedidoResponse {
 
     public void setObservacoes(String observacoes) {
         this.observacoes = observacoes;
+    }
+
+    public MetodoPagamento getMetodoPagamento() {
+        return metodoPagamento;
+    }
+
+    public void setMetodoPagamento(MetodoPagamento metodoPagamento) {
+        this.metodoPagamento = metodoPagamento;
     }
 
     public Integer getFkCliente() {
