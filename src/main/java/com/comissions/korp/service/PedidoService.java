@@ -12,6 +12,7 @@ import com.comissions.korp.entity.ENUM.StatusComissao;
 import com.comissions.korp.entity.ENUM.StatusParcela;
 import com.comissions.korp.exception.OperacaoNaoPermitida;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
+import com.comissions.korp.exception.RequisicaoInvalida;
 import com.comissions.korp.repository.*;
 import com.comissions.korp.service.Email.EmailService;
 import org.springframework.stereotype.Service;
@@ -45,6 +46,7 @@ public class PedidoService {
     private final ComissaoRepository comissaoRepository;
     private final ClienteRepository clienteRepository;
     private final DistribuidorRepository distribuidorRepository;
+    private final PedidoRascunhoService rascunhoService;
 
 
     public PedidoService(PedidoRepository pedidoRepository
@@ -52,7 +54,7 @@ public class PedidoService {
             , ProdutoRepository produtoRepository
             , ClienteService clienteService
             , DistribuidorService distribuidorService,
-                         ItemPedidoService itemPedidoService, UsuarioRepository usuarioRepository, EmailService emailService, PagamentoRepository pagamentoRepository, ParcelaRepository parcelaRepository, ComissaoRepository comissaoRepository, ClienteRepository clienteRepository, DistribuidorRepository distribuidorRepository) {
+                         ItemPedidoService itemPedidoService, UsuarioRepository usuarioRepository, EmailService emailService, PagamentoRepository pagamentoRepository, ParcelaRepository parcelaRepository, ComissaoRepository comissaoRepository, ClienteRepository clienteRepository, DistribuidorRepository distribuidorRepository, PedidoRascunhoService rascunhoService) {
         this.pedidoRepository = pedidoRepository;
         this.itemPedidoRepository = itemPedidoRepository;
         this.produtoRepository = produtoRepository;
@@ -66,6 +68,7 @@ public class PedidoService {
         this.comissaoRepository = comissaoRepository;
         this.clienteRepository = clienteRepository;
         this.distribuidorRepository = distribuidorRepository;
+        this.rascunhoService = rascunhoService;
     }
 
     @Transactional
@@ -74,6 +77,8 @@ public class PedidoService {
         if (pedidoRequest.getMetodoPagamento() == null) {
             throw new IllegalArgumentException("Informe o método de pagamento do pedido.");
         }
+
+        validarMargemItens(pedidoRequest.getItens());
 
         Usuario vendedor = usuarioRepository.findById(vendedorId)
                 .orElseThrow(() -> new RuntimeException("Vendedor não encontrado com id: " + vendedorId));
@@ -84,6 +89,8 @@ public class PedidoService {
         Pedido pedidoSalvo = pedidoRepository.save(criarPedidoFromRequest(pedidoRequest, cliente, distribuidor, vendedor));
         Map<Integer, Produto> produtoMap = mapearProdutosPorId(pedidoRequest.getItens());
         List<ItemPedido> itensSalvos = salvarItensDoPedido(pedidoSalvo, pedidoRequest.getItens(), produtoMap);
+
+        rascunhoService.excluirAposCriarPedido(vendedorId, pedidoRequest.getIdRascunho());
 
         if ( pedidoRequest.getPdfBase64() != null
                 && pedidoRequest.getDistribuidor().getEmail() != null) {
@@ -126,6 +133,8 @@ public class PedidoService {
 
     @Transactional
     public PedidoResponse atualizarPedido(Integer id, PedidoRequest pedidoRequest, Integer vendedorId) {
+        validarMargemItens(pedidoRequest.getItens());
+
         Pedido pedido = pedidoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontrado("Pedido não encontrado com id: " + id));
 
@@ -443,6 +452,7 @@ public class PedidoService {
             atualizarQuantidadeItemPedido(pedidoAtual, pedido);
         }
 
+        validarMargemItensPedido(itemPedidoRepository.findByPedido(pedidoAtual));
         recalcularTotaisPedido(pedidoAtual);
 
         if (Boolean.TRUE.equals(pedido.getFinalizarPedido())) {
@@ -460,6 +470,34 @@ public class PedidoService {
         pedidoRepository.save(pedidoAtual);
 
         return convertToPedidoResponse(pedidoAtual, itemPedidoRepository.findByPedido(pedidoAtual));
+    }
+
+    // Comissão nunca negativa: em cada item o valor faturado pode ser igual, jamais menor que o do distribuidor.
+    private void validarMargemItens(List<ItemPedidoRequest> itens) {
+        if (itens == null) {
+            return;
+        }
+        for (int i = 0; i < itens.size(); i++) {
+            ItemPedidoRequest item = itens.get(i);
+            validarMargem(item.getVlrUnitDistr(), item.getVlrUnitCliente(), "Item " + (i + 1));
+        }
+    }
+
+    private void validarMargemItensPedido(List<ItemPedido> itens) {
+        for (ItemPedido item : itens) {
+            String nome = item.getProduto() != null ? item.getProduto().getNome() : "Item";
+            validarMargem(item.getVlrUnitDistr(), item.getVlrUnitCliente(), nome);
+        }
+    }
+
+    private void validarMargem(BigDecimal valorUnitDistr, BigDecimal valorUnitCliente, String identificacao) {
+        if (valorUnitDistr == null || valorUnitCliente == null) {
+            throw new RequisicaoInvalida(identificacao + ": informe os valores unitários do distribuidor e do cliente.");
+        }
+        if (valorUnitCliente.compareTo(valorUnitDistr) < 0) {
+            throw new RequisicaoInvalida(identificacao
+                    + ": o valor unitário faturado não pode ser menor que o valor unitário do distribuidor.");
+        }
     }
 
     private void atualizarQuantidadeItemPedido(Pedido pedidoAtual, PedidoEditRequest pedido) {

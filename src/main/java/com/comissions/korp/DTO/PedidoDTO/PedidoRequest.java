@@ -16,6 +16,7 @@ public class PedidoRequest {
     private List<ItemPedidoRequest> itens;
     private String pdfBase64;
     private MetodoPagamento metodoPagamento;
+    private Integer idRascunho;
 
     public PedidoRequest() {
     }
@@ -26,6 +27,15 @@ public class PedidoRequest {
 
     public void setMetodoPagamento(MetodoPagamento metodoPagamento) {
         this.metodoPagamento = metodoPagamento;
+    }
+
+    /** Rascunho que originou o pedido; é apagado junto com a criação. */
+    public Integer getIdRascunho() {
+        return idRascunho;
+    }
+
+    public void setIdRascunho(Integer idRascunho) {
+        this.idRascunho = idRascunho;
     }
 
     public String getPdfBase64() {
