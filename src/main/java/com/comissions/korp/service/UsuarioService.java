@@ -183,12 +183,6 @@ public class UsuarioService {
 
         Usuario usuarioTrocarSenha = buscarUsuarioPorId(idUsuario);
 
-        Boolean mesmaSenha = passwordEncoder.matches(usuarioTrocarSenhaReqDTO.getSenhaAtual(), usuarioTrocarSenha.getSenha());
-
-        if(!mesmaSenha){
-            throw new RuntimeException("Deu erardo");
-        }
-
         usuarioTrocarSenha.setSenha(passwordEncoder.encode(usuarioTrocarSenhaReqDTO.getNovaSenha()));
 
         usuarioTrocarSenha.setPrimeiroAcesso(false);
