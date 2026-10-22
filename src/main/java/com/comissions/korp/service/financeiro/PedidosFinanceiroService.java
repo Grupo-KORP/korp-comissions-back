@@ -3,6 +3,7 @@ package com.comissions.korp.service.financeiro;
 import com.comissions.korp.DTO.HomeFinanceiroDTO.ComissaoPedidoDTO;
 import com.comissions.korp.DTO.HomeFinanceiroDTO.PedidoRecenteDTO;
 import com.comissions.korp.entity.Cliente;
+import com.comissions.korp.entity.ENUM.MetodoPagamento;
 import com.comissions.korp.entity.ENUM.StatusComissao;
 import com.comissions.korp.entity.ENUM.StatusParcela;
 import com.comissions.korp.entity.Pagamento;
@@ -92,7 +93,10 @@ public class PedidosFinanceiroService {
         }
         Pagamento pagamento = parcelas.get(0).getPagamento();
         Integer total = pagamento.getQuantidadeParcelas();
-        return total == null || total <= 1 ? "À vista" : "Parcelado " + total + "x";
+        if (total != null && total > 1) {
+            return "Parcelado " + total + "x";
+        }
+        return pagamento.getMetodoPagamento() == MetodoPagamento.BOLETO ? "Boleto" : "À vista";
     }
 
     /** EM_ANDAMENTO ainda não gerou pagamento; depois disso vale o status das parcelas não canceladas. */
