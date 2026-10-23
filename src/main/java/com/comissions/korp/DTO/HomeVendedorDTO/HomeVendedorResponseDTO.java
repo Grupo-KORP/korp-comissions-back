@@ -212,6 +212,7 @@ public class HomeVendedorResponseDTO {
     public static class ParcelaDTO {
         private Integer idParcela;
         private Integer pedidoId;
+        private String cliente;
         private String label;
         private BigDecimal valor;
         private Integer numeroParcela;
@@ -281,6 +282,14 @@ public class HomeVendedorResponseDTO {
 
         public void setPedidoId(Integer pedidoId) {
             this.pedidoId = pedidoId;
+        }
+
+        public String getCliente() {
+            return cliente;
+        }
+
+        public void setCliente(String cliente) {
+            this.cliente = cliente;
         }
     }
 

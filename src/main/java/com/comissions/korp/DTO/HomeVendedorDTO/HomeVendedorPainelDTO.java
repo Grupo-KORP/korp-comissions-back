@@ -11,7 +11,7 @@ import java.util.List;
  * Resposta de GET /vendedor/home.
  * <ul>
  *   <li>resumo: cards e projeção do período (independem da página e do filtro de status)</li>
- *   <li>parcelasLiberadas: lista da coluna direita (independe da página)</li>
+ *   <li>parcelasDoPeriodo: parcelas pendentes, liberadas e pagas da coluna direita (independe da página)</li>
  *   <li>vendas: página de vendas já filtrada por status e período</li>
  * </ul>
  */
@@ -20,17 +20,24 @@ public record HomeVendedorPainelDTO(
         Integer mes,
         String nomeMes,
         ResumoDTO resumo,
-        List<ParcelaDTO> parcelasLiberadas,
+        List<ParcelaDTO> parcelasDoPeriodo,
         Page<VendaResumoDTO> vendas
 ) {
 
+    /**
+     * Tendências comparam o período com o mesmo período do mês anterior
+     * ("+25%", "-10%", "0%" ou "Novo" quando o mês anterior não tem base).
+     */
     public record ResumoDTO(
             Integer totalVendas,
             Integer comissoesLiberadas,
             Integer pagamentosPendentes,
             BigDecimal projecao,
-            Integer parcelas,
-            String tendencia
+            Integer parcelasPagas,
+            Integer totalParcelas,
+            String tendencia,
+            String tendenciaVendas,
+            String tendenciaLiberadas
     ) {
     }
 }

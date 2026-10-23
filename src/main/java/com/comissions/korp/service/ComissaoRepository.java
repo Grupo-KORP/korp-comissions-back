@@ -71,11 +71,12 @@ public interface ComissaoRepository extends JpaRepository<Comissao, Integer> {
             @Param("parcelaCancelada") StatusParcela parcelaCancelada
     );
 
-    /** Comissões do período por status (lista de parcelas liberadas da coluna direita). */
+    /** Comissões do período por status (lista de parcelas da coluna direita). */
     @Query("""
         SELECT c
         FROM Comissao c
         JOIN FETCH c.pedido p
+        JOIN FETCH p.cliente
         JOIN FETCH c.parcela parcela
         JOIN FETCH parcela.pagamento pagamento
         WHERE c.usuario.idUsuario = :idUsuario

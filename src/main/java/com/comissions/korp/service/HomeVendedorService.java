@@ -62,7 +62,8 @@ public class HomeVendedorService {
     /** Ordenação fixa: o cliente não escolhe o campo, só a página e o tamanho. */
     private static final Sort ORDENACAO_VENDAS = Sort.by(Sort.Direction.DESC, "dataPedido", "idPedido");
 
-    private static final List<StatusComissao> STATUS_LIBERADAS = FiltroStatusVenda.LIBERADAS.getStatusComissoes();
+    private static final List<StatusComissao> STATUS_PARCELAS_DO_PERIODO = FiltroStatusVenda.TODAS.getStatusComissoes();
+    private static final String TENDENCIA_SEM_BASE = "Novo";
 
     private final PedidoRepository pedidoPainelRepository;
     private final ItemPedidoRepository itemPedidoRepository;
@@ -137,22 +138,14 @@ public class HomeVendedorService {
 
         long totalVendas = filtro == FiltroStatusVenda.TODAS
                 ? paginaPedidos.getTotalElements()
-                : pedidoPainelRepository.contarPedidosDoPainel(
-                idVendedor,
-                intervalo.inicio(),
-                intervalo.fim(),
-                FiltroStatusVenda.TODAS.getStatusComissoes(),
-                StatusParcela.CANCELADO,
-                FiltroStatusVenda.TODAS.isIncluiEmAndamento(),
-                FiltroStatusVenda.TODAS.isIncluiVendaDoPeriodo()
-        );
+                : contarVendas(idVendedor, intervalo);
 
-        ResumoDTO resumo = montarResumo(idVendedor, periodo, intervalo, totalVendas);
+        ResumoDTO resumo = montarResumo(idVendedor, periodo, dia, intervalo, totalVendas);
 
-        List<ParcelaDTO> parcelasLiberadas = comissaoRepository
+        List<ParcelaDTO> parcelasDoPeriodo = comissaoRepository
                 .buscarComissoesPorStatusNoPeriodo(
                         idVendedor,
-                        STATUS_LIBERADAS,
+                        STATUS_PARCELAS_DO_PERIODO,
                         intervalo.inicio(),
                         intervalo.fim(),
                         StatusParcela.CANCELADO
@@ -166,7 +159,7 @@ public class HomeVendedorService {
                 periodo.getMonthValue(),
                 nomeMes(periodo),
                 resumo,
-                parcelasLiberadas,
+                parcelasDoPeriodo,
                 vendas
         );
     }
@@ -240,27 +233,70 @@ public class HomeVendedorService {
     // Resumo (cards / projeção / tendência) — agregado no banco, sem carregar entidades
     // ═══════════════════════════════════════════════════════════════════════════
 
-    private ResumoDTO montarResumo(Integer idVendedor, YearMonth periodo, Intervalo intervalo, long totalVendas) {
+    /**
+     * Cada tendência compara o indicador do próprio card com o mesmo período do mês anterior:
+     * vendas x vendas, comissões liberadas x liberadas e comissão bruta (todas as parcelas
+     * não canceladas, de qualquer status) x comissão bruta.
+     */
+    private ResumoDTO montarResumo(Integer idVendedor, YearMonth periodo, Integer dia, Intervalo intervalo, long totalVendas) {
+        Intervalo intervaloAnterior = resolverIntervaloMesAnterior(periodo, dia);
+
         Map<StatusComissao, ResumoStatusDTO> atual = resumirPorStatus(idVendedor, intervalo);
+        Map<StatusComissao, ResumoStatusDTO> mesAnterior = resumirPorStatus(idVendedor, intervaloAnterior);
+        long totalVendasMesAnterior = contarVendas(idVendedor, intervaloAnterior);
 
-        YearMonth anterior = periodo.minusMonths(1);
-        Map<StatusComissao, ResumoStatusDTO> mesAnterior = resumirPorStatus(
-                idVendedor,
-                new Intervalo(anterior.atDay(1), anterior.atEndOfMonth())
-        );
-
-        BigDecimal projecao = total(atual, StatusComissao.LIBERADA);
-        BigDecimal projecaoMesAnterior = total(mesAnterior, StatusComissao.LIBERADA);
-        int pendentes = (int) quantidade(atual, StatusComissao.PENDENTE);
+        BigDecimal projecao = totalGeral(atual);
+        BigDecimal projecaoMesAnterior = totalGeral(mesAnterior);
+        long liberadas = quantidadeLiberadas(atual);
+        long liberadasMesAnterior = quantidadeLiberadas(mesAnterior);
 
         return new ResumoDTO(
                 (int) totalVendas,
-                (int) (quantidade(atual, StatusComissao.LIBERADA) + quantidade(atual, StatusComissao.PAGA)),
-                pendentes,
+                (int) liberadas,
+                (int) quantidade(atual, StatusComissao.PENDENTE),
                 projecao,
-                pendentes,
-                calcularTendencia(projecao, projecaoMesAnterior)
+                (int) quantidade(atual, StatusComissao.PAGA),
+                (int) quantidadeGeral(atual),
+                calcularTendencia(projecao, projecaoMesAnterior),
+                calcularTendencia(BigDecimal.valueOf(totalVendas), BigDecimal.valueOf(totalVendasMesAnterior)),
+                calcularTendencia(BigDecimal.valueOf(liberadas), BigDecimal.valueOf(liberadasMesAnterior))
         );
+    }
+
+    /** Mesmo recorte do período atual, um mês antes (mês inteiro ou o mesmo dia, limitado ao fim do mês). */
+    private Intervalo resolverIntervaloMesAnterior(YearMonth periodo, Integer dia) {
+        YearMonth anterior = periodo.minusMonths(1);
+        if (dia == null) {
+            return new Intervalo(anterior.atDay(1), anterior.atEndOfMonth());
+        }
+        LocalDate data = anterior.atDay(Math.min(dia, anterior.lengthOfMonth()));
+        return new Intervalo(data, data);
+    }
+
+    private long contarVendas(Integer idVendedor, Intervalo intervalo) {
+        return pedidoPainelRepository.contarPedidosDoPainel(
+                idVendedor,
+                intervalo.inicio(),
+                intervalo.fim(),
+                FiltroStatusVenda.TODAS.getStatusComissoes(),
+                StatusParcela.CANCELADO,
+                FiltroStatusVenda.TODAS.isIncluiEmAndamento(),
+                FiltroStatusVenda.TODAS.isIncluiVendaDoPeriodo()
+        );
+    }
+
+    private long quantidadeLiberadas(Map<StatusComissao, ResumoStatusDTO> resumo) {
+        return quantidade(resumo, StatusComissao.LIBERADA) + quantidade(resumo, StatusComissao.PAGA);
+    }
+
+    private long quantidadeGeral(Map<StatusComissao, ResumoStatusDTO> resumo) {
+        return resumo.keySet().stream().mapToLong(status -> quantidade(resumo, status)).sum();
+    }
+
+    private BigDecimal totalGeral(Map<StatusComissao, ResumoStatusDTO> resumo) {
+        return resumo.keySet().stream()
+                .map(status -> total(resumo, status))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private Map<StatusComissao, ResumoStatusDTO> resumirPorStatus(Integer idVendedor, Intervalo intervalo) {
@@ -440,6 +476,7 @@ public class HomeVendedorService {
         ParcelaDTO dto = new ParcelaDTO();
         dto.setIdParcela(parcela.getId());
         dto.setPedidoId(comissao.getPedido().getIdPedido());
+        dto.setCliente(nomeEmpresa(comissao.getPedido().getCliente()));
         dto.setNumeroParcela(parcela.getNumeroParcela());
         dto.setTotalParcelas(totalParcelas);
         dto.setLabel(totalParcelas == null || (totalParcelas <= 1 && pagamento.getMetodoPagamento() != MetodoPagamento.BOLETO)
@@ -458,15 +495,22 @@ public class HomeVendedorService {
                 .findFirst()
                 .map(Contato::getNome)
                 .orElse(cliente.getNomeFantasia());
-        String empresa = cliente.getNomeFantasia() != null && !cliente.getNomeFantasia().isBlank()
-                ? cliente.getNomeFantasia()
-                : cliente.getRazaoSocial();
+        String empresa = nomeEmpresa(cliente);
 
         if (contato == null || contato.isBlank()) {
             return empresa;
         }
 
         return contato + " - " + empresa;
+    }
+
+    private String nomeEmpresa(Cliente cliente) {
+        if (cliente == null) {
+            return null;
+        }
+        return cliente.getNomeFantasia() != null && !cliente.getNomeFantasia().isBlank()
+                ? cliente.getNomeFantasia()
+                : cliente.getRazaoSocial();
     }
 
     private void preencherEndereco(PessoaDTO pessoa, Endereco endereco) {
@@ -509,9 +553,10 @@ public class HomeVendedorService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
+    /** Sem base no mês anterior a variação percentual não existe: devolve "Novo" em vez de inventar +100%. */
     private String calcularTendencia(BigDecimal atual, BigDecimal anterior) {
         if (anterior == null || BigDecimal.ZERO.compareTo(anterior) == 0) {
-            return atual.compareTo(BigDecimal.ZERO) > 0 ? "+100%" : "0%";
+            return atual.compareTo(BigDecimal.ZERO) > 0 ? TENDENCIA_SEM_BASE : "0%";
         }
 
         BigDecimal variacao = atual.subtract(anterior)

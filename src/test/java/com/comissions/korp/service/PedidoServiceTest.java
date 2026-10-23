@@ -428,6 +428,9 @@ class PedidoServiceTest {
         Pedido pedido = pedido(30, "EM_ANDAMENTO");
         pedido.setMetodoPagamento(MetodoPagamento.AVISTA);
         ItemPedido item = new ItemPedido();
+        item.setQuantidade(1);
+        item.setVlrUnitDistr(new BigDecimal("70.00"));
+        item.setVlrUnitCliente(new BigDecimal("100.00"));
         item.setVlrTotalDistr(new BigDecimal("70.00"));
         item.setVlrTotalCliente(new BigDecimal("100.00"));
 
@@ -471,6 +474,9 @@ class PedidoServiceTest {
         // Arrange
         Pedido pedido = pedido(30, "EM_ANDAMENTO");
         ItemPedido item = new ItemPedido();
+        item.setQuantidade(1);
+        item.setVlrUnitDistr(new BigDecimal("70.00"));
+        item.setVlrUnitCliente(new BigDecimal("100.00"));
         item.setVlrTotalDistr(new BigDecimal("70.00"));
         item.setVlrTotalCliente(new BigDecimal("100.00"));
 
