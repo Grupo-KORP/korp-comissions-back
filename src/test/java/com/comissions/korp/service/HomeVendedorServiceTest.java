@@ -2,6 +2,8 @@ package com.comissions.korp.service;
 
 import com.comissions.korp.DTO.HomeVendedorDTO.FiltroStatusVenda;
 import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorPainelDTO;
+import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorPainelDTO.LinhaPainelDTO;
+import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorPainelDTO.TipoLinha;
 import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorResponseDTO.ParcelaDTO;
 import com.comissions.korp.DTO.HomeVendedorDTO.ResumoStatusDTO;
 import com.comissions.korp.entity.Cliente;
@@ -22,13 +24,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -108,7 +112,104 @@ class HomeVendedorServiceTest {
         assertThat(resumo.tendenciaVendas()).isEqualTo("0%");
         assertThat(resumo.tendenciaLiberadas()).isEqualTo("0%");
         assertThat(painel.parcelasDoPeriodo()).isEmpty();
-        assertThat(painel.vendas()).isEmpty();
+        assertThat(painel.linhas()).isEmpty();
+    }
+
+    @Test
+    void buscarPainel_devePaginarPorLinha_contandoVendaEParcelas() {
+        prepararDuasVendasComParcelas();
+
+        Page<LinhaPainelDTO> primeira = homeVendedorService.buscarPainel(
+                VENDEDOR, 2026, 10, null, FiltroStatusVenda.TODAS, PRIMEIRA_PAGINA).linhas();
+
+        // 1 linha de venda (só a feita no período) + 5 parcelas no período = 6 linhas
+        assertThat(primeira.getTotalElements()).isEqualTo(6);
+        assertThat(primeira.getTotalPages()).isEqualTo(2);
+        assertThat(primeira.getContent())
+                .extracting(linha -> linha.tipo(), linha -> linha.venda().getIdPedido(),
+                        linha -> linha.parcela() == null ? null : linha.parcela().getNumeroParcela())
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple(TipoLinha.VENDA, 1, null),
+                        org.assertj.core.groups.Tuple.tuple(TipoLinha.PAGAMENTO, 1, 1),
+                        org.assertj.core.groups.Tuple.tuple(TipoLinha.PAGAMENTO, 1, 2),
+                        org.assertj.core.groups.Tuple.tuple(TipoLinha.PAGAMENTO, 1, 3),
+                        org.assertj.core.groups.Tuple.tuple(TipoLinha.PAGAMENTO, 2, 1)
+                );
+        // A venda leva todas as parcelas (modal), não só as do período
+        assertThat(primeira.getContent().get(4).venda().getParcelasDaVenda()).hasSize(3);
+
+        Page<LinhaPainelDTO> segunda = homeVendedorService.buscarPainel(
+                VENDEDOR, 2026, 10, null, FiltroStatusVenda.TODAS, PageRequest.of(1, 5)).linhas();
+
+        assertThat(segunda.getContent())
+                .extracting(linha -> linha.tipo(), linha -> linha.venda().getIdPedido(), linha -> linha.parcela().getNumeroParcela())
+                .containsExactly(org.assertj.core.groups.Tuple.tuple(TipoLinha.PAGAMENTO, 2, 2));
+    }
+
+    @Test
+    void buscarPainel_filtroVendas_deveListarSoAsVendas_paginando() {
+        prepararDuasVendasComParcelas();
+
+        HomeVendedorPainelDTO painel = homeVendedorService.buscarPainel(
+                VENDEDOR, 2026, 10, null, FiltroStatusVenda.VENDAS, PageRequest.of(0, 1));
+
+        // Mesmas vendas contadas no card, inclusive a do mês anterior que tem parcela no período
+        assertThat(painel.resumo().totalVendas()).isEqualTo(2);
+        assertThat(painel.linhas().getTotalElements()).isEqualTo(2);
+        assertThat(painel.linhas().getTotalPages()).isEqualTo(2);
+        assertThat(painel.linhas().getContent())
+                .extracting(LinhaPainelDTO::tipo, linha -> linha.venda().getIdPedido(), LinhaPainelDTO::parcela)
+                .containsExactly(org.assertj.core.groups.Tuple.tuple(TipoLinha.VENDA, 1, null));
+    }
+
+    @Test
+    void buscarPainel_filtroLiberadas_deveListarSoParcelasLiberadasEPagas() {
+        prepararDuasVendasComParcelas();
+
+        Page<LinhaPainelDTO> linhas = homeVendedorService.buscarPainel(
+                VENDEDOR, 2026, 10, null, FiltroStatusVenda.LIBERADAS, PRIMEIRA_PAGINA).linhas();
+
+        assertThat(linhas.getTotalElements()).isEqualTo(2);
+        assertThat(linhas.getContent())
+                .extracting(LinhaPainelDTO::tipo, linha -> linha.venda().getIdPedido(), linha -> linha.parcela().getStatus())
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple(TipoLinha.PAGAMENTO, 2, "PAGA"),
+                        org.assertj.core.groups.Tuple.tuple(TipoLinha.PAGAMENTO, 2, "LIBERADA")
+                );
+    }
+
+    @Test
+    void buscarPainel_filtroPendentes_deveListarSoParcelasPendentes_paginando() {
+        prepararDuasVendasComParcelas();
+
+        Page<LinhaPainelDTO> segunda = homeVendedorService.buscarPainel(
+                VENDEDOR, 2026, 10, null, FiltroStatusVenda.PENDENTES, PageRequest.of(1, 2)).linhas();
+
+        // 3 parcelas pendentes no período (a de novembro fica de fora), 2 por página
+        assertThat(segunda.getTotalElements()).isEqualTo(3);
+        assertThat(segunda.getTotalPages()).isEqualTo(2);
+        assertThat(segunda.getContent())
+                .extracting(LinhaPainelDTO::tipo, linha -> linha.parcela().getNumeroParcela(), linha -> linha.parcela().getStatus())
+                .containsExactly(org.assertj.core.groups.Tuple.tuple(TipoLinha.PAGAMENTO, 3, "PENDENTE"));
+    }
+
+    /** Venda 1 (feita no período, 3 parcelas pendentes) e venda 2 (mês anterior, 1 paga e 1 liberada no período). */
+    private void prepararDuasVendasComParcelas() {
+        Pedido vendaDoPeriodo = pedido(1, LocalDate.of(2026, 10, 10));
+        Pedido vendaDoMesAnterior = pedido(2, LocalDate.of(2026, 9, 5));
+        when(pedidoRepository.listarPedidosDoPainel(
+                eq(VENDEDOR), any(), any(), anyList(), any(), anyBoolean(), anyBoolean(), any(Sort.class)))
+                .thenReturn(List.of(vendaDoPeriodo, vendaDoMesAnterior));
+        when(comissaoRepository.buscarComissoesDosPedidos(List.of(1, 2), VENDEDOR))
+                .thenReturn(List.of(
+                        comissao(vendaDoPeriodo, 1, 3, "100.00", StatusComissao.PENDENTE, LocalDate.of(2026, 10, 10)),
+                        comissao(vendaDoPeriodo, 2, 3, "100.00", StatusComissao.PENDENTE, LocalDate.of(2026, 10, 20)),
+                        comissao(vendaDoPeriodo, 3, 3, "100.00", StatusComissao.PENDENTE, LocalDate.of(2026, 10, 30)),
+                        comissao(vendaDoMesAnterior, 2, 3, "50.00", StatusComissao.LIBERADA, LocalDate.of(2026, 10, 25)),
+                        comissao(vendaDoMesAnterior, 1, 3, "50.00", StatusComissao.PAGA, LocalDate.of(2026, 10, 5)),
+                        // vence fora do período: não vira linha
+                        comissao(vendaDoMesAnterior, 3, 3, "50.00", StatusComissao.PENDENTE, LocalDate.of(2026, 11, 5))
+                ));
     }
 
     @Test
@@ -201,10 +302,37 @@ class HomeVendedorServiceTest {
                 eq(VENDEDOR), eq(diaAnterior), eq(diaAnterior), anyList(), any(), anyBoolean(), anyBoolean());
     }
 
-    private void prepararPaginaVazia(long totalVendas) {
-        when(pedidoRepository.buscarPedidosDoPainel(
-                eq(VENDEDOR), any(), any(), anyList(), any(), anyBoolean(), anyBoolean(), any(Pageable.class)))
-                .thenReturn(new PageImpl<>(List.of(), PRIMEIRA_PAGINA, totalVendas));
+    private void prepararPaginaVazia(int totalVendas) {
+        // Pedidos sem data e sem comissões: contam como venda, mas não geram linhas
+        List<Pedido> pedidos = IntStream.rangeClosed(1, totalVendas)
+                .mapToObj(id -> pedido(id, null))
+                .toList();
+        when(pedidoRepository.listarPedidosDoPainel(
+                eq(VENDEDOR), any(), any(), anyList(), any(), anyBoolean(), anyBoolean(), any(Sort.class)))
+                .thenReturn(pedidos);
+    }
+
+    private Pedido pedido(Integer idPedido, LocalDate dataPedido) {
+        Cliente cliente = new Cliente();
+        cliente.setIdCliente(idPedido);
+        cliente.setNomeFantasia("Cliente " + idPedido);
+        cliente.setRazaoSocial("Razao " + idPedido);
+
+        Pedido pedido = new Pedido();
+        pedido.setIdPedido(idPedido);
+        pedido.setCliente(cliente);
+        pedido.setDataPedido(dataPedido);
+        pedido.setStatusPedido("APROVADO");
+        return pedido;
+    }
+
+    private Comissao comissao(Pedido pedido, Integer numeroParcela, Integer totalParcelas,
+                              String valor, StatusComissao status, LocalDate vencimento) {
+        Comissao comissao = comissao(pedido.getIdPedido(), "", numeroParcela, totalParcelas, valor, status);
+        comissao.setPedido(pedido);
+        comissao.getParcela().setDataVencimento(vencimento);
+        comissao.getParcela().setStatusParcela(StatusParcela.PENDENTE);
+        return comissao;
     }
 
     private Comissao comissao(Integer idPedido, String nomeFantasia, Integer numeroParcela, Integer totalParcelas,
