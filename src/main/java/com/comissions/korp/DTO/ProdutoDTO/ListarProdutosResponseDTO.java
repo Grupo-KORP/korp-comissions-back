@@ -4,11 +4,21 @@ public class ListarProdutosResponseDTO {
     private Integer idProduto;
     private String nome;
     private String codigoProduto;
+    private String pn;
 
-    public ListarProdutosResponseDTO(Integer idProduto, String nome, String codigoProduto) {
+    public ListarProdutosResponseDTO(Integer idProduto, String nome, String codigoProduto, String pn) {
         this.idProduto = idProduto;
         this.nome = nome;
         this.codigoProduto = codigoProduto;
+        this.pn = pn;
+    }
+
+    public String getPn() {
+        return pn;
+    }
+
+    public void setPn(String pn) {
+        this.pn = pn;
     }
 
     public void setIdProduto(Integer idProduto) {

@@ -10,7 +10,9 @@ import com.comissions.korp.entity.Cliente;
 import com.comissions.korp.entity.Contato;
 import com.comissions.korp.entity.Distribuidor;
 import com.comissions.korp.entity.Usuario;
+import com.comissions.korp.exception.OperacaoNaoPermitida;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
+import com.comissions.korp.exception.RequisicaoInvalida;
 import com.comissions.korp.repository.ContatoRepository;
 import com.comissions.korp.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,14 +66,20 @@ public class ContatoService {
 
         for (ClienteContatosRequestDTO.ContatoItemDTO contatoDTO : requestDTO.getContatos()) {
 
+            validarDadosContato(contatoDTO.getNome(), contatoDTO.getEmail(), contatoDTO.getTelefone());
+
             // Caso o contato venha como nulo é porque está sendo criado no front
             if (contatoDTO.getIdContato() == null) {
                 salvarContatoCliente(contatoDTO.getNome(), contatoDTO.getEmail(), contatoDTO.getTelefone(), idCliente);
             } else {
 
                 Contato contato = contatoRepository.findById(contatoDTO.getIdContato())
-                        .orElseThrow(() -> new RuntimeException(
-                                "Contato não encontrado: " + contatoDTO.getIdContato()));
+                        .orElseThrow(() -> new RecursoNaoEncontrado(
+                                "Contato não encontrado com ID: " + contatoDTO.getIdContato()));
+
+                if (contato.getCliente() == null || !idCliente.equals(contato.getCliente().getIdCliente())) {
+                    throw new RequisicaoInvalida("O contato " + contatoDTO.getIdContato() + " não pertence a este cliente.");
+                }
 
                 contato.setNome(contatoDTO.getNome());
                 contato.setEmail(contatoDTO.getEmail());
@@ -109,14 +117,20 @@ public class ContatoService {
 
         for (DistribuidorContatosRequestDTO.ContatoItemDTO contatoDTO : requestDTO.getContatos()) {
 
+            validarDadosContato(contatoDTO.getNome(), contatoDTO.getEmail(), contatoDTO.getTelefone());
+
             // Caso o contato venha como nulo é porque está sendo criado no front
             if (contatoDTO.getIdContato() == null) {
                 salvarContatoDistribuidor(contatoDTO.getNome(), contatoDTO.getEmail(), contatoDTO.getTelefone(), idDistribuidor);
             } else {
 
                 Contato contato = contatoRepository.findById(contatoDTO.getIdContato())
-                        .orElseThrow(() -> new RuntimeException(
-                                "Contato não encontrado: " + contatoDTO.getIdContato()));
+                        .orElseThrow(() -> new RecursoNaoEncontrado(
+                                "Contato não encontrado com ID: " + contatoDTO.getIdContato()));
+
+                if (contato.getDistribuidor() == null || !idDistribuidor.equals(contato.getDistribuidor().getIdDistribuidor())) {
+                    throw new RequisicaoInvalida("O contato " + contatoDTO.getIdContato() + " não pertence a este distribuidor.");
+                }
 
                 contato.setNome(contatoDTO.getNome());
                 contato.setEmail(contatoDTO.getEmail());
@@ -140,21 +154,25 @@ public class ContatoService {
                 .orElseThrow(() -> new RecursoNaoEncontrado(
                         "Contato não encontrado com ID: " + id));
 
+        validarDadosContato(requestDTO.getNome(), requestDTO.getEmail(), requestDTO.getTelefone());
+
+        // O contato não pode mudar de dono
+        if (requestDTO.getIdCliente() != null
+                && (contatoExistente.getCliente() == null
+                || !requestDTO.getIdCliente().equals(contatoExistente.getCliente().getIdCliente()))) {
+            throw new RequisicaoInvalida("Não é permitido mover o contato para outro cliente.");
+        }
+
+        if (requestDTO.getIdDistribuidor() != null
+                && (contatoExistente.getDistribuidor() == null
+                || !requestDTO.getIdDistribuidor().equals(contatoExistente.getDistribuidor().getIdDistribuidor()))) {
+            throw new RequisicaoInvalida("Não é permitido mover o contato para outro distribuidor.");
+        }
+
         // Atualiza os campos usando dados do DTO
         contatoExistente.setNome(requestDTO.getNome());
         contatoExistente.setEmail(requestDTO.getEmail());
         contatoExistente.setTelefone(requestDTO.getTelefone());
-
-        // Atualiza relacionamentos se fornecidos
-        if (requestDTO.getIdCliente() != null) {
-            Cliente cliente = clienteService.buscarClientePorId(requestDTO.getIdCliente());
-            contatoExistente.setCliente(cliente);
-        }
-
-        if (requestDTO.getIdDistribuidor() != null) {
-            Distribuidor distribuidor = distribuidorService.buscarDistribuidorPorId(requestDTO.getIdDistribuidor());
-            contatoExistente.setDistribuidor(distribuidor);
-        }
 
         Contato contatoAtualizado = contatoRepository.save(contatoExistente);
         return convertToResponseDTO(contatoAtualizado);
@@ -163,11 +181,45 @@ public class ContatoService {
     @Transactional
     public void deletar(Integer id) {
         Contato contato = contatoRepository.findById(id).orElseThrow(() -> new RecursoNaoEncontrado("Contato não encontrado com ID: " + id));
+
+        if (Boolean.TRUE.equals(contato.getAtivo()) && eUltimoContatoAtivo(contato)) {
+            throw new OperacaoNaoPermitida("A empresa precisa ter pelo menos um contato. Edite este contato ou cadastre um novo antes de excluí-lo.");
+        }
+
         contato.setAtivo(false);
         contatoRepository.save(contato);
     }
 
+    private boolean eUltimoContatoAtivo(Contato contato) {
+        if (contato.getCliente() != null) {
+            return contatoRepository.countByClienteAndAtivoTrue(contato.getCliente()) <= 1;
+        }
+        if (contato.getDistribuidor() != null) {
+            return contatoRepository.countByDistribuidorAndAtivoTrue(contato.getDistribuidor()) <= 1;
+        }
+        return false;
+    }
+
+    private void validarDadosContato(String nome, String email, String telefone) {
+        if (nome == null || nome.isBlank()) {
+            throw new RequisicaoInvalida("Nome do contato obrigatório.");
+        }
+        if (email == null || email.isBlank() || !email.contains("@")) {
+            throw new RequisicaoInvalida("E-mail do contato inválido.");
+        }
+        String digitos = telefone == null ? "" : telefone.replaceAll("\\D", "");
+        if (digitos.length() < 10 || digitos.length() > 11) {
+            throw new RequisicaoInvalida("Telefone do contato inválido: informe DDD e 10 ou 11 dígitos.");
+        }
+    }
+
     private Contato convertToEntity(ContatoRequestDTO dto) {
+        validarDadosContato(dto.getNome(), dto.getEmail(), dto.getTelefone());
+
+        if ((dto.getIdCliente() == null) == (dto.getIdDistribuidor() == null)) {
+            throw new RequisicaoInvalida("Informe o cliente ou o distribuidor do contato (apenas um).");
+        }
+
         Contato contato = new Contato();
         contato.setNome(dto.getNome());
         contato.setEmail(dto.getEmail());

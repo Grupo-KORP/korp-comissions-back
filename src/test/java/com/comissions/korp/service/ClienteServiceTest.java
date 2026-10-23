@@ -2,11 +2,13 @@ package com.comissions.korp.service;
 
 import com.comissions.korp.DTO.ClienteDTO.ClienteRequestDTO;
 import com.comissions.korp.DTO.ClienteDTO.ClienteResponseDTO;
+import com.comissions.korp.DTO.DadosEmpresaRequestDTO;
 import com.comissions.korp.config.utils.SecurityUtils;
 import com.comissions.korp.entity.Cliente;
 import com.comissions.korp.entity.Endereco;
 import com.comissions.korp.entity.Usuario;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
+import com.comissions.korp.exception.RequisicaoInvalida;
 import com.comissions.korp.exception.UsuarioJaExistente;
 import com.comissions.korp.repository.ClienteRepository;
 import com.comissions.korp.repository.ContatoRepository;
@@ -177,6 +179,54 @@ class ClienteServiceTest {
         // Assert
         assertThat(cliente.getAtivo()).isFalse();
         verify(clienteRepository).save(cliente);
+    }
+
+    @Test
+    void atualizarDados_deveAlterarSomenteNomeFantasiaETelefone() {
+        Cliente cliente = cliente(10);
+        when(clienteRepository.findById(10)).thenReturn(Optional.of(cliente));
+        when(clienteRepository.existsByTelefone("11977776666")).thenReturn(false);
+        when(clienteRepository.save(any(Cliente.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        clienteService.atualizarDados(10, new DadosEmpresaRequestDTO("  Novo Fantasia ", "(11) 97777-6666"));
+
+        assertThat(cliente.getNomeFantasia()).isEqualTo("Novo Fantasia");
+        assertThat(cliente.getTelefone()).isEqualTo("11977776666");
+        assertThat(cliente.getRazaoSocial()).isEqualTo("Cliente Razao");
+        assertThat(cliente.getCnpj()).isEqualTo("11222333000144");
+    }
+
+    @Test
+    void atualizarDados_naoDeveConferirDuplicidade_quandoTelefoneNaoMudou() {
+        Cliente cliente = cliente(10);
+        when(clienteRepository.findById(10)).thenReturn(Optional.of(cliente));
+        when(clienteRepository.save(any(Cliente.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        clienteService.atualizarDados(10, new DadosEmpresaRequestDTO("Novo Fantasia", "(11) 99999-8888"));
+
+        verify(clienteRepository, never()).existsByTelefone(any());
+        assertThat(cliente.getNomeFantasia()).isEqualTo("Novo Fantasia");
+    }
+
+    @Test
+    void atualizarDados_deveFalhar_quandoTelefoneJaPertenceAOutroCliente() {
+        when(clienteRepository.findById(10)).thenReturn(Optional.of(cliente(10)));
+        when(clienteRepository.existsByTelefone("11977776666")).thenReturn(true);
+
+        assertThatThrownBy(() -> clienteService.atualizarDados(10, new DadosEmpresaRequestDTO("Fantasia", "11977776666")))
+                .isInstanceOf(UsuarioJaExistente.class);
+        verify(clienteRepository, never()).save(any());
+    }
+
+    @Test
+    void atualizarDados_deveFalhar_quandoNomeFantasiaVazioOuTelefoneInvalido() {
+        when(clienteRepository.findById(10)).thenReturn(Optional.of(cliente(10)));
+
+        assertThatThrownBy(() -> clienteService.atualizarDados(10, new DadosEmpresaRequestDTO("  ", "11977776666")))
+                .isInstanceOf(RequisicaoInvalida.class);
+        assertThatThrownBy(() -> clienteService.atualizarDados(10, new DadosEmpresaRequestDTO("Fantasia", "1234")))
+                .isInstanceOf(RequisicaoInvalida.class);
+        verify(clienteRepository, never()).save(any());
     }
 
     @Test

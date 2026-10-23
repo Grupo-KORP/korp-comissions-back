@@ -1,0 +1,1 @@
+ALTER TABLE produto ADD COLUMN part_number VARCHAR(50) NULL;
