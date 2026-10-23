@@ -1,6 +1,7 @@
 package com.comissions.korp.service;
 
 import com.comissions.korp.DTO.ClienteDTO.ClientePedidoResponseDTO;
+import com.comissions.korp.DTO.DadosEmpresaRequestDTO;
 import com.comissions.korp.DTO.ClienteDTO.ClienteRequestDTO;
 import com.comissions.korp.DTO.ClienteDTO.ClienteResponseDTO;
 import com.comissions.korp.DTO.ClienteDTO.ListarClientesResponseDTO;
@@ -170,6 +171,25 @@ public class ClienteService {
             }
         }
         return convertToResponseDTO(clienteAtualizado);
+    }
+
+    /**
+     * Atualiza somente nome fantasia e telefone do Cliente (edição pelos detalhes)
+     */
+    @Transactional
+    public ClienteResponseDTO atualizarDados(Integer id, DadosEmpresaRequestDTO requestDTO) {
+        Cliente cliente = buscarClientePorId(id);
+        DadosEmpresaRequestDTO dados = requestDTO.validarENormalizar();
+
+        // Só confere duplicidade quando o telefone muda, para não bloquear registros antigos com telefone repetido
+        String telefoneAtual = cliente.getTelefone() == null ? "" : cliente.getTelefone().replaceAll("\\D", "");
+        if (!dados.getTelefone().equals(telefoneAtual) && clienteRepository.existsByTelefone(dados.getTelefone())) {
+            throw new UsuarioJaExistente("Já existe um cliente com este telefone: " + dados.getTelefone());
+        }
+
+        cliente.setNomeFantasia(dados.getNomeFantasia());
+        cliente.setTelefone(dados.getTelefone());
+        return convertToResponseDTO(clienteRepository.save(cliente));
     }
 
     /**

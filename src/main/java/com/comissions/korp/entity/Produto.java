@@ -15,8 +15,11 @@ public class    Produto {
     @Column(name = "nome", nullable = false, length = 150)
     private String nome;
 
-    @Column(name = "codigo_produto", length = 150)
+    @Column(name = "codigo_produto", length = 20)
     private String codigoProduto;
+
+    @Column(name = "part_number", length = 50)
+    private String partNumber;
 
     @Column(name = "ativo", nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
     private Boolean ativo = true;
@@ -47,6 +50,14 @@ public class    Produto {
 
     public void setCodigoProduto(String codigoProduto) {
         this.codigoProduto = codigoProduto;
+    }
+
+    public String getPartNumber() {
+        return partNumber;
+    }
+
+    public void setPartNumber(String partNumber) {
+        this.partNumber = partNumber;
     }
 
     public Boolean getAtivo() {

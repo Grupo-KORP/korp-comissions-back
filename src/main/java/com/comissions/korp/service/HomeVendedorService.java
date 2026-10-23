@@ -416,7 +416,7 @@ public class HomeVendedorService {
         produto.setIdItemPedido(item.getIdItemPedido());
         produto.setIdProduto(item.getProduto().getIdProduto());
         produto.setDescricao(item.getProduto().getNome());
-        produto.setPn(item.getProduto().getCodigoProduto());
+        produto.setPn(item.getProduto().getPartNumber());
         produto.setQuantidade(item.getQuantidade());
         produto.setValorUnitario(item.getVlrUnitDistr());
         produto.setValorTotal(item.getVlrTotalDistr());

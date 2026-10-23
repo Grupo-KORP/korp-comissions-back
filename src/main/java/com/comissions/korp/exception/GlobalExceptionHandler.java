@@ -78,6 +78,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", ex.getMessage()));
     }
 
+    @ExceptionHandler(OperacaoNaoPermitida.class)
+    public ResponseEntity<Map<String, String>> handleOperacaoNaoPermitida(OperacaoNaoPermitida ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", ex.getMessage()));
+    }
+
     @ExceptionHandler(LimiteRascunhosAtingido.class)
     public ResponseEntity<Map<String, String>> handleLimiteRascunhos(LimiteRascunhosAtingido ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)

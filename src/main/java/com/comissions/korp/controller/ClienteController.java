@@ -1,6 +1,7 @@
 package com.comissions.korp.controller;
 
 import com.comissions.korp.DTO.ClienteDTO.*;
+import com.comissions.korp.DTO.DadosEmpresaRequestDTO;
 import com.comissions.korp.DTO.DistribuidorDTO.ListarDistribuidoresResponseDTO;
 import com.comissions.korp.service.ClienteService;
 import com.comissions.korp.service.ContatoService;
@@ -122,6 +123,21 @@ public class ClienteController {
             @RequestBody ClienteRequestDTO requestDTO) {
         ClienteResponseDTO responseDTO = clienteService.atualizar(id, requestDTO);
         return ResponseEntity.ok(responseDTO);
+    }
+
+    @PatchMapping("/{id}/dados")
+    @Operation(summary = "Atualizar dados do cliente", description = "Atualiza somente o nome fantasia e o telefone do cliente.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Dados atualizados com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Requisição inválida"),
+            @ApiResponse(responseCode = "404", description = "Cliente não encontrado"),
+            @ApiResponse(responseCode = "409", description = "Telefone já utilizado por outro cliente"),
+            @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
+    })
+    public ResponseEntity<ClienteResponseDTO> atualizarDados(
+            @PathVariable Integer id,
+            @RequestBody DadosEmpresaRequestDTO requestDTO) {
+        return ResponseEntity.ok(clienteService.atualizarDados(id, requestDTO));
     }
 
     /**

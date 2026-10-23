@@ -1,6 +1,7 @@
 package com.comissions.korp.service;
 
 import com.comissions.korp.DTO.ClienteDTO.ClientePedidoResponseDTO;
+import com.comissions.korp.DTO.DadosEmpresaRequestDTO;
 import com.comissions.korp.DTO.ContatoDTO.ContatoClienteResponseDTO;
 import com.comissions.korp.DTO.ContatoDTO.ContatoDistribuidorResponseDTO;
 import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorPedidoResponseDTO;
@@ -135,6 +136,25 @@ public class DistribuidorService {
         }
 
         return convertToResponseDTO(distribuidorAtualizado);
+    }
+
+    /**
+     * Atualiza somente nome fantasia e telefone do Distribuidor (edição pelos detalhes)
+     */
+    @Transactional
+    public DistribuidorResponseDTO atualizarDados(Integer id, DadosEmpresaRequestDTO requestDTO) {
+        Distribuidor distribuidor = buscarDistribuidorPorId(id);
+        DadosEmpresaRequestDTO dados = requestDTO.validarENormalizar();
+
+        // Só confere duplicidade quando o telefone muda, para não bloquear registros antigos com telefone repetido
+        String telefoneAtual = distribuidor.getTelefone() == null ? "" : distribuidor.getTelefone().replaceAll("\\D", "");
+        if (!dados.getTelefone().equals(telefoneAtual) && distribuidorRepository.existsByTelefone(dados.getTelefone())) {
+            throw new UsuarioJaExistente("Já existe um distribuidor com este telefone: " + dados.getTelefone());
+        }
+
+        distribuidor.setNomeFantasia(dados.getNomeFantasia());
+        distribuidor.setTelefone(dados.getTelefone());
+        return convertToResponseDTO(distribuidorRepository.save(distribuidor));
     }
 
     @Transactional

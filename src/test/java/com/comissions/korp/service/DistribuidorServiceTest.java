@@ -1,10 +1,12 @@
 package com.comissions.korp.service;
 
+import com.comissions.korp.DTO.DadosEmpresaRequestDTO;
 import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorRequestDTO;
 import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorResponseDTO;
 import com.comissions.korp.entity.Distribuidor;
 import com.comissions.korp.entity.Endereco;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
+import com.comissions.korp.exception.RequisicaoInvalida;
 import com.comissions.korp.exception.UsuarioJaExistente;
 import com.comissions.korp.repository.ClienteRepository;
 import com.comissions.korp.repository.DistribuidorRepository;
@@ -144,6 +146,54 @@ class DistribuidorServiceTest {
         // Assert
         assertThat(distribuidor.getAtivo()).isFalse();
         verify(distribuidorRepository).save(distribuidor);
+    }
+
+    @Test
+    void atualizarDados_deveAlterarSomenteNomeFantasiaETelefone() {
+        Distribuidor distribuidor = distribuidor(20);
+        when(distribuidorRepository.findById(20)).thenReturn(Optional.of(distribuidor));
+        when(distribuidorRepository.existsByTelefone("11977776666")).thenReturn(false);
+        when(distribuidorRepository.save(any(Distribuidor.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        distribuidorService.atualizarDados(20, new DadosEmpresaRequestDTO("  Novo Fantasia ", "(11) 97777-6666"));
+
+        assertThat(distribuidor.getNomeFantasia()).isEqualTo("Novo Fantasia");
+        assertThat(distribuidor.getTelefone()).isEqualTo("11977776666");
+        assertThat(distribuidor.getRazaoSocial()).isEqualTo("Distribuidor Razao");
+        assertThat(distribuidor.getCnpj()).isEqualTo("55666777000188");
+    }
+
+    @Test
+    void atualizarDados_naoDeveConferirDuplicidade_quandoTelefoneNaoMudou() {
+        Distribuidor distribuidor = distribuidor(20);
+        when(distribuidorRepository.findById(20)).thenReturn(Optional.of(distribuidor));
+        when(distribuidorRepository.save(any(Distribuidor.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        distribuidorService.atualizarDados(20, new DadosEmpresaRequestDTO("Novo Fantasia", "(11) 88888-7777"));
+
+        verify(distribuidorRepository, never()).existsByTelefone(any());
+        assertThat(distribuidor.getNomeFantasia()).isEqualTo("Novo Fantasia");
+    }
+
+    @Test
+    void atualizarDados_deveFalhar_quandoTelefoneJaPertenceAOutroDistribuidor() {
+        when(distribuidorRepository.findById(20)).thenReturn(Optional.of(distribuidor(20)));
+        when(distribuidorRepository.existsByTelefone("11977776666")).thenReturn(true);
+
+        assertThatThrownBy(() -> distribuidorService.atualizarDados(20, new DadosEmpresaRequestDTO("Fantasia", "11977776666")))
+                .isInstanceOf(UsuarioJaExistente.class);
+        verify(distribuidorRepository, never()).save(any());
+    }
+
+    @Test
+    void atualizarDados_deveFalhar_quandoNomeFantasiaVazioOuTelefoneInvalido() {
+        when(distribuidorRepository.findById(20)).thenReturn(Optional.of(distribuidor(20)));
+
+        assertThatThrownBy(() -> distribuidorService.atualizarDados(20, new DadosEmpresaRequestDTO("", "11977776666")))
+                .isInstanceOf(RequisicaoInvalida.class);
+        assertThatThrownBy(() -> distribuidorService.atualizarDados(20, new DadosEmpresaRequestDTO("Fantasia", "1234")))
+                .isInstanceOf(RequisicaoInvalida.class);
+        verify(distribuidorRepository, never()).save(any());
     }
 
     @Test

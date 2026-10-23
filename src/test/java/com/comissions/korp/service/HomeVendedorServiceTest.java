@@ -1,5 +1,7 @@
 package com.comissions.korp.service;
 
+import com.comissions.korp.DTO.HomeVendedorDTO.FiltroStatusVenda;
+import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorPainelDTO;
 import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorResponseDTO;
 import com.comissions.korp.entity.Cliente;
 import com.comissions.korp.entity.Comissao;
@@ -23,6 +25,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -32,6 +36,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -70,91 +75,61 @@ class HomeVendedorServiceTest {
     @Test
     void buscarPainel_deveFalhar_quandoMesEhInvalido() {
         // Arrange / Act / Assert
-        assertThatThrownBy(() -> homeVendedorService.buscarPainel(99, 2026, 13, null))
+        assertThatThrownBy(() -> homeVendedorService.buscarPainel(99, 2026, 13, null, FiltroStatusVenda.TODAS, PageRequest.of(0, 5)))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("12");
 
-        verify(comissaoRepository, never()).buscarComissoesDoPainelPorVencimento(any(), any(), any());
+        verify(pedidoRepository, never()).buscarPedidosDoPainel(any(), any(), any(), any(), any(), anyBoolean(), anyBoolean(), any());
     }
 
     @Test
     void buscarPainel_deveRetornarResumoZerado_quandoNaoHaVendasNemComissoesNoPeriodo() {
         // Arrange
-        when(comissaoRepository.buscarComissoesDoPainelPorVencimento(eq(99), any(), any()))
-                .thenReturn(List.of(), List.of());
-        when(pedidoRepository.findByUsuario_IdUsuarioAndAtivoTrueAndStatusPedidoAndDataPedidoBetweenOrderByDataPedidoDescIdPedidoDesc(
-                eq(99), eq("EM_ANDAMENTO"), any(), any()))
-                .thenReturn(List.of());
+        when(pedidoRepository.buscarPedidosDoPainel(eq(99), any(), any(), any(), any(), anyBoolean(), anyBoolean(), any()))
+                .thenReturn(Page.empty());
 
         // Act
-        HomeVendedorResponseDTO response = homeVendedorService.buscarPainel(99, 2026, 6, null);
+        HomeVendedorPainelDTO response = homeVendedorService.buscarPainel(99, 2026, 6, null, FiltroStatusVenda.TODAS, PageRequest.of(0, 5));
 
         // Assert
-        assertThat(response.getAno()).isEqualTo(2026);
-        assertThat(response.getMes()).isEqualTo(6);
-        assertThat(response.getNomeMes()).isEqualTo("Junho");
-        assertThat(response.getTotalVendas()).isZero();
-        assertThat(response.getComissoesLiberadas()).isZero();
-        assertThat(response.getPagamentosPendentes()).isZero();
-        assertThat(response.getProjecao()).isEqualByComparingTo(BigDecimal.ZERO);
-        assertThat(response.getTendencia()).isEqualTo("0%");
-        assertThat(response.getVendas()).isEmpty();
-        assertThat(response.getDetalhesVenda()).isEmpty();
+        assertThat(response.ano()).isEqualTo(2026);
+        assertThat(response.mes()).isEqualTo(6);
+        assertThat(response.nomeMes()).isEqualTo("Junho");
+        assertThat(response.resumo().totalVendas()).isZero();
+        assertThat(response.resumo().comissoesLiberadas()).isZero();
+        assertThat(response.resumo().pagamentosPendentes()).isZero();
+        assertThat(response.resumo().projecao()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(response.resumo().tendencia()).isEqualTo("0%");
+        assertThat(response.parcelasLiberadas()).isEmpty();
+        assertThat(response.vendas().getContent()).isEmpty();
     }
 
     @Test
-    void buscarPainel_deveCombinarPedidosSemDuplicarESomarIndicadoresDoPeriodo() {
+    void buscarDetalheVenda_deveMontarClienteDistribuidorEProdutoComPartNumber() {
         // Arrange
         Cliente cliente = cliente(10);
         Distribuidor distribuidor = distribuidor(20);
-        Pedido pedidoComComissao = pedido(1, "APROVADO", cliente, distribuidor);
-        Pedido pedidoEmAndamento = pedido(2, "EM_ANDAMENTO", cliente, distribuidor);
+        Pedido pedido = pedido(1, "APROVADO", cliente, distribuidor);
+        Comissao comissao = comissao(pedido, 1, 2, "100.00", StatusComissao.LIBERADA);
 
-        Comissao comissaoLiberada = comissao(pedidoComComissao, 1, 2, "100.00", StatusComissao.LIBERADA);
-        Comissao comissaoPendente = comissao(pedidoComComissao, 2, 2, "50.00", StatusComissao.PENDENTE);
-        Comissao comissaoMesAnterior = comissao(pedidoComComissao, 1, 1, "50.00", StatusComissao.LIBERADA);
-
-        when(comissaoRepository.buscarComissoesDoPainelPorVencimento(eq(99), any(), any()))
-                .thenReturn(List.of(comissaoLiberada, comissaoPendente), List.of(comissaoMesAnterior));
-        when(pedidoRepository.findByUsuario_IdUsuarioAndAtivoTrueAndStatusPedidoAndDataPedidoBetweenOrderByDataPedidoDescIdPedidoDesc(
-                eq(99), eq("EM_ANDAMENTO"), any(), any()))
-                .thenReturn(List.of(pedidoComComissao, pedidoEmAndamento));
-        when(comissaoRepository.findByPedidoIn(List.of(pedidoComComissao, pedidoEmAndamento)))
-                .thenReturn(List.of(comissaoLiberada, comissaoPendente));
-        when(itemPedidoRepository.findByPedido(pedidoComComissao)).thenReturn(List.of(itemPedido(101)));
-        when(itemPedidoRepository.findByPedido(pedidoEmAndamento)).thenReturn(List.of());
+        when(pedidoRepository.existsByIdPedidoAndUsuario_IdUsuario(1, 99)).thenReturn(true);
+        when(pedidoRepository.findByIdPedidoAndAtivoTrue(1)).thenReturn(Optional.of(pedido));
+        when(itemPedidoRepository.findByPedido(pedido)).thenReturn(List.of(itemPedido(101)));
+        when(comissaoRepository.buscarComissoesDosPedidos(List.of(1), 99)).thenReturn(List.of(comissao));
         when(enderecoRepository.findFirstByCliente_IdCliente(10)).thenReturn(Optional.of(endereco()));
         when(enderecoRepository.findFirstByDistribuidor_IdDistribuidor(20)).thenReturn(Optional.of(endereco()));
         when(contatoRepository.findByClienteAndAtivoTrue(cliente)).thenReturn(List.of(contato("Contato Cliente")));
         when(contatoRepository.findByDistribuidorAndAtivoTrue(distribuidor)).thenReturn(List.of(contato("Contato Distribuidor")));
         when(pagamentoRepository.findByPedido_IdPedido(1)).thenReturn(Optional.of(pagamento(2)));
-        when(pagamentoRepository.findByPedido_IdPedido(2)).thenReturn(Optional.empty());
 
         // Act
-        HomeVendedorResponseDTO response = homeVendedorService.buscarPainel(99, 2026, 6, null);
+        HomeVendedorResponseDTO.DetalheVendaDTO detalhe = homeVendedorService.buscarDetalheVenda(99, 1);
 
         // Assert
-        assertThat(response.getTotalVendas()).isEqualTo(2);
-        assertThat(response.getComissoesLiberadas()).isEqualTo(1);
-        assertThat(response.getPagamentosPendentes()).isEqualTo(1);
-        assertThat(response.getParcelas()).isEqualTo(1);
-        assertThat(response.getProjecao()).isEqualByComparingTo("100.00");
-        assertThat(response.getTendencia()).isEqualTo("+100%");
-
-        assertThat(response.getVendas()).hasSize(2);
-        HomeVendedorResponseDTO.VendaResumoDTO vendaComComissao = response.getVendas().getFirst();
-        assertThat(vendaComComissao.getId()).isEqualTo("V1");
-        assertThat(vendaComComissao.getValorComissao()).isEqualByComparingTo("150.00");
-        assertThat(vendaComComissao.getStatus()).isEqualTo("LIBERADA 1 PARCELAS");
-        assertThat(vendaComComissao.getTipo()).isEqualTo("liberada");
-        assertThat(vendaComComissao.getParcelas()).extracting(HomeVendedorResponseDTO.ParcelaDTO::getNumeroParcela)
-                .containsExactly(1, 2);
-
-        HomeVendedorResponseDTO.DetalheVendaDTO detalhe = response.getDetalhesVenda().get("Junho-V1");
-        assertThat(detalhe).isNotNull();
         assertThat(detalhe.getCliente().getContato()).isEqualTo("Contato Cliente");
         assertThat(detalhe.getDistribuidor().getContato()).isEqualTo("Contato Distribuidor");
         assertThat(detalhe.getProduto().getIdItemPedido()).isEqualTo(101);
+        assertThat(detalhe.getProduto().getPn()).isEqualTo("PN-501");
         assertThat(detalhe.getPedido().getMetodoPagamento()).isEqualTo("BOLETO");
     }
 
@@ -198,7 +173,7 @@ class HomeVendedorServiceTest {
         Produto produto = new Produto();
         produto.setIdProduto(501);
         produto.setNome("Produto Teste");
-        produto.setCodigoProduto("PN-501");
+        produto.setPartNumber("PN-501");
 
         ItemPedido item = new ItemPedido();
         item.setIdItemPedido(id);
