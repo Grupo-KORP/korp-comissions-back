@@ -130,6 +130,7 @@ public class UsuarioService {
         usuarioExistente.setNome(requestDTO.getNome());
         usuarioExistente.setEmail(requestDTO.getEmail());
         usuarioExistente.setTelefone(requestDTO.getTelefone());
+        usuarioExistente.setAtivo(requestDTO.getAtivo());
 
         Usuario usuarioAtualizado = usuarioRepository.save(usuarioExistente);
         return convertToResponseDTO(usuarioAtualizado);
