@@ -4,8 +4,7 @@ import com.comissions.korp.entity.Cliente;
 import com.comissions.korp.entity.ENUM.StatusComissao;
 import com.comissions.korp.entity.ENUM.StatusParcela;
 import com.comissions.korp.entity.Pedido;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -65,11 +64,12 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
         )
         """;
 
-    @Query(
-            value = "SELECT p FROM Pedido p JOIN FETCH p.cliente WHERE " + FILTRO_PAINEL,
-            countQuery = "SELECT COUNT(p) FROM Pedido p WHERE " + FILTRO_PAINEL
-    )
-    Page<Pedido> buscarPedidosDoPainel(
+    /**
+     * Todos os pedidos do filtro, sem paginar: a tabela pagina por linha (venda + parcelas),
+     * e o número de linhas de cada pedido só é conhecido depois de carregar as comissões.
+     */
+    @Query("SELECT p FROM Pedido p JOIN FETCH p.cliente WHERE " + FILTRO_PAINEL)
+    List<Pedido> listarPedidosDoPainel(
             @Param("idVendedor") Integer idVendedor,
             @Param("inicio") LocalDate inicio,
             @Param("fim") LocalDate fim,
@@ -77,18 +77,30 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
             @Param("parcelaCancelada") StatusParcela parcelaCancelada,
             @Param("incluirEmAndamento") boolean incluirEmAndamento,
             @Param("incluirVendaDoPeriodo") boolean incluirVendaDoPeriodo,
-            Pageable pageable
+            Sort sort
     );
 
-    @Query("SELECT COUNT(p) FROM Pedido p WHERE " + FILTRO_PAINEL)
-    long contarPedidosDoPainel(
+    /** Vendas do período: pedidos ativos do vendedor feitos entre as datas (qualquer status do pedido). */
+    String FILTRO_VENDAS_DO_PERIODO = """
+        p.ativo = true
+        AND p.usuario.idUsuario = :idVendedor
+        AND p.dataPedido BETWEEN :inicio AND :fim
+        """;
+
+    @Query("SELECT p FROM Pedido p JOIN FETCH p.cliente WHERE " + FILTRO_VENDAS_DO_PERIODO)
+    List<Pedido> listarVendasDoPeriodo(
             @Param("idVendedor") Integer idVendedor,
             @Param("inicio") LocalDate inicio,
             @Param("fim") LocalDate fim,
-            @Param("statusComissoes") List<StatusComissao> statusComissoes,
-            @Param("parcelaCancelada") StatusParcela parcelaCancelada,
-            @Param("incluirEmAndamento") boolean incluirEmAndamento,
-            @Param("incluirVendaDoPeriodo") boolean incluirVendaDoPeriodo
+            Sort sort
+    );
+
+    /** Base do card "Total de Vendas" e da tendência de vendas: só a data do pedido conta. */
+    @Query("SELECT COUNT(p) FROM Pedido p WHERE " + FILTRO_VENDAS_DO_PERIODO)
+    long contarVendasDoPeriodo(
+            @Param("idVendedor") Integer idVendedor,
+            @Param("inicio") LocalDate inicio,
+            @Param("fim") LocalDate fim
     );
 
     Optional<Pedido> findByIdPedidoAndAtivoTrue(Integer idPedido);

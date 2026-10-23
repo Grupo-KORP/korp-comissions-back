@@ -32,14 +32,17 @@ public class HomeVendedorController {
     /**
      * GET /vendedor/home?ano=2026&mes=9&dia=18&status=LIBERADAS&page=0&size=5
      * - ano/mes/dia opcionais (sem nada: mês atual; mes sem ano: ano atual; dia exige mes)
-     * - status: TODAS (padrão) | LIBERADAS | PENDENTES
-     * - page (0-based) e size seguem o padrão do Spring; a ordenação é fixa no service
+     * - status: TODAS (padrão: vendas + parcelas) | VENDAS (só vendas) | LIBERADAS (só parcelas
+     *   liberadas/pagas) | PENDENTES (só parcelas pendentes)
+     * - page (0-based) e size seguem o padrão do Spring, contando linhas da tabela
+     *   (cada venda + cada parcela de comissão); a ordenação é fixa no service
      */
     @GetMapping
     @Operation(
             summary = "Buscar painel do vendedor",
-            description = "Retorna o resumo do período e uma página de vendas do vendedor autenticado, "
-                    + "filtradas por status (TODAS, LIBERADAS, PENDENTES) e por período (mês ou dia)."
+            description = "Retorna o resumo do período e uma página de linhas da tabela do vendedor autenticado "
+                    + "(venda + parcelas de comissão), filtradas por status (TODAS, VENDAS, LIBERADAS, PENDENTES) "
+                    + "e por período (mês ou dia)."
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Painel retornado com sucesso"),
