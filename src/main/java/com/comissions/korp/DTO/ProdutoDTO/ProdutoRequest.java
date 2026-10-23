@@ -4,6 +4,7 @@ public class ProdutoRequest {
 
     private String nome;
     private String codigoProduto;
+    private String pn;
     private Boolean ativo;
 
     public ProdutoRequest() {
@@ -15,6 +16,14 @@ public class ProdutoRequest {
 
     public void setNome(String nome) {
         this.nome = nome;
+    }
+
+    public String getPn() {
+        return pn;
+    }
+
+    public void setPn(String pn) {
+        this.pn = pn;
     }
 
     public Boolean getAtivo() {

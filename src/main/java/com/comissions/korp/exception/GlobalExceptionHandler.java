@@ -1,8 +1,10 @@
 package com.comissions.korp.exception;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -36,6 +38,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, String>> handleIllegalArgument(IllegalArgumentException e) {
+        String mensagem = e.getMessage() != null ? e.getMessage() : "Requisição inválida.";
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", mensagem));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, String>> handleMensagemIlegivel(HttpMessageNotReadableException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", "Requisição inválida: verifique os valores enviados."));
+    }
+
     @ExceptionHandler(RecursoNaoEncontrado.class)
     public ResponseEntity<Map<String, String>> handleRecursoNaoEncontrado(RecursoNaoEncontrado e) {
         Map<String, String> response = new HashMap<>();
@@ -57,5 +71,30 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
                 .body(Map.of("message", ex.getMessage()));
+    }
+
+    @ExceptionHandler(RequisicaoInvalida.class)
+    public ResponseEntity<Map<String, String>> handleRequisicaoInvalida(RequisicaoInvalida ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", ex.getMessage()));
+    }
+
+    @ExceptionHandler(OperacaoNaoPermitida.class)
+    public ResponseEntity<Map<String, String>> handleOperacaoNaoPermitida(OperacaoNaoPermitida ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", ex.getMessage()));
+    }
+
+    @ExceptionHandler(LimiteRascunhosAtingido.class)
+    public ResponseEntity<Map<String, String>> handleLimiteRascunhos(LimiteRascunhosAtingido ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("message", ex.getMessage(), "codigo", "LIMITE_RASCUNHOS"));
+    }
+
+    @ExceptionHandler({RascunhoDesatualizado.class, ObjectOptimisticLockingFailureException.class})
+    public ResponseEntity<Map<String, String>> handleRascunhoDesatualizado(Exception ex) {
+        String mensagem = ex instanceof RascunhoDesatualizado
+                ? ex.getMessage()
+                : "Este registro foi alterado em outra operação. Recarregue e tente novamente.";
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("message", mensagem, "codigo", "VERSAO_DESATUALIZADA"));
     }
 }

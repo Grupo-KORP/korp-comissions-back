@@ -1,5 +1,6 @@
 package com.comissions.korp.controller;
 
+import com.comissions.korp.DTO.DadosEmpresaRequestDTO;
 import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorContatosRequestDTO;
 import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorPedidoResponseDTO;
 import com.comissions.korp.DTO.DistribuidorDTO.DistribuidorRequestDTO;
@@ -20,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 
 @RestController
-@RequestMapping("/distribuidor")
+@RequestMapping("/api/distribuidor")
 public class DistribuidorController {
 
     private final DistribuidorService distribuidorService;
@@ -93,6 +94,21 @@ public class DistribuidorController {
             @RequestBody DistribuidorRequestDTO requestDTO) {
         DistribuidorResponseDTO responseDTO = distribuidorService.atualizar(id, requestDTO);
         return ResponseEntity.ok(responseDTO);
+    }
+
+    @PatchMapping("/{id}/dados")
+    @Operation(summary = "Atualizar dados do distribuidor", description = "Atualiza somente o nome fantasia e o telefone do distribuidor.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Dados atualizados com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Requisição inválida"),
+            @ApiResponse(responseCode = "404", description = "Distribuidor não encontrado"),
+            @ApiResponse(responseCode = "409", description = "Telefone já utilizado por outro distribuidor"),
+            @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
+    })
+    public ResponseEntity<DistribuidorResponseDTO> atualizarDados(
+            @PathVariable Integer id,
+            @RequestBody DadosEmpresaRequestDTO requestDTO) {
+        return ResponseEntity.ok(distribuidorService.atualizarDados(id, requestDTO));
     }
 
     @DeleteMapping("/{id}")

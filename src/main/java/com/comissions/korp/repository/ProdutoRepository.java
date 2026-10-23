@@ -15,12 +15,17 @@ public interface ProdutoRepository extends JpaRepository<Produto, Integer> {
 
     List<Produto> findByIdProdutoIn(List<Integer> idsProdutos);
 
+    boolean existsByPartNumberIgnoreCaseAndAtivoTrue(String partNumber);
+
+    boolean existsByPartNumberIgnoreCaseAndAtivoTrueAndIdProdutoNot(String partNumber, Integer idProduto);
+
 
     @Query("""
     SELECT p FROM Produto p
     WHERE (:busca IS NULL OR
          LOWER(p.nome)  LIKE LOWER(CONCAT('%', :busca, '%')) OR
-         LOWER(p.codigoProduto) LIKE LOWER(CONCAT('%', :busca, '%')))
+         LOWER(p.codigoProduto) LIKE LOWER(CONCAT('%', :busca, '%')) OR
+         LOWER(p.partNumber) LIKE LOWER(CONCAT('%', :busca, '%')))
     AND p.ativo = true
 """)
     Page<Produto> findProdutosComFiltro(@Param("busca") String busca,

@@ -12,6 +12,7 @@ import com.comissions.korp.entity.ENUM.StatusComissao;
 import com.comissions.korp.entity.ENUM.StatusParcela;
 import com.comissions.korp.exception.OperacaoNaoPermitida;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
+import com.comissions.korp.exception.RequisicaoInvalida;
 import com.comissions.korp.repository.*;
 import com.comissions.korp.service.Email.EmailService;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,9 @@ import java.util.stream.Collectors;
 @Service
 public class PedidoService {
 
+    private static final int MAX_PARCELAS_BOLETO = 10;
+    private static final int PRAZO_MAXIMO_DIAS = 999;
+
     private final PedidoRepository pedidoRepository;
     private final ItemPedidoRepository itemPedidoRepository;
     private final ProdutoRepository produtoRepository;
@@ -36,13 +40,13 @@ public class PedidoService {
     private final ClienteService clienteService;
     private final DistribuidorService distribuidorService;
     private final ItemPedidoService itemPedidoService;
-    private final ComissaoService comissaoService;
     private final EmailService emailService;
     private final PagamentoRepository pagamentoRepository;
     private final ParcelaRepository parcelaRepository;
     private final ComissaoRepository comissaoRepository;
     private final ClienteRepository clienteRepository;
     private final DistribuidorRepository distribuidorRepository;
+    private final PedidoRascunhoService rascunhoService;
 
 
     public PedidoService(PedidoRepository pedidoRepository
@@ -50,7 +54,7 @@ public class PedidoService {
             , ProdutoRepository produtoRepository
             , ClienteService clienteService
             , DistribuidorService distribuidorService,
-                         ItemPedidoService itemPedidoService, UsuarioRepository usuarioRepository, ComissaoService comissaoService,EmailService emailService, PagamentoRepository pagamentoRepository, ParcelaRepository parcelaRepository, ComissaoRepository comissaoRepository, ClienteRepository clienteRepository, DistribuidorRepository distribuidorRepository) {
+                         ItemPedidoService itemPedidoService, UsuarioRepository usuarioRepository, EmailService emailService, PagamentoRepository pagamentoRepository, ParcelaRepository parcelaRepository, ComissaoRepository comissaoRepository, ClienteRepository clienteRepository, DistribuidorRepository distribuidorRepository, PedidoRascunhoService rascunhoService) {
         this.pedidoRepository = pedidoRepository;
         this.itemPedidoRepository = itemPedidoRepository;
         this.produtoRepository = produtoRepository;
@@ -58,17 +62,23 @@ public class PedidoService {
         this.distribuidorService = distribuidorService;
         this.itemPedidoService = itemPedidoService;
         this.usuarioRepository = usuarioRepository;
-        this.comissaoService = comissaoService;
         this.emailService = emailService;
         this.pagamentoRepository = pagamentoRepository;
         this.parcelaRepository = parcelaRepository;
         this.comissaoRepository = comissaoRepository;
         this.clienteRepository = clienteRepository;
         this.distribuidorRepository = distribuidorRepository;
+        this.rascunhoService = rascunhoService;
     }
 
     @Transactional
     public PedidoResponse cadastrarPedido(PedidoRequest pedidoRequest, Integer vendedorId) {
+
+        if (pedidoRequest.getMetodoPagamento() == null) {
+            throw new IllegalArgumentException("Informe o método de pagamento do pedido.");
+        }
+
+        validarMargemItens(pedidoRequest.getItens());
 
         Usuario vendedor = usuarioRepository.findById(vendedorId)
                 .orElseThrow(() -> new RuntimeException("Vendedor não encontrado com id: " + vendedorId));
@@ -79,6 +89,8 @@ public class PedidoService {
         Pedido pedidoSalvo = pedidoRepository.save(criarPedidoFromRequest(pedidoRequest, cliente, distribuidor, vendedor));
         Map<Integer, Produto> produtoMap = mapearProdutosPorId(pedidoRequest.getItens());
         List<ItemPedido> itensSalvos = salvarItensDoPedido(pedidoSalvo, pedidoRequest.getItens(), produtoMap);
+
+        rascunhoService.excluirAposCriarPedido(vendedorId, pedidoRequest.getIdRascunho());
 
         if ( pedidoRequest.getPdfBase64() != null
                 && pedidoRequest.getDistribuidor().getEmail() != null) {
@@ -121,6 +133,8 @@ public class PedidoService {
 
     @Transactional
     public PedidoResponse atualizarPedido(Integer id, PedidoRequest pedidoRequest, Integer vendedorId) {
+        validarMargemItens(pedidoRequest.getItens());
+
         Pedido pedido = pedidoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontrado("Pedido não encontrado com id: " + id));
 
@@ -166,6 +180,7 @@ public class PedidoService {
         pedidoResponse.setFrete(pedido.getFrete());
         pedidoResponse.setTransportadora(pedido.getTransportadora());
         pedidoResponse.setObservacoes(pedido.getObservacoes());
+        pedidoResponse.setMetodoPagamento(pedido.getMetodoPagamento());
         pedidoResponse.setFkVendedor(pedido.getUsuario() != null ? pedido.getUsuario().getIdUsuario(): null);
         pedidoResponse.setFkCliente(pedido.getCliente() != null ? pedido.getCliente().getIdCliente() : null);
         pedidoResponse.setFkDistribuidor(pedido.getDistribuidor() != null ? pedido.getDistribuidor().getIdDistribuidor() : null);
@@ -209,6 +224,7 @@ public class PedidoService {
     private Pedido criarPedidoFromRequest(PedidoRequest pedidoRequest, Cliente cliente, Distribuidor distribuidor, Usuario vendedor) {
         Pedido pedido = new Pedido();
         pedido.setStatusPedido("EM_ANDAMENTO");
+        pedido.setMetodoPagamento(pedidoRequest.getMetodoPagamento());
         atualizarDadosPedido(pedido, pedidoRequest, cliente, distribuidor, vendedor);
         return pedido;
     }
@@ -283,8 +299,9 @@ public class PedidoService {
         Pagamento pagamentoPedido = criarPagamentoFromPagamentoDTOAndPedido(pagamento, pedido);
         pagamentoRepository.save(pagamentoPedido);
 
-        criarParcelasComComissao(pagamentoPedido, pedido);
+        criarParcelasComComissao(pagamentoPedido, pedido, pagamento.getDatasPagamento());
 
+        pedido.setMetodoPagamento(pagamento.getMetodoPagamento());
         pedido.setStatusPedido("APROVADO");
         pedidoRepository.save(pedido);
 
@@ -292,14 +309,16 @@ public class PedidoService {
     }
 
     public Pagamento criarPagamentoFromPagamentoDTOAndPedido(PagamentoDTO pagamento, Pedido pedido) {
-        Pagamento pagamentoPedido = new Pagamento();
-
         MetodoPagamento metodo = getMetodoPagamentoFromPagamentoDTO(pagamento);
+        validarPrazosPagamento(metodo, pagamento.getDatasPagamento());
 
+        int quantidadeParcelas = pagamento.getDatasPagamento().size();
+
+        Pagamento pagamentoPedido = new Pagamento();
         pagamentoPedido.setPedido(pedido);
-        pagamentoPedido.setParcelado(pagamento.getParcelado());
+        pagamentoPedido.setParcelado(quantidadeParcelas > 1);
         pagamentoPedido.setMetodoPagamento(metodo);
-        pagamentoPedido.setQuantidadeParcelas(pagamento.getQuantidadeParcelas());
+        pagamentoPedido.setQuantidadeParcelas(quantidadeParcelas);
         return pagamentoPedido;
     }
 
@@ -307,15 +326,40 @@ public class PedidoService {
         return pagamento.getMetodoPagamento();
     }
 
-    public List<Parcela> criarParcelasComComissao(Pagamento pagamento, Pedido pedido) {
-        Integer qtdParcelas = pagamento.getQuantidadeParcelas();
-        if (qtdParcelas == null || qtdParcelas <= 0) {
-            throw new IllegalArgumentException(
-                    "Quantidade de parcelas inválida: deve ser um número inteiro maior que zero."
-            );
+    /** À vista tem 1 prazo; boleto de 1 a 10 prazos. Em ambos: 0 a 999 dias, estritamente crescentes. */
+    public void validarPrazosPagamento(MetodoPagamento metodo, List<Integer> prazos) {
+        if (metodo == null) {
+            throw new IllegalArgumentException("Informe o método de pagamento.");
+        }
+        if (prazos == null || prazos.isEmpty()) {
+            throw new IllegalArgumentException("Informe ao menos um prazo de pagamento.");
+        }
+        if (metodo == MetodoPagamento.AVISTA && prazos.size() != 1) {
+            throw new IllegalArgumentException("Pagamento à vista deve ter exatamente um prazo.");
+        }
+        if (metodo == MetodoPagamento.BOLETO && prazos.size() > MAX_PARCELAS_BOLETO) {
+            throw new IllegalArgumentException("Boleto aceita no máximo " + MAX_PARCELAS_BOLETO + " parcelas.");
         }
 
-        BigDecimal percentualComissao = comissaoService.pegarComissaoPorUsuario().divide(BigDecimal.valueOf(100));
+        Integer anterior = null;
+        for (Integer prazo : prazos) {
+            if (prazo == null || prazo < 0 || prazo > PRAZO_MAXIMO_DIAS) {
+                throw new IllegalArgumentException("Cada prazo de pagamento deve estar entre 0 e " + PRAZO_MAXIMO_DIAS + " dias.");
+            }
+            if (anterior != null && prazo <= anterior) {
+                throw new IllegalArgumentException("Os prazos de pagamento devem ser crescentes e sem repetição.");
+            }
+            anterior = prazo;
+        }
+    }
+
+    public List<Parcela> criarParcelasComComissao(Pagamento pagamento, Pedido pedido, List<Integer> prazosDias) {
+        if (prazosDias == null || prazosDias.isEmpty()) {
+            throw new IllegalArgumentException("Informe ao menos um prazo de pagamento.");
+        }
+        int qtdParcelas = prazosDias.size();
+
+        BigDecimal percentualComissao = pedido.getUsuario().getPercentualComissao().divide(BigDecimal.valueOf(100));
         BigDecimal bdQtd = BigDecimal.valueOf(qtdParcelas); // 5
         BigDecimal valorTotal = pedido.getValorTotalFaturamento(); // 30000
         BigDecimal valorComissaoBruto = valorTotal.subtract(pedido.getValorTotalDistr());
@@ -340,6 +384,8 @@ public class PedidoService {
                 .setScale(2, RoundingMode.HALF_UP)
                 .subtract(somaComissaoBase);
 
+        LocalDate dataFinalizacao = LocalDate.now();
+
         for (int i = 1; i <= qtdParcelas; i++) {
             boolean isUltimaParcela = (i == qtdParcelas);
 
@@ -357,7 +403,8 @@ public class PedidoService {
             parcela.setNumeroParcela(i);
             parcela.setDataPagamento(null);
             parcela.setValorParcela(valorParcelaFinal);
-            parcela.setDataVencimento(LocalDate.now().plusMonths(i));
+            parcela.setDataVencimento(dataFinalizacao.plusDays(prazosDias.get(i - 1)));
+            parcela.setPrazoDias(prazosDias.get(i - 1));
 
             Comissao comissao = new Comissao();
             comissao.setPedido(pedido);
@@ -397,29 +444,60 @@ public class PedidoService {
 
         pedidoAtual.setNumeroNotaDistribuidor(pedido.getNumeroNotaDistribuidor());
         pedidoAtual.setObservacoes(pedido.getObservacoes());
+        if (pedido.getMetodoPagamento() != null) {
+            pedidoAtual.setMetodoPagamento(pedido.getMetodoPagamento());
+        }
 
         if (pedido.getQuantidade() != null) {
             atualizarQuantidadeItemPedido(pedidoAtual, pedido);
         }
 
+        validarMargemItensPedido(itemPedidoRepository.findByPedido(pedidoAtual));
         recalcularTotaisPedido(pedidoAtual);
 
         if (Boolean.TRUE.equals(pedido.getFinalizarPedido())) {
-            validarPedidoParaFinalizacao(pedido);
+            validarPedidoParaFinalizacao(pedido, pedidoAtual);
             PagamentoDTO pagamentoDTO = new PagamentoDTO();
-            pagamentoDTO.setMetodoPagamento(pedido.getMetodoPagamento());
-            pagamentoDTO.setParcelado(Boolean.TRUE.equals(pedido.getParcelado()));
-            pagamentoDTO.setQuantidadeParcelas(pedido.getQuantidadeParcelas());
+            pagamentoDTO.setMetodoPagamento(pedidoAtual.getMetodoPagamento());
+            pagamentoDTO.setDatasPagamento(pedido.getDatasPagamento());
 
             Pagamento pagamentoPedido = criarPagamentoFromPagamentoDTOAndPedido(pagamentoDTO, pedidoAtual);
             pagamentoRepository.save(pagamentoPedido);
-            criarParcelasComComissao(pagamentoPedido, pedidoAtual);
+            criarParcelasComComissao(pagamentoPedido, pedidoAtual, pedido.getDatasPagamento());
             pedidoAtual.setStatusPedido("APROVADO");
         }
 
         pedidoRepository.save(pedidoAtual);
 
         return convertToPedidoResponse(pedidoAtual, itemPedidoRepository.findByPedido(pedidoAtual));
+    }
+
+    // Comissão nunca negativa: em cada item o valor faturado pode ser igual, jamais menor que o do distribuidor.
+    private void validarMargemItens(List<ItemPedidoRequest> itens) {
+        if (itens == null) {
+            return;
+        }
+        for (int i = 0; i < itens.size(); i++) {
+            ItemPedidoRequest item = itens.get(i);
+            validarMargem(item.getVlrUnitDistr(), item.getVlrUnitCliente(), "Item " + (i + 1));
+        }
+    }
+
+    private void validarMargemItensPedido(List<ItemPedido> itens) {
+        for (ItemPedido item : itens) {
+            String nome = item.getProduto() != null ? item.getProduto().getNome() : "Item";
+            validarMargem(item.getVlrUnitDistr(), item.getVlrUnitCliente(), nome);
+        }
+    }
+
+    private void validarMargem(BigDecimal valorUnitDistr, BigDecimal valorUnitCliente, String identificacao) {
+        if (valorUnitDistr == null || valorUnitCliente == null) {
+            throw new RequisicaoInvalida(identificacao + ": informe os valores unitários do distribuidor e do cliente.");
+        }
+        if (valorUnitCliente.compareTo(valorUnitDistr) < 0) {
+            throw new RequisicaoInvalida(identificacao
+                    + ": o valor unitário faturado não pode ser menor que o valor unitário do distribuidor.");
+        }
     }
 
     private void atualizarQuantidadeItemPedido(Pedido pedidoAtual, PedidoEditRequest pedido) {
@@ -463,7 +541,7 @@ public class PedidoService {
         pedidoAtual.setValorTotalCliente(totalCliente);
     }
 
-    private void validarPedidoParaFinalizacao(PedidoEditRequest pedido) {
+    private void validarPedidoParaFinalizacao(PedidoEditRequest pedido, Pedido pedidoAtual) {
         if (pagamentoRepository.existsByPedido_IdPedido(pedido.getIdPedido())) {
             throw new OperacaoNaoPermitida("Pedido já foi finalizado.");
         }
@@ -473,11 +551,8 @@ public class PedidoService {
         if (pedido.getObservacoes() == null || pedido.getObservacoes().isBlank()) {
             throw new IllegalArgumentException("Informe a observação para finalizar o pedido.");
         }
-        if (pedido.getMetodoPagamento() == null) {
+        if (pedidoAtual.getMetodoPagamento() == null) {
             throw new IllegalArgumentException("Informe o método de pagamento para finalizar o pedido.");
-        }
-        if (pedido.getQuantidadeParcelas() == null || pedido.getQuantidadeParcelas() <= 0) {
-            throw new IllegalArgumentException("Informe uma quantidade de parcelas maior que zero.");
         }
     }
 }

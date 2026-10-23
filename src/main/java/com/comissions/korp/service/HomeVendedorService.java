@@ -1,27 +1,36 @@
 package com.comissions.korp.service;
 
-import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorResponseDTO;
+import com.comissions.korp.DTO.HomeVendedorDTO.FiltroStatusVenda;
+import com.comissions.korp.DTO.HomeVendedorDTO.FiltroStatusVenda.LinhasTabela;
+import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorPainelDTO;
+import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorPainelDTO.LinhaPainelDTO;
+import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorPainelDTO.ResumoDTO;
 import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorResponseDTO.DetalheVendaDTO;
 import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorResponseDTO.ParcelaDTO;
-import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorResponseDTO.PessoaDTO;
 import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorResponseDTO.PedidoVendaDTO;
+import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorResponseDTO.PessoaDTO;
 import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorResponseDTO.ProdutoVendaDTO;
 import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorResponseDTO.VendaResumoDTO;
+import com.comissions.korp.DTO.HomeVendedorDTO.ResumoStatusDTO;
 import com.comissions.korp.entity.Cliente;
 import com.comissions.korp.entity.Comissao;
 import com.comissions.korp.entity.Contato;
 import com.comissions.korp.entity.Distribuidor;
-import com.comissions.korp.entity.Endereco;
+import com.comissions.korp.entity.ENUM.MetodoPagamento;
 import com.comissions.korp.entity.ENUM.StatusComissao;
+import com.comissions.korp.entity.ENUM.StatusParcela;
+import com.comissions.korp.entity.Endereco;
 import com.comissions.korp.entity.ItemPedido;
 import com.comissions.korp.entity.Pagamento;
 import com.comissions.korp.entity.Parcela;
 import com.comissions.korp.entity.Pedido;
-import com.comissions.korp.repository.ContatoRepository;
-import com.comissions.korp.repository.EnderecoRepository;
-import com.comissions.korp.repository.ItemPedidoRepository;
-import com.comissions.korp.repository.PagamentoRepository;
-import com.comissions.korp.repository.PedidoRepository;
+import com.comissions.korp.exception.RecursoNaoEncontrado;
+import com.comissions.korp.repository.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,11 +43,12 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -51,7 +61,15 @@ public class HomeVendedorService {
             "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
     };
 
-    private final PedidoRepository pedidoRepository;
+    /** Teto de linhas por página (o front usa 5; o PDF pede páginas maiores). */
+    private static final int TAMANHO_MAXIMO_PAGINA = 100;
+    /** Ordenação fixa: o cliente não escolhe o campo, só a página e o tamanho. */
+    private static final Sort ORDENACAO_VENDAS = Sort.by(Sort.Direction.DESC, "dataPedido", "idPedido");
+
+    private static final List<StatusComissao> STATUS_PARCELAS_DO_PERIODO = FiltroStatusVenda.TODAS.getStatusComissoes();
+    private static final String TENDENCIA_SEM_BASE = "Novo";
+
+    private final PedidoRepository pedidoPainelRepository;
     private final ItemPedidoRepository itemPedidoRepository;
     private final ComissaoRepository comissaoRepository;
     private final EnderecoRepository enderecoRepository;
@@ -59,14 +77,14 @@ public class HomeVendedorService {
     private final PagamentoRepository pagamentoRepository;
 
     public HomeVendedorService(
-            PedidoRepository pedidoRepository,
+            PedidoRepository pedidoPainelRepository,
             ItemPedidoRepository itemPedidoRepository,
             ComissaoRepository comissaoRepository,
             EnderecoRepository enderecoRepository,
             ContatoRepository contatoRepository,
             PagamentoRepository pagamentoRepository
     ) {
-        this.pedidoRepository = pedidoRepository;
+        this.pedidoPainelRepository = pedidoPainelRepository;
         this.itemPedidoRepository = itemPedidoRepository;
         this.comissaoRepository = comissaoRepository;
         this.enderecoRepository = enderecoRepository;
@@ -74,80 +92,173 @@ public class HomeVendedorService {
         this.pagamentoRepository = pagamentoRepository;
     }
 
+    private record Intervalo(LocalDate inicio, LocalDate fim) {
+    }
+
+    private record VendaDoPainel(Pedido pedido, List<Comissao> doPainel, List<Comissao> todas) {
+    }
+
+    /** comissao == null: linha VENDA; caso contrário, linha PAGAMENTO daquela parcela. */
+    private record LinhaPedido(VendaDoPainel venda, Comissao comissao) {
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Painel (listagem paginada + resumo)
+    // ═══════════════════════════════════════════════════════════════════════════
+
     @Transactional(readOnly = true)
-    public HomeVendedorResponseDTO buscarPainel(Integer idVendedor, Integer ano, Integer mes, Integer dia) {
+    public HomeVendedorPainelDTO buscarPainel(
+            Integer idVendedor,
+            Integer ano,
+            Integer mes,
+            Integer dia,
+            FiltroStatusVenda filtro,
+            Pageable pageable
+    ) {
         YearMonth periodo = resolverPeriodo(ano, mes);
-        boolean diaExiste = dia != null;
-        LocalDate inicio = periodo.atDay(diaExiste ? dia : 1);
-        LocalDate fim = diaExiste ? periodo.atDay(dia) : periodo.atEndOfMonth();
+        Intervalo intervalo = resolverIntervalo(periodo, dia);
 
-        List<Comissao> comissoes = comissaoRepository.buscarComissoesDoPainelPorVencimento(idVendedor, inicio, fim);
-        List<Pedido> pedidosComComissaoNoPeriodo = comissoes.stream()
-                .map(Comissao::getPedido)
-                .collect(Collectors.toMap(
-                        Pedido::getIdPedido,
-                        pedido -> pedido,
-                        (pedidoExistente, pedidoDuplicado) -> pedidoExistente,
-                        LinkedHashMap::new
-                ))
-                .values()
-                .stream()
-                .toList();
-        List<Pedido> pedidosEmAndamento = pedidoRepository
-                .findByUsuario_IdUsuarioAndAtivoTrueAndStatusPedidoAndDataPedidoBetweenOrderByDataPedidoDescIdPedidoDesc(
+        Pageable paginacao = PageRequest.of(
+                Math.max(pageable.getPageNumber(), 0),
+                Math.min(Math.max(pageable.getPageSize(), 1), TAMANHO_MAXIMO_PAGINA),
+                ORDENACAO_VENDAS
+        );
+
+        // 1 query: pedidos que geram linhas no filtro (a paginação é por linha, feita em memória).
+        // VENDAS lista só as vendas feitas no período; os demais filtros incluem pedidos de outros
+        // meses quando eles têm parcelas no período.
+        List<Pedido> pedidos = filtro == FiltroStatusVenda.VENDAS
+                ? pedidoPainelRepository.listarVendasDoPeriodo(
+                        idVendedor, intervalo.inicio(), intervalo.fim(), ORDENACAO_VENDAS)
+                : pedidoPainelRepository.listarPedidosDoPainel(
                         idVendedor,
-                        "EM_ANDAMENTO",
-                        inicio,
-                        fim
+                        intervalo.inicio(),
+                        intervalo.fim(),
+                        filtro.getStatusComissoes(),
+                        StatusParcela.CANCELADO,
+                        filtro.isIncluiEmAndamento(),
+                        filtro.isIncluiVendaDoPeriodo(),
+                        ORDENACAO_VENDAS
                 );
-        List<Pedido> pedidos = combinarPedidos(pedidosComComissaoNoPeriodo, pedidosEmAndamento);
 
-        List<Comissao> todasComissoesDosPedidos = pedidos.isEmpty()
-                ? List.of()
-                : comissaoRepository.findByPedidoIn(pedidos);
+        // 1 query: comissões/parcelas desses pedidos (necessárias para saber quantas linhas cada um gera)
+        Map<Integer, List<Comissao>> comissoesPorPedido = buscarComissoesPorPedido(idVendedor, pedidos);
 
-        Map<Integer, List<Comissao>> comissoesPorPedido = comissoes.stream()
-                .collect(Collectors.groupingBy(comissao -> comissao.getPedido().getIdPedido()));
-        Map<Integer, List<Comissao>> todasComissoesPorPedido = todasComissoesDosPedidos.stream()
-                .collect(Collectors.groupingBy(comissao -> comissao.getPedido().getIdPedido()));
+        List<LinhaPedido> linhas = montarLinhas(pedidos, comissoesPorPedido, intervalo, filtro);
+        Page<LinhaPainelDTO> paginaLinhas = paginarLinhas(linhas, paginacao);
 
-        List<VendaResumoDTO> vendas = new ArrayList<>();
-        Map<String, DetalheVendaDTO> detalhesVenda = new HashMap<>();
+        ResumoDTO resumo = montarResumo(idVendedor, periodo, dia, intervalo);
 
+        List<ParcelaDTO> parcelasDoPeriodo = comissaoRepository
+                .buscarComissoesPorStatusNoPeriodo(
+                        idVendedor,
+                        STATUS_PARCELAS_DO_PERIODO,
+                        intervalo.inicio(),
+                        intervalo.fim(),
+                        StatusParcela.CANCELADO
+                )
+                .stream()
+                .map(this::criarParcela)
+                .toList();
+
+        return new HomeVendedorPainelDTO(
+                periodo.getYear(),
+                periodo.getMonthValue(),
+                nomeMes(periodo),
+                resumo,
+                parcelasDoPeriodo,
+                paginaLinhas
+        );
+    }
+
+    /**
+     * Achata cada pedido em linhas, na ordem da tabela, conforme o filtro:
+     * <ul>
+     *   <li>VENDAS_E_PARCELAS: linha VENDA (só se o pedido foi feito no período) seguida de uma
+     *   linha PAGAMENTO por parcela de comissão do painel</li>
+     *   <li>SOMENTE_VENDAS: uma linha VENDA por pedido listado (o mesmo conjunto contado no card)</li>
+     *   <li>SOMENTE_PARCELAS: só as linhas PAGAMENTO</li>
+     * </ul>
+     */
+    private List<LinhaPedido> montarLinhas(
+            List<Pedido> pedidos,
+            Map<Integer, List<Comissao>> comissoesPorPedido,
+            Intervalo intervalo,
+            FiltroStatusVenda filtro
+    ) {
+        LinhasTabela tipoLinhas = filtro.getLinhasTabela();
+        List<LinhaPedido> linhas = new ArrayList<>();
         for (Pedido pedido : pedidos) {
-            List<Comissao> comissoesDoPedido = comissoesPorPedido.getOrDefault(pedido.getIdPedido(), List.of());
-            List<Comissao> todasComissoesDoPedido = todasComissoesPorPedido.getOrDefault(pedido.getIdPedido(), List.of());
-            List<ItemPedido> itens = itemPedidoRepository.findByPedido(pedido);
-            VendaResumoDTO venda = criarVendaResumo(pedido, comissoesDoPedido, todasComissoesDoPedido);
-            vendas.add(venda);
-            detalhesVenda.put(periodoKey(periodo, venda.getId()), criarDetalheVenda(pedido, itens));
+            List<Comissao> todasDoPedido = comissoesPorPedido.getOrDefault(pedido.getIdPedido(), List.of());
+            List<Comissao> doPainel = todasDoPedido.stream()
+                    .filter(comissao -> comissaoEntraNoPainel(comissao, intervalo, filtro))
+                    .sorted(Comparator.comparing(comissao -> comissao.getParcela().getNumeroParcela()))
+                    .toList();
+            VendaDoPainel venda = new VendaDoPainel(pedido, doPainel, todasDoPedido);
+
+            boolean exibeVenda = switch (tipoLinhas) {
+                case SOMENTE_VENDAS -> true;
+                case VENDAS_E_PARCELAS -> dentroDoIntervalo(pedido.getDataPedido(), intervalo);
+                case SOMENTE_PARCELAS -> false;
+            };
+            if (exibeVenda) {
+                linhas.add(new LinhaPedido(venda, null));
+            }
+            if (tipoLinhas != LinhasTabela.SOMENTE_VENDAS) {
+                doPainel.forEach(comissao -> linhas.add(new LinhaPedido(venda, comissao)));
+            }
         }
-
-        BigDecimal projecao = somaComissoesPorStatus(comissoes, StatusComissao.LIBERADA);
-        BigDecimal projecaoMesAnterior = buscarProjecaoMesAnterior(idVendedor, periodo);
-
-        HomeVendedorResponseDTO response = new HomeVendedorResponseDTO();
-        response.setAno(periodo.getYear());
-        response.setMes(periodo.getMonthValue());
-        response.setNomeMes(nomeMes(periodo));
-        response.setTotalVendas(pedidos.size());
-        response.setComissoesLiberadas(contarComissoesLiberadas(comissoes));
-        response.setPagamentosPendentes(contarComissoesPendentes(comissoes));
-        response.setProjecao(projecao);
-        response.setParcelas(contarComissoesPendentes(comissoes));
-        response.setTendencia(calcularTendencia(projecao, projecaoMesAnterior));
-        response.setVendas(vendas);
-        response.setDetalhesVenda(detalhesVenda);
-
-        return response;
+        return linhas;
     }
 
-    private List<Pedido> combinarPedidos(List<Pedido> pedidosComComissaoNoPeriodo, List<Pedido> pedidosEmAndamento) {
-        Map<Integer, Pedido> pedidos = new LinkedHashMap<>();
-        pedidosComComissaoNoPeriodo.forEach(pedido -> pedidos.put(pedido.getIdPedido(), pedido));
-        pedidosEmAndamento.forEach(pedido -> pedidos.putIfAbsent(pedido.getIdPedido(), pedido));
-        return new ArrayList<>(pedidos.values());
+    /** Monta os DTOs só das linhas da página (cada venda é montada uma vez, mesmo com várias linhas). */
+    private Page<LinhaPainelDTO> paginarLinhas(List<LinhaPedido> linhas, Pageable paginacao) {
+        int inicio = (int) Math.min(paginacao.getOffset(), linhas.size());
+        int fim = Math.min(inicio + paginacao.getPageSize(), linhas.size());
+
+        Map<Integer, VendaResumoDTO> vendasDaPagina = new HashMap<>();
+        List<LinhaPainelDTO> conteudo = linhas.subList(inicio, fim).stream()
+                .map(linha -> {
+                    VendaDoPainel venda = linha.venda();
+                    VendaResumoDTO vendaDTO = vendasDaPagina.computeIfAbsent(
+                            venda.pedido().getIdPedido(),
+                            id -> criarVendaResumo(venda.pedido(), venda.doPainel(), venda.todas())
+                    );
+                    return linha.comissao() == null
+                            ? LinhaPainelDTO.venda(vendaDTO)
+                            : LinhaPainelDTO.pagamento(vendaDTO, criarParcela(linha.comissao()));
+                })
+                .toList();
+
+        return new PageImpl<>(conteudo, paginacao, linhas.size());
     }
+
+    private boolean dentroDoIntervalo(LocalDate data, Intervalo intervalo) {
+        return data != null && !data.isBefore(intervalo.inicio()) && !data.isAfter(intervalo.fim());
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Detalhe de uma venda (carregado só ao abrir o modal)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    @Transactional(readOnly = true)
+    public DetalheVendaDTO buscarDetalheVenda(Integer idVendedor, Integer idPedido) {
+        boolean pertenceAoVendedor = pedidoPainelRepository.existsByIdPedidoAndUsuario_IdUsuario(idPedido, idVendedor)
+                || comissaoRepository.existsByPedido_IdPedidoAndUsuario_IdUsuario(idPedido, idVendedor);
+
+        // 404 também quando a venda é de outro vendedor, para não expor que ela existe
+        Pedido pedido = pedidoPainelRepository.findByIdPedidoAndAtivoTrue(idPedido)
+                .filter(p -> pertenceAoVendedor)
+                .orElseThrow(() -> new RecursoNaoEncontrado("Venda não encontrada com ID: " + idPedido));
+
+        List<ItemPedido> itens = itemPedidoRepository.findByPedido(pedido);
+        List<Comissao> comissoes = comissaoRepository.buscarComissoesDosPedidos(List.of(idPedido), idVendedor);
+        return criarDetalheVenda(pedido, itens, comissoes);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Período e filtros
+    // ═══════════════════════════════════════════════════════════════════════════
 
     private YearMonth resolverPeriodo(Integer ano, Integer mes) {
         LocalDate hoje = LocalDate.now();
@@ -161,14 +272,122 @@ public class HomeVendedorService {
         return YearMonth.of(anoResolvido, mesResolvido);
     }
 
+    private Intervalo resolverIntervalo(YearMonth periodo, Integer dia) {
+        if (dia == null) {
+            return new Intervalo(periodo.atDay(1), periodo.atEndOfMonth());
+        }
+        if (dia < 1 || dia > periodo.lengthOfMonth()) {
+            throw new IllegalArgumentException("Dia inválido: informe um valor entre 1 e " + periodo.lengthOfMonth() + ".");
+        }
+        LocalDate data = periodo.atDay(dia);
+        return new Intervalo(data, data);
+    }
+
+    private Map<Integer, List<Comissao>> buscarComissoesPorPedido(Integer idVendedor, List<Pedido> pedidos) {
+        if (pedidos.isEmpty()) {
+            return Map.of();
+        }
+        List<Integer> ids = pedidos.stream().map(Pedido::getIdPedido).toList();
+        return comissaoRepository.buscarComissoesDosPedidos(ids, idVendedor).stream()
+                .collect(Collectors.groupingBy(comissao -> comissao.getPedido().getIdPedido()));
+    }
+
+    /** Mesma regra do EXISTS da query do painel, aplicada em memória às comissões dos pedidos listados. */
+    private boolean comissaoEntraNoPainel(Comissao comissao, Intervalo intervalo, FiltroStatusVenda filtro) {
+        Parcela parcela = comissao.getParcela();
+        LocalDate vencimento = parcela.getDataVencimento();
+        return !vencimento.isBefore(intervalo.inicio())
+                && !vencimento.isAfter(intervalo.fim())
+                && parcela.getStatusParcela() != StatusParcela.CANCELADO
+                && filtro.getStatusComissoes().contains(comissao.getStatusComissao());
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Resumo (cards / projeção / tendência) — agregado no banco, sem carregar entidades
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Cada tendência compara o indicador do próprio card com o mesmo período do mês anterior:
+     * vendas (pela data do pedido) x vendas, comissões liberadas x liberadas (pelo vencimento da
+     * parcela) e comissão bruta (todas as parcelas não canceladas, de qualquer status) x comissão bruta.
+     */
+    private ResumoDTO montarResumo(Integer idVendedor, YearMonth periodo, Integer dia, Intervalo intervalo) {
+        Intervalo intervaloAnterior = resolverIntervaloMesAnterior(periodo, dia);
+
+        Map<StatusComissao, ResumoStatusDTO> atual = resumirPorStatus(idVendedor, intervalo);
+        Map<StatusComissao, ResumoStatusDTO> mesAnterior = resumirPorStatus(idVendedor, intervaloAnterior);
+        long totalVendas = contarVendas(idVendedor, intervalo);
+        long totalVendasMesAnterior = contarVendas(idVendedor, intervaloAnterior);
+
+        BigDecimal projecao = totalGeral(atual);
+        BigDecimal projecaoMesAnterior = totalGeral(mesAnterior);
+        long liberadas = quantidadeLiberadas(atual);
+        long liberadasMesAnterior = quantidadeLiberadas(mesAnterior);
+
+        return new ResumoDTO(
+                (int) totalVendas,
+                (int) liberadas,
+                (int) quantidade(atual, StatusComissao.PENDENTE),
+                projecao,
+                (int) quantidade(atual, StatusComissao.PAGA),
+                (int) quantidadeGeral(atual),
+                calcularTendencia(projecao, projecaoMesAnterior),
+                calcularTendencia(BigDecimal.valueOf(totalVendas), BigDecimal.valueOf(totalVendasMesAnterior)),
+                calcularTendencia(BigDecimal.valueOf(liberadas), BigDecimal.valueOf(liberadasMesAnterior))
+        );
+    }
+
+    /** Mesmo recorte do período atual, um mês antes (mês inteiro ou o mesmo dia, limitado ao fim do mês). */
+    private Intervalo resolverIntervaloMesAnterior(YearMonth periodo, Integer dia) {
+        YearMonth anterior = periodo.minusMonths(1);
+        if (dia == null) {
+            return new Intervalo(anterior.atDay(1), anterior.atEndOfMonth());
+        }
+        LocalDate data = anterior.atDay(Math.min(dia, anterior.lengthOfMonth()));
+        return new Intervalo(data, data);
+    }
+
+    private long contarVendas(Integer idVendedor, Intervalo intervalo) {
+        return pedidoPainelRepository.contarVendasDoPeriodo(idVendedor, intervalo.inicio(), intervalo.fim());
+    }
+
+    private long quantidadeLiberadas(Map<StatusComissao, ResumoStatusDTO> resumo) {
+        return quantidade(resumo, StatusComissao.LIBERADA) + quantidade(resumo, StatusComissao.PAGA);
+    }
+
+    private long quantidadeGeral(Map<StatusComissao, ResumoStatusDTO> resumo) {
+        return resumo.keySet().stream().mapToLong(status -> quantidade(resumo, status)).sum();
+    }
+
+    private BigDecimal totalGeral(Map<StatusComissao, ResumoStatusDTO> resumo) {
+        return resumo.keySet().stream()
+                .map(status -> total(resumo, status))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private Map<StatusComissao, ResumoStatusDTO> resumirPorStatus(Integer idVendedor, Intervalo intervalo) {
+        return comissaoRepository
+                .resumirPorStatus(idVendedor, intervalo.inicio(), intervalo.fim(), StatusParcela.CANCELADO)
+                .stream()
+                .collect(Collectors.toMap(ResumoStatusDTO::status, Function.identity()));
+    }
+
+    private long quantidade(Map<StatusComissao, ResumoStatusDTO> resumo, StatusComissao status) {
+        ResumoStatusDTO linha = resumo.get(status);
+        return linha == null || linha.quantidade() == null ? 0L : linha.quantidade();
+    }
+
+    private BigDecimal total(Map<StatusComissao, ResumoStatusDTO> resumo, StatusComissao status) {
+        ResumoStatusDTO linha = resumo.get(status);
+        return linha == null || linha.total() == null ? BigDecimal.ZERO : linha.total();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Montagem de DTOs
+    // ═══════════════════════════════════════════════════════════════════════════
+
     private VendaResumoDTO criarVendaResumo(Pedido pedido, List<Comissao> comissoes, List<Comissao> todasComissoesDoPedido) {
         BigDecimal totalComissao = somarComissoes(comissoes);
-        long parcelasPagas = comissoes.stream()
-                .filter(this::isComissaoPaga)
-                .count();
-        long parcelasLiberadas = comissoes.stream()
-                .filter(this::isComissaoLiberada)
-                .count();
 
         VendaResumoDTO venda = new VendaResumoDTO();
         venda.setId("V" + pedido.getIdPedido());
@@ -176,34 +395,69 @@ public class HomeVendedorService {
         venda.setNome("VENDA " + pedido.getIdPedido());
         venda.setCliente(criarNomeClienteTabela(pedido.getCliente()));
         venda.setValorComissao(totalComissao);
-        venda.setComissao(criarTextoComissao(totalComissao, comissoes));
-        venda.setStatus(criarStatusVenda(comissoes, parcelasLiberadas, parcelasPagas));
-        venda.setTipo(criarTipoVenda(parcelasLiberadas, parcelasPagas));
+        // A linha "Venda" mostra o total do período; o detalhamento por parcela agora é
+        // uma linha "Pagamento" própria no front (ver criarParcelas/criarParcela abaixo).
+        venda.setComissao(formatarMoeda(totalComissao));
+        // Status da linha "Venda" reflete o pedido em si, não mais o status das comissões
+        // (isso agora aparece separado, em cada linha "Pagamento").
+        venda.setStatus(statusPedidoLabel(pedido));
+        venda.setTipo(tipoPedido(pedido));
+        venda.setDataVenda(pedido.getDataPedido());
         venda.setParcelas(criarParcelas(comissoes));
         venda.setParcelasDaVenda(criarParcelas(todasComissoesDoPedido));
         return venda;
     }
 
-    private DetalheVendaDTO criarDetalheVenda(Pedido pedido, List<ItemPedido> itens) {
+    /**
+     * PedidoService só atribui dois valores a statusPedido: "EM_ANDAMENTO" na criação
+     * (criarPedidoFromRequest) e "APROVADO" quando a comissão é criada (criarComissao /
+     * editarPedidoFromPedidoEditRequest). O default 'PENDENTE' do banco nunca é usado na
+     * prática, pois o service sempre sobrescreve para EM_ANDAMENTO. Por isso o fallback
+     * abaixo cobre diretamente o caso APROVADO.
+     */
+    private String statusPedidoLabel(Pedido pedido) {
+        return isEmAndamento(pedido) ? "Em andamento" : "Aprovada";
+    }
+
+    private String tipoPedido(Pedido pedido) {
+        return isEmAndamento(pedido) ? "andamento" : "aprovada";
+    }
+
+    private boolean isEmAndamento(Pedido pedido) {
+        return "EM_ANDAMENTO".equalsIgnoreCase(pedido.getStatusPedido());
+    }
+
+    private DetalheVendaDTO criarDetalheVenda(Pedido pedido, List<ItemPedido> itens, List<Comissao> comissoes) {
         DetalheVendaDTO detalhe = new DetalheVendaDTO();
         detalhe.setCliente(criarPessoaCliente(pedido.getCliente()));
         detalhe.setDistribuidor(criarPessoaDistribuidor(pedido.getDistribuidor()));
         detalhe.setProduto(criarProdutoVenda(pedido, itens));
-        detalhe.setPedido(criarPedidoVenda(pedido));
+        detalhe.setPedido(criarPedidoVenda(pedido, comissoes));
         return detalhe;
     }
 
-    private PedidoVendaDTO criarPedidoVenda(Pedido pedido) {
+    private PedidoVendaDTO criarPedidoVenda(Pedido pedido, List<Comissao> comissoes) {
         PedidoVendaDTO dto = new PedidoVendaDTO();
         dto.setIdPedido(pedido.getIdPedido());
         dto.setStatusPedido(pedido.getStatusPedido());
         dto.setNumeroNotaDistribuidor(pedido.getNumeroNotaDistribuidor());
         dto.setObservacoes(pedido.getObservacoes());
+        dto.setDatasPagamento(List.of());
+
+        if (pedido.getMetodoPagamento() != null) {
+            dto.setMetodoPagamento(pedido.getMetodoPagamento().name());
+        }
 
         pagamentoRepository.findByPedido_IdPedido(pedido.getIdPedido()).ifPresent(pagamento -> {
             dto.setMetodoPagamento(pagamento.getMetodoPagamento().name());
             dto.setParcelado(pagamento.getParcelado());
             dto.setQuantidadeParcelas(pagamento.getQuantidadeParcelas());
+            dto.setDatasPagamento(comissoes.stream()
+                    .map(Comissao::getParcela)
+                    .sorted(Comparator.comparing(Parcela::getNumeroParcela))
+                    .map(Parcela::getPrazoDias)
+                    .filter(Objects::nonNull)
+                    .toList());
         });
 
         return dto;
@@ -264,7 +518,7 @@ public class HomeVendedorService {
         produto.setIdItemPedido(item.getIdItemPedido());
         produto.setIdProduto(item.getProduto().getIdProduto());
         produto.setDescricao(item.getProduto().getNome());
-        produto.setPn(item.getProduto().getCodigoProduto());
+        produto.setPn(item.getProduto().getPartNumber());
         produto.setQuantidade(item.getQuantidade());
         produto.setValorUnitario(item.getVlrUnitDistr());
         produto.setValorTotal(item.getVlrTotalDistr());
@@ -283,13 +537,20 @@ public class HomeVendedorService {
     private ParcelaDTO criarParcela(Comissao comissao) {
         Parcela parcela = comissao.getParcela();
         Pagamento pagamento = parcela.getPagamento();
+        Integer totalParcelas = pagamento.getQuantidadeParcelas();
 
         ParcelaDTO dto = new ParcelaDTO();
         dto.setIdParcela(parcela.getId());
+        dto.setPedidoId(comissao.getPedido().getIdPedido());
+        dto.setCliente(nomeEmpresa(comissao.getPedido().getCliente()));
         dto.setNumeroParcela(parcela.getNumeroParcela());
-        dto.setTotalParcelas(pagamento.getQuantidadeParcelas());
-        dto.setLabel("Parcela " + parcela.getNumeroParcela() + "/" + pagamento.getQuantidadeParcelas());
+        dto.setTotalParcelas(totalParcelas);
+        dto.setLabel(totalParcelas == null || (totalParcelas <= 1 && pagamento.getMetodoPagamento() != MetodoPagamento.BOLETO)
+                ? "À vista"
+                : "Parcela " + parcela.getNumeroParcela() + "/" + totalParcelas);
         dto.setValor(comissao.getValorComissao());
+        // Status bruto do enum (PENDENTE/LIBERADA/PAGA); o rótulo em português
+        // e a cor de cada linha "Pagamento" ficam a cargo do front.
         dto.setStatus(comissao.getStatusComissao().name());
         dto.setDataVencimento(parcela.getDataVencimento());
         return dto;
@@ -300,9 +561,7 @@ public class HomeVendedorService {
                 .findFirst()
                 .map(Contato::getNome)
                 .orElse(cliente.getNomeFantasia());
-        String empresa = cliente.getNomeFantasia() != null && !cliente.getNomeFantasia().isBlank()
-                ? cliente.getNomeFantasia()
-                : cliente.getRazaoSocial();
+        String empresa = nomeEmpresa(cliente);
 
         if (contato == null || contato.isBlank()) {
             return empresa;
@@ -311,49 +570,13 @@ public class HomeVendedorService {
         return contato + " - " + empresa;
     }
 
-    private String criarTextoComissao(BigDecimal totalComissao, List<Comissao> comissoes) {
-        String valor = formatarMoeda(totalComissao);
-        if (comissoes.size() == 1) {
-            Parcela parcela = comissoes.get(0).getParcela();
-            Integer totalParcelas = parcela.getPagamento().getQuantidadeParcelas();
-            return parcela.getNumeroParcela() + "/" + totalParcelas + " - " + valor;
+    private String nomeEmpresa(Cliente cliente) {
+        if (cliente == null) {
+            return null;
         }
-        if (comissoes.size() > 1) {
-            return comissoes.size() + " parcelas - " + valor;
-        }
-        return valor;
-    }
-
-    private String criarStatusVenda(List<Comissao> comissoes, long parcelasLiberadas, long parcelasPagas) {
-        if (comissoes.isEmpty()) {
-            return "AGUARDANDO";
-        }
-
-        if (parcelasPagas > 0) {
-            if (comissoes.size() == 1) {
-                return "PAGO " + comissoes.get(0).getParcela().getNumeroParcela() + "ª PARCELA";
-            }
-            return "PAGO " + parcelasPagas + " PARCELAS";
-        }
-
-        if (parcelasLiberadas > 0) {
-            if (comissoes.size() == 1) {
-                return "LIBERADA " + comissoes.get(0).getParcela().getNumeroParcela() + "ª PARCELA";
-            }
-            return "LIBERADA " + parcelasLiberadas + " PARCELAS";
-        }
-
-        return "AGUARDANDO";
-    }
-
-    private String criarTipoVenda(long parcelasLiberadas, long parcelasPagas) {
-        if (parcelasPagas > 0) {
-            return "paga";
-        }
-        if (parcelasLiberadas > 0) {
-            return "liberada";
-        }
-        return "pendente";
+        return cliente.getNomeFantasia() != null && !cliente.getNomeFantasia().isBlank()
+                ? cliente.getNomeFantasia()
+                : cliente.getRazaoSocial();
     }
 
     private void preencherEndereco(PessoaDTO pessoa, Endereco endereco) {
@@ -390,53 +613,16 @@ public class HomeVendedorService {
                 .collect(Collectors.joining(", "));
     }
 
-    private BigDecimal buscarProjecaoMesAnterior(Integer idVendedor, YearMonth periodo) {
-        YearMonth anterior = periodo.minusMonths(1);
-        List<Comissao> comissoesAnteriores = comissaoRepository.buscarComissoesDoPainelPorVencimento(
-                idVendedor,
-                anterior.atDay(1),
-                anterior.atEndOfMonth()
-        );
-        return somaComissoesPorStatus(comissoesAnteriores, StatusComissao.LIBERADA);
-    }
-
-    private BigDecimal somaComissoesPorStatus(List<Comissao> comissoes, StatusComissao status) {
-        return comissoes.stream()
-                .filter(comissao -> comissao.getStatusComissao() == status)
-                .map(Comissao::getValorComissao)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
     private BigDecimal somarComissoes(List<Comissao> comissoes) {
         return comissoes.stream()
                 .map(Comissao::getValorComissao)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private Integer contarComissoesPendentes(List<Comissao> comissoes) {
-        return (int) comissoes.stream()
-                .filter(comissao -> comissao.getStatusComissao() == StatusComissao.PENDENTE)
-                .count();
-    }
-
-    private Integer contarComissoesLiberadas(List<Comissao> comissoes) {
-        return (int) comissoes.stream()
-                .filter(this::isComissaoLiberada)
-                .count();
-    }
-
-    private boolean isComissaoLiberada(Comissao comissao) {
-        return comissao.getStatusComissao() == StatusComissao.LIBERADA
-                || comissao.getStatusComissao() == StatusComissao.PAGA;
-    }
-
-    private boolean isComissaoPaga(Comissao comissao) {
-        return comissao.getStatusComissao() == StatusComissao.PAGA;
-    }
-
+    /** Sem base no mês anterior a variação percentual não existe: devolve "Novo" em vez de inventar +100%. */
     private String calcularTendencia(BigDecimal atual, BigDecimal anterior) {
         if (anterior == null || BigDecimal.ZERO.compareTo(anterior) == 0) {
-            return atual.compareTo(BigDecimal.ZERO) > 0 ? "+100%" : "0%";
+            return atual.compareTo(BigDecimal.ZERO) > 0 ? TENDENCIA_SEM_BASE : "0%";
         }
 
         BigDecimal variacao = atual.subtract(anterior)
@@ -448,10 +634,6 @@ public class HomeVendedorService {
 
     private String formatarMoeda(BigDecimal valor) {
         return NumberFormat.getCurrencyInstance(LOCALE_BR).format(valor == null ? BigDecimal.ZERO : valor);
-    }
-
-    private String periodoKey(YearMonth periodo, String idVenda) {
-        return nomeMes(periodo) + "-" + idVenda;
     }
 
     private String nomeMes(YearMonth periodo) {
