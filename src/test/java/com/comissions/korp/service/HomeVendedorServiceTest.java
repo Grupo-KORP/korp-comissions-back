@@ -32,7 +32,6 @@ import org.springframework.data.domain.Sort;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -40,6 +39,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -89,8 +89,8 @@ class HomeVendedorServiceTest {
 
     @Test
     void buscarPainel_deveRetornarResumoZerado_quandoNaoHaVendasNemComissoes() {
-        prepararPaginaVazia(0);
-        when(pedidoRepository.contarPedidosDoPainel(eq(VENDEDOR), any(), any(), anyList(), any(), anyBoolean(), anyBoolean()))
+        prepararPaginaVazia();
+        when(pedidoRepository.contarVendasDoPeriodo(eq(VENDEDOR), any(), any()))
                 .thenReturn(0L);
         when(comissaoRepository.resumirPorStatus(eq(VENDEDOR), any(), any(), eq(StatusParcela.CANCELADO)))
                 .thenReturn(List.of());
@@ -147,19 +147,48 @@ class HomeVendedorServiceTest {
     }
 
     @Test
-    void buscarPainel_filtroVendas_deveListarSoAsVendas_paginando() {
-        prepararDuasVendasComParcelas();
+    void buscarPainel_filtroVendas_deveListarSoVendasFeitasNoPeriodo_paginando() {
+        Pedido venda1 = pedido(1, LocalDate.of(2026, 10, 10));
+        Pedido venda3 = pedido(3, LocalDate.of(2026, 10, 12));
+        when(pedidoRepository.listarVendasDoPeriodo(
+                eq(VENDEDOR), eq(LocalDate.of(2026, 10, 1)), eq(LocalDate.of(2026, 10, 31)), any(Sort.class)))
+                .thenReturn(List.of(venda1, venda3));
+        when(pedidoRepository.contarVendasDoPeriodo(VENDEDOR, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 31)))
+                .thenReturn(2L);
 
         HomeVendedorPainelDTO painel = homeVendedorService.buscarPainel(
                 VENDEDOR, 2026, 10, null, FiltroStatusVenda.VENDAS, PageRequest.of(0, 1));
 
-        // Mesmas vendas contadas no card, inclusive a do mês anterior que tem parcela no período
         assertThat(painel.resumo().totalVendas()).isEqualTo(2);
         assertThat(painel.linhas().getTotalElements()).isEqualTo(2);
         assertThat(painel.linhas().getTotalPages()).isEqualTo(2);
         assertThat(painel.linhas().getContent())
                 .extracting(LinhaPainelDTO::tipo, linha -> linha.venda().getIdPedido(), LinhaPainelDTO::parcela)
                 .containsExactly(org.assertj.core.groups.Tuple.tuple(TipoLinha.VENDA, 1, null));
+        // Pedidos de outros meses que só têm parcela no período não entram na lista de vendas
+        verify(pedidoRepository, never()).listarPedidosDoPainel(
+                any(), any(), any(), anyList(), any(), anyBoolean(), anyBoolean(), any(Sort.class));
+    }
+
+    @Test
+    void buscarPainel_vendaDeOutroMesComParcelaNoPeriodo_apareceComoParcelaMasNaoContaComoVenda() {
+        Pedido vendaDeOutubro = pedido(1, LocalDate.of(2026, 10, 10));
+        when(pedidoRepository.listarPedidosDoPainel(
+                eq(VENDEDOR), any(), any(), anyList(), any(), anyBoolean(), anyBoolean(), any(Sort.class)))
+                .thenReturn(List.of(vendaDeOutubro));
+        when(comissaoRepository.buscarComissoesDosPedidos(List.of(1), VENDEDOR))
+                .thenReturn(List.of(
+                        comissao(vendaDeOutubro, 2, 2, "100.00", StatusComissao.PENDENTE, LocalDate.of(2026, 11, 10))
+                ));
+
+        HomeVendedorPainelDTO painel = homeVendedorService.buscarPainel(
+                VENDEDOR, 2026, 11, null, FiltroStatusVenda.PENDENTES, PRIMEIRA_PAGINA);
+
+        assertThat(painel.resumo().totalVendas()).isZero();
+        assertThat(painel.linhas().getContent())
+                .extracting(LinhaPainelDTO::tipo, linha -> linha.venda().getIdPedido(), linha -> linha.parcela().getNumeroParcela())
+                .containsExactly(org.assertj.core.groups.Tuple.tuple(TipoLinha.PAGAMENTO, 1, 2));
+        verify(pedidoRepository).contarVendasDoPeriodo(VENDEDOR, LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 30));
     }
 
     @Test
@@ -214,10 +243,10 @@ class HomeVendedorServiceTest {
 
     @Test
     void buscarPainel_deveSomarTodasAsParcelasECompararCadaCardComOMesAnterior() {
-        prepararPaginaVazia(4);
-        when(pedidoRepository.contarPedidosDoPainel(
-                eq(VENDEDOR), eq(LocalDate.of(2026, 9, 1)), eq(LocalDate.of(2026, 9, 30)),
-                anyList(), any(), anyBoolean(), anyBoolean()))
+        prepararPaginaVazia();
+        when(pedidoRepository.contarVendasDoPeriodo(VENDEDOR, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 31)))
+                .thenReturn(4L);
+        when(pedidoRepository.contarVendasDoPeriodo(VENDEDOR, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30)))
                 .thenReturn(2L);
         when(comissaoRepository.resumirPorStatus(
                 VENDEDOR, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 31), StatusParcela.CANCELADO))
@@ -263,8 +292,10 @@ class HomeVendedorServiceTest {
 
     @Test
     void buscarPainel_deveRetornarNovo_quandoMesAnteriorNaoTemBase() {
-        prepararPaginaVazia(1);
-        when(pedidoRepository.contarPedidosDoPainel(eq(VENDEDOR), any(), any(), anyList(), any(), anyBoolean(), anyBoolean()))
+        prepararPaginaVazia();
+        when(pedidoRepository.contarVendasDoPeriodo(VENDEDOR, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 31)))
+                .thenReturn(1L);
+        when(pedidoRepository.contarVendasDoPeriodo(VENDEDOR, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30)))
                 .thenReturn(0L);
         when(comissaoRepository.resumirPorStatus(
                 VENDEDOR, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 31), StatusParcela.CANCELADO))
@@ -285,8 +316,8 @@ class HomeVendedorServiceTest {
 
     @Test
     void buscarPainel_deveCompararComOMesmoDiaDoMesAnterior_quandoDiaEhInformado() {
-        prepararPaginaVazia(0);
-        when(pedidoRepository.contarPedidosDoPainel(eq(VENDEDOR), any(), any(), anyList(), any(), anyBoolean(), anyBoolean()))
+        prepararPaginaVazia();
+        when(pedidoRepository.contarVendasDoPeriodo(eq(VENDEDOR), any(), any()))
                 .thenReturn(0L);
         when(comissaoRepository.resumirPorStatus(eq(VENDEDOR), any(), any(), eq(StatusParcela.CANCELADO)))
                 .thenReturn(List.of());
@@ -298,18 +329,13 @@ class HomeVendedorServiceTest {
         // 31/03 compara com o último dia de fevereiro
         LocalDate diaAnterior = LocalDate.of(2026, 2, 28);
         verify(comissaoRepository).resumirPorStatus(VENDEDOR, diaAnterior, diaAnterior, StatusParcela.CANCELADO);
-        verify(pedidoRepository).contarPedidosDoPainel(
-                eq(VENDEDOR), eq(diaAnterior), eq(diaAnterior), anyList(), any(), anyBoolean(), anyBoolean());
+        verify(pedidoRepository).contarVendasDoPeriodo(VENDEDOR, diaAnterior, diaAnterior);
     }
 
-    private void prepararPaginaVazia(int totalVendas) {
-        // Pedidos sem data e sem comissões: contam como venda, mas não geram linhas
-        List<Pedido> pedidos = IntStream.rangeClosed(1, totalVendas)
-                .mapToObj(id -> pedido(id, null))
-                .toList();
+    private void prepararPaginaVazia() {
         when(pedidoRepository.listarPedidosDoPainel(
                 eq(VENDEDOR), any(), any(), anyList(), any(), anyBoolean(), anyBoolean(), any(Sort.class)))
-                .thenReturn(pedidos);
+                .thenReturn(List.of());
     }
 
     private Pedido pedido(Integer idPedido, LocalDate dataPedido) {

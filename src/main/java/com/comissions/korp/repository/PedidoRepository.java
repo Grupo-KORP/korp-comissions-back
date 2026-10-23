@@ -80,15 +80,27 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
             Sort sort
     );
 
-    @Query("SELECT COUNT(p) FROM Pedido p WHERE " + FILTRO_PAINEL)
-    long contarPedidosDoPainel(
+    /** Vendas do período: pedidos ativos do vendedor feitos entre as datas (qualquer status do pedido). */
+    String FILTRO_VENDAS_DO_PERIODO = """
+        p.ativo = true
+        AND p.usuario.idUsuario = :idVendedor
+        AND p.dataPedido BETWEEN :inicio AND :fim
+        """;
+
+    @Query("SELECT p FROM Pedido p JOIN FETCH p.cliente WHERE " + FILTRO_VENDAS_DO_PERIODO)
+    List<Pedido> listarVendasDoPeriodo(
             @Param("idVendedor") Integer idVendedor,
             @Param("inicio") LocalDate inicio,
             @Param("fim") LocalDate fim,
-            @Param("statusComissoes") List<StatusComissao> statusComissoes,
-            @Param("parcelaCancelada") StatusParcela parcelaCancelada,
-            @Param("incluirEmAndamento") boolean incluirEmAndamento,
-            @Param("incluirVendaDoPeriodo") boolean incluirVendaDoPeriodo
+            Sort sort
+    );
+
+    /** Base do card "Total de Vendas" e da tendência de vendas: só a data do pedido conta. */
+    @Query("SELECT COUNT(p) FROM Pedido p WHERE " + FILTRO_VENDAS_DO_PERIODO)
+    long contarVendasDoPeriodo(
+            @Param("idVendedor") Integer idVendedor,
+            @Param("inicio") LocalDate inicio,
+            @Param("fim") LocalDate fim
     );
 
     Optional<Pedido> findByIdPedidoAndAtivoTrue(Integer idPedido);

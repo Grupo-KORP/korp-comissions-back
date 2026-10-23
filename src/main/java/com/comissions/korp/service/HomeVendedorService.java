@@ -124,17 +124,22 @@ public class HomeVendedorService {
                 ORDENACAO_VENDAS
         );
 
-        // 1 query: todos os pedidos do filtro (a paginação é por linha, feita em memória)
-        List<Pedido> pedidos = pedidoPainelRepository.listarPedidosDoPainel(
-                idVendedor,
-                intervalo.inicio(),
-                intervalo.fim(),
-                filtro.getStatusComissoes(),
-                StatusParcela.CANCELADO,
-                filtro.isIncluiEmAndamento(),
-                filtro.isIncluiVendaDoPeriodo(),
-                ORDENACAO_VENDAS
-        );
+        // 1 query: pedidos que geram linhas no filtro (a paginação é por linha, feita em memória).
+        // VENDAS lista só as vendas feitas no período; os demais filtros incluem pedidos de outros
+        // meses quando eles têm parcelas no período.
+        List<Pedido> pedidos = filtro == FiltroStatusVenda.VENDAS
+                ? pedidoPainelRepository.listarVendasDoPeriodo(
+                        idVendedor, intervalo.inicio(), intervalo.fim(), ORDENACAO_VENDAS)
+                : pedidoPainelRepository.listarPedidosDoPainel(
+                        idVendedor,
+                        intervalo.inicio(),
+                        intervalo.fim(),
+                        filtro.getStatusComissoes(),
+                        StatusParcela.CANCELADO,
+                        filtro.isIncluiEmAndamento(),
+                        filtro.isIncluiVendaDoPeriodo(),
+                        ORDENACAO_VENDAS
+                );
 
         // 1 query: comissões/parcelas desses pedidos (necessárias para saber quantas linhas cada um gera)
         Map<Integer, List<Comissao>> comissoesPorPedido = buscarComissoesPorPedido(idVendedor, pedidos);
@@ -142,12 +147,7 @@ public class HomeVendedorService {
         List<LinhaPedido> linhas = montarLinhas(pedidos, comissoesPorPedido, intervalo, filtro);
         Page<LinhaPainelDTO> paginaLinhas = paginarLinhas(linhas, paginacao);
 
-        // TODAS e VENDAS listam o mesmo conjunto de pedidos que o card "Total de Vendas" conta
-        long totalVendas = filtro == FiltroStatusVenda.TODAS || filtro == FiltroStatusVenda.VENDAS
-                ? pedidos.size()
-                : contarVendas(idVendedor, intervalo);
-
-        ResumoDTO resumo = montarResumo(idVendedor, periodo, dia, intervalo, totalVendas);
+        ResumoDTO resumo = montarResumo(idVendedor, periodo, dia, intervalo);
 
         List<ParcelaDTO> parcelasDoPeriodo = comissaoRepository
                 .buscarComissoesPorStatusNoPeriodo(
@@ -308,14 +308,15 @@ public class HomeVendedorService {
 
     /**
      * Cada tendência compara o indicador do próprio card com o mesmo período do mês anterior:
-     * vendas x vendas, comissões liberadas x liberadas e comissão bruta (todas as parcelas
-     * não canceladas, de qualquer status) x comissão bruta.
+     * vendas (pela data do pedido) x vendas, comissões liberadas x liberadas (pelo vencimento da
+     * parcela) e comissão bruta (todas as parcelas não canceladas, de qualquer status) x comissão bruta.
      */
-    private ResumoDTO montarResumo(Integer idVendedor, YearMonth periodo, Integer dia, Intervalo intervalo, long totalVendas) {
+    private ResumoDTO montarResumo(Integer idVendedor, YearMonth periodo, Integer dia, Intervalo intervalo) {
         Intervalo intervaloAnterior = resolverIntervaloMesAnterior(periodo, dia);
 
         Map<StatusComissao, ResumoStatusDTO> atual = resumirPorStatus(idVendedor, intervalo);
         Map<StatusComissao, ResumoStatusDTO> mesAnterior = resumirPorStatus(idVendedor, intervaloAnterior);
+        long totalVendas = contarVendas(idVendedor, intervalo);
         long totalVendasMesAnterior = contarVendas(idVendedor, intervaloAnterior);
 
         BigDecimal projecao = totalGeral(atual);
@@ -347,15 +348,7 @@ public class HomeVendedorService {
     }
 
     private long contarVendas(Integer idVendedor, Intervalo intervalo) {
-        return pedidoPainelRepository.contarPedidosDoPainel(
-                idVendedor,
-                intervalo.inicio(),
-                intervalo.fim(),
-                FiltroStatusVenda.TODAS.getStatusComissoes(),
-                StatusParcela.CANCELADO,
-                FiltroStatusVenda.TODAS.isIncluiEmAndamento(),
-                FiltroStatusVenda.TODAS.isIncluiVendaDoPeriodo()
-        );
+        return pedidoPainelRepository.contarVendasDoPeriodo(idVendedor, intervalo.inicio(), intervalo.fim());
     }
 
     private long quantidadeLiberadas(Map<StatusComissao, ResumoStatusDTO> resumo) {

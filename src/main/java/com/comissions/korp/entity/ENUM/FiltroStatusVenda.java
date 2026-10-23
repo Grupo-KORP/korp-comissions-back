@@ -22,7 +22,7 @@ public enum FiltroStatusVenda {
             LinhasTabela.VENDAS_E_PARCELAS
     ),
 
-    /** Card "Total de Vendas": as mesmas vendas contadas no card, sem as parcelas. */
+    /** Card "Total de Vendas": só as vendas feitas no período (data do pedido), sem as parcelas. */
     VENDAS(
             List.of(StatusComissao.PENDENTE, StatusComissao.LIBERADA, StatusComissao.PAGA),
             true,
