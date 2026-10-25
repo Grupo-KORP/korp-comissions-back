@@ -109,27 +109,44 @@ public class UsuarioService {
         Usuario usuarioExistente = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontrado("Usuário não encontrado com ID: " + id));
 
+        Boolean ativoSolicitado = requestDTO.ativoParaAtualizacao();
+        if (Boolean.FALSE.equals(usuarioExistente.getAtivo()) && Boolean.TRUE.equals(ativoSolicitado)) {
+            throw new OperacaoNaoPermitida("Não é permitido reativar um usuário inativo.");
+        }
+
         // Verifica conflito de email com OUTRO usuário
-        if (!usuarioExistente.getEmail().equalsIgnoreCase(requestDTO.getEmail()) &&
+        if (requestDTO.getEmail() != null &&
+                !usuarioExistente.getEmail().equalsIgnoreCase(requestDTO.getEmail()) &&
                 usuarioRepository.existsByEmail(requestDTO.getEmail())) {
             throw new UsuarioJaExistente("Já existe um usuário com este email: " + requestDTO.getEmail());
         }
 
         // Verifica conflito de nome com OUTRO usuário
-        if (!usuarioExistente.getNome().equalsIgnoreCase(requestDTO.getNome()) &&
+        if (requestDTO.getNome() != null &&
+                !usuarioExistente.getNome().equalsIgnoreCase(requestDTO.getNome()) &&
                 usuarioRepository.existsByNome(requestDTO.getNome())) {
             throw new UsuarioJaExistente("Já existe um usuário com este nome: " + requestDTO.getNome());
         }
 
         // Verifica conflito de telefone com OUTRO usuário
-        if (!usuarioExistente.getTelefone().equals(requestDTO.getTelefone()) &&
+        if (requestDTO.getTelefone() != null &&
+                !usuarioExistente.getTelefone().equals(requestDTO.getTelefone()) &&
                 usuarioRepository.existsByTelefone(requestDTO.getTelefone())) {
             throw new UsuarioJaExistente("Já existe um usuário com este telefone: " + requestDTO.getTelefone());
         }
 
-        usuarioExistente.setNome(requestDTO.getNome());
-        usuarioExistente.setEmail(requestDTO.getEmail());
-        usuarioExistente.setTelefone(requestDTO.getTelefone());
+        if (requestDTO.getNome() != null) {
+            usuarioExistente.setNome(requestDTO.getNome());
+        }
+        if (requestDTO.getEmail() != null) {
+            usuarioExistente.setEmail(requestDTO.getEmail());
+        }
+        if (requestDTO.getTelefone() != null) {
+            usuarioExistente.setTelefone(requestDTO.getTelefone());
+        }
+        if (ativoSolicitado != null) {
+            usuarioExistente.setAtivo(ativoSolicitado);
+        }
 
         Usuario usuarioAtualizado = usuarioRepository.save(usuarioExistente);
         return convertToResponseDTO(usuarioAtualizado);
