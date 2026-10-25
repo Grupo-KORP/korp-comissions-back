@@ -11,6 +11,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -47,6 +51,19 @@ public class PedidoController {
     })
     public ResponseEntity<List<PedidoResponse>> listarPedidos() {
         return ResponseEntity.status(200).body(pedidoService.listarPedidos());
+    }
+
+    @GetMapping("/vendedor/{idVendedor}")
+    @Operation(summary = "Listar pedidos de um vendedor", description = "Retorna o histórico paginado de pedidos do vendedor informado.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Pedidos retornados com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Parâmetros inválidos")
+    })
+    public ResponseEntity<Page<PedidoResponse>> listarPedidosPorVendedor(
+            @PathVariable Integer idVendedor,
+            @PageableDefault(size = 10, sort = {"dataPedido", "idPedido"}, direction = Sort.Direction.DESC)
+            Pageable pageable) {
+        return ResponseEntity.ok(pedidoService.listarPedidosPorVendedor(idVendedor, pageable));
     }
 
     @GetMapping("/buscar/{id}")
