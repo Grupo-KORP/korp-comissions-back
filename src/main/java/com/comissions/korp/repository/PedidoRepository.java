@@ -1,9 +1,12 @@
 package com.comissions.korp.repository;
 
+import com.comissions.korp.DTO.HomeFinanceiroDTO.ComissaoPedidoDTO;
 import com.comissions.korp.entity.Cliente;
 import com.comissions.korp.entity.ENUM.StatusComissao;
 import com.comissions.korp.entity.ENUM.StatusParcela;
 import com.comissions.korp.entity.Pedido;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -16,13 +19,34 @@ import java.util.Optional;
 public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
 
     @Query("""
-        SELECT p.usuario.idUsuario, COUNT(p)
+        SELECT p.usuario.idUsuario, COUNT(p.usuario.idUsuario)
         FROM Pedido p
         GROUP BY p.usuario.idUsuario
     """)
     List<Object[]> contarPedidosPorVendedor();
 
     Integer countByCliente(Cliente cliente);
+
+        @Query(value = "SELECT p FROM Pedido p JOIN FETCH p.cliente WHERE p.usuario.idUsuario = :idVendedor",
+            countQuery = "SELECT COUNT(p) FROM Pedido p WHERE p.usuario.idUsuario = :idVendedor")
+        Page<Pedido> listarPedidosPorVendedor(
+            @Param("idVendedor") Integer idVendedor,
+            Pageable pageable
+        );
+
+        @Query("""
+        SELECT new com.comissions.korp.DTO.HomeFinanceiroDTO.ComissaoPedidoDTO(
+            c.pedido.idPedido, SUM(c.valorComissao)
+        )
+        FROM Comissao c
+        WHERE c.pedido.idPedido IN :idsPedido
+          AND c.statusComissao <> :comissaoCancelada
+        GROUP BY c.pedido.idPedido
+        """)
+        List<ComissaoPedidoDTO> somarComissoesPorPedido(
+            @Param("idsPedido") List<Integer> idsPedido,
+            @Param("comissaoCancelada") StatusComissao comissaoCancelada
+        );
 
     List<Pedido> findByUsuario_IdUsuarioAndAtivoTrueAndStatusPedidoAndDataPedidoBetweenOrderByDataPedidoDescIdPedidoDesc(
             Integer idUsuario,
