@@ -1,8 +1,10 @@
 package com.comissions.korp.DTO;
 
 import com.comissions.korp.entity.Role;
+import com.comissions.korp.exception.RequisicaoInvalida;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Locale;
 
 public class UsuarioRequestDTO{
     private Integer idUsuario;
@@ -14,9 +16,13 @@ public class UsuarioRequestDTO{
     private BigDecimal percentualComissao;
     private Boolean primeiroAcesso;
     private Boolean ativo;
+    private String status;
     private String dtCriacao;
     private String token;
     private LocalDateTime expiracaoToken;
+
+    public UsuarioRequestDTO() {
+    }
 
     public UsuarioRequestDTO(Integer idUsuario, String nome, String email, String senha, String telefone, Integer role, BigDecimal percentualComissao, Boolean primeiroAcesso, Boolean ativo, String dtCriacao, String token, LocalDateTime expiracaoToken) {
         this.idUsuario = idUsuario;
@@ -103,6 +109,26 @@ public class UsuarioRequestDTO{
 
     public void setAtivo(Boolean ativo) {
         this.ativo = ativo;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public Boolean ativoParaAtualizacao() {
+        if (status == null) {
+            return ativo;
+        }
+
+        return switch (status.trim().toLowerCase(Locale.ROOT)) {
+            case "ativo", "true", "1" -> true;
+            case "inativo", "false", "0" -> false;
+            default -> throw new RequisicaoInvalida("Status inválido. Use 'ativo' ou 'inativo'.");
+        };
     }
 
     public String getDtCriacao() {

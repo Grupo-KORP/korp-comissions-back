@@ -10,6 +10,7 @@ import com.comissions.korp.entity.*;
 import com.comissions.korp.entity.ENUM.MetodoPagamento;
 import com.comissions.korp.entity.ENUM.StatusComissao;
 import com.comissions.korp.entity.ENUM.StatusParcela;
+import com.comissions.korp.DTO.HomeFinanceiroDTO.ComissaoPedidoDTO;
 import com.comissions.korp.exception.OperacaoNaoPermitida;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.exception.RequisicaoInvalida;
@@ -17,6 +18,8 @@ import com.comissions.korp.repository.*;
 import com.comissions.korp.service.Email.EmailService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -119,6 +122,30 @@ public class PedidoService {
         }
 
         return response;
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PedidoResponse> listarPedidosPorVendedor(Integer idVendedor, Pageable pageable) {
+        Page<Pedido> pedidos = pedidoRepository.listarPedidosPorVendedor(idVendedor, pageable);
+        List<Integer> idsPedido = pedidos.getContent().stream().map(Pedido::getIdPedido).toList();
+        Map<Integer, BigDecimal> comissoesPorPedido = idsPedido.isEmpty()
+            ? Map.of()
+            : pedidoRepository.somarComissoesPorPedido(idsPedido, StatusComissao.CANCELADA).stream()
+            .collect(Collectors.toMap(ComissaoPedidoDTO::idPedido, ComissaoPedidoDTO::total));
+
+        return pedidos.map(pedido -> {
+            PedidoResponse response = convertToPedidoResponse(pedido, itemPedidoRepository.findByPedido(pedido));
+            response.setCliente(pedido.getCliente().getNomeFantasia() != null
+                ? pedido.getCliente().getNomeFantasia()
+                : pedido.getCliente().getRazaoSocial());
+            response.setValorFaturado(pedido.getValorTotalFaturamento());
+            response.setComissao(comissoesPorPedido.getOrDefault(pedido.getIdPedido(), BigDecimal.ZERO));
+            response.setPagamento(pedido.getMetodoPagamento() != null
+                ? pedido.getMetodoPagamento().name()
+                : null);
+            response.setStatus(pedido.getStatusPedido());
+            return response;
+        });
     }
 
     public PedidoResponse buscarPedidoPorId(Integer id) {

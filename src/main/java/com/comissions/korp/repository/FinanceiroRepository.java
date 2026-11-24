@@ -4,6 +4,7 @@ import com.comissions.korp.DTO.HomeFinanceiroDTO.AgregadoMensalDTO;
 import com.comissions.korp.DTO.HomeFinanceiroDTO.ComissaoPedidoDTO;
 import com.comissions.korp.DTO.HomeFinanceiroDTO.RankingVendedorDTO;
 import com.comissions.korp.DTO.HomeFinanceiroDTO.TotalQuantidadeDTO;
+import com.comissions.korp.entity.Comissao;
 import com.comissions.korp.entity.ENUM.StatusComissao;
 import com.comissions.korp.entity.ENUM.StatusParcela;
 import com.comissions.korp.entity.Parcela;
@@ -24,6 +25,28 @@ import java.util.List;
 public interface FinanceiroRepository extends Repository<Pedido, Integer> {
 
     String PEDIDOS_DO_PERIODO = "p.ativo = true AND p.dataPedido BETWEEN :inicio AND :fim";
+
+        /** Comissões individuais por parcela, usadas na tela de gestão financeira. */
+        @Query("""
+                SELECT c
+                FROM Comissao c
+                JOIN FETCH c.pedido p
+                JOIN FETCH c.usuario
+                JOIN FETCH p.cliente
+                JOIN FETCH c.parcela pa
+                JOIN FETCH pa.pagamento
+                WHERE p.ativo = true
+                    AND c.statusComissao <> :comissaoCancelada
+                    AND pa.statusParcela <> :parcelaCancelada
+                    AND pa.dataVencimento BETWEEN :inicio AND :fim
+                ORDER BY pa.dataVencimento ASC, p.idPedido ASC, pa.numeroParcela ASC
+        """)
+        List<Comissao> buscarComissoesDoPeriodo(
+                        @Param("inicio") LocalDate inicio,
+                        @Param("fim") LocalDate fim,
+                        @Param("comissaoCancelada") StatusComissao comissaoCancelada,
+                        @Param("parcelaCancelada") StatusParcela parcelaCancelada
+        );
 
     /** Faturamento e quantidade de vendas por mês (cards, tendência e gráfico de evolução). */
     @Query("""

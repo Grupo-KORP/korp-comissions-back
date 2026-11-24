@@ -21,6 +21,11 @@ public class PedidoResponse {
     private Integer fkCliente;
     private Integer fkDistribuidor;
     private Integer fkVendedor;
+    private String cliente;
+    private java.math.BigDecimal valorFaturado;
+    private java.math.BigDecimal comissao;
+    private String pagamento;
+    private String status;
     private List<ItemPedidoResumoResponse> itens;
 
     public PedidoResponse() {
@@ -32,6 +37,46 @@ public class PedidoResponse {
 
     public void setFkVendedor(Integer fkVendedor) {
         this.fkVendedor = fkVendedor;
+    }
+
+    public String getCliente() {
+        return cliente;
+    }
+
+    public void setCliente(String cliente) {
+        this.cliente = cliente;
+    }
+
+    public java.math.BigDecimal getValorFaturado() {
+        return valorFaturado;
+    }
+
+    public void setValorFaturado(java.math.BigDecimal valorFaturado) {
+        this.valorFaturado = valorFaturado;
+    }
+
+    public java.math.BigDecimal getComissao() {
+        return comissao;
+    }
+
+    public void setComissao(java.math.BigDecimal comissao) {
+        this.comissao = comissao;
+    }
+
+    public String getPagamento() {
+        return pagamento;
+    }
+
+    public void setPagamento(String pagamento) {
+        this.pagamento = pagamento;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     public Integer getIdPedido() {
