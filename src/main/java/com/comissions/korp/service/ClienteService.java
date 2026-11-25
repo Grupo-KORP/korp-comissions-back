@@ -21,6 +21,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -93,11 +95,24 @@ public class ClienteService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Clientes ativos para a tela de pedido. Endereços e contatos vêm em uma consulta cada,
+     * para todos os clientes de uma vez (antes eram duas consultas por cliente).
+     */
     public List<ClientePedidoResponseDTO> listarTodosPedidoDto() {
-        return clienteRepository.findAll()
+        List<Cliente> ativos = clienteRepository.findAll()
                 .stream()
                 .filter(cliente -> cliente.getAtivo() != null && cliente.getAtivo())
-                .map(this::convertToPedidoResponseDTO)
+                .toList();
+        List<Integer> ids = ativos.stream().map(Cliente::getIdCliente).toList();
+        Map<Integer, Endereco> enderecos = enderecoService.buscarEnderecosPorClientes(ids);
+        Map<Integer, List<ContatoClienteResponseDTO>> contatos = contatoService.buscarPorClientesToDto(ids);
+
+        return ativos.stream()
+                .map(cliente -> convertToPedidoResponseDTO(
+                        cliente,
+                        enderecos.get(cliente.getIdCliente()),
+                        contatos.getOrDefault(cliente.getIdCliente(), List.of())))
                 .collect(Collectors.toList());
     }
 
@@ -154,9 +169,10 @@ public class ClienteService {
 
         if (requestDTO.getEndereco() != null || requestDTO.getCep() != null || requestDTO.getCidade() != null || requestDTO.getUf() != null
                 || requestDTO.getNumero() != null || requestDTO.getComplemento() != null || requestDTO.getBairro() != null) {
-            Endereco enderecos = enderecoService.buscarEnderecoPorCliente(id);
-            if (enderecos != null) {
-                Endereco enderecoExistente = enderecos;
+            // Cliente sem endereço (cadastro antigo): cria um em vez de responder 404
+            Optional<Endereco> enderecoAtual = enderecoService.buscarEnderecoPorCliente(id);
+            if (enderecoAtual.isPresent()) {
+                Endereco enderecoExistente = enderecoAtual.get();
                 enderecoExistente.setLogradouro(requestDTO.getEndereco());
                 enderecoExistente.setNumero(requestDTO.getNumero());
                 enderecoExistente.setComplemento(requestDTO.getComplemento());
@@ -250,7 +266,8 @@ public class ClienteService {
         return dto;
     }
 
-    private ClientePedidoResponseDTO convertToPedidoResponseDTO(Cliente cliente) {
+    private ClientePedidoResponseDTO convertToPedidoResponseDTO(Cliente cliente, Endereco endereco,
+                                                                List<ContatoClienteResponseDTO> contatos) {
         ClientePedidoResponseDTO dto = new ClientePedidoResponseDTO();
 
         // informações cliente
@@ -262,17 +279,15 @@ public class ClienteService {
         dto.setFone(cliente.getTelefone());
         dto.setInscricaoEstadual(cliente.getInscricaoEstadual());
 
-        // informações endereço
-        Endereco endereco = enderecoService.buscarEnderecoPorCliente(cliente.getIdCliente());
+        // informações endereço (sem endereço cadastrado, os campos ficam vazios em vez de derrubar a lista)
+        if (endereco != null) {
+            dto.setCidade(endereco.getCidade());
+            dto.setUf(endereco.getEstado());
+            dto.setCep(endereco.getCep());
+            dto.setEndereco(endereco.getLogradouro());
+        }
 
-        dto.setCidade(endereco.getCidade());
-        dto.setUf(endereco.getEstado());
-        dto.setCep(endereco.getCep());
-        dto.setEndereco(endereco.getLogradouro());
-
-        List<ContatoClienteResponseDTO> contatoDtoList = contatoService.buscarPorClienteToDto(cliente);
-
-        dto.setContatos(contatoDtoList);
+        dto.setContatos(contatos);
 
         return dto;
     }
@@ -283,15 +298,16 @@ public class ClienteService {
 
         Page<Cliente> paginaClientes = clienteRepository.findClientesComFiltro(filtro, pageable);
 
+        // Endereços e contatos da página inteira, uma consulta cada (antes eram duas por cliente)
+        List<Integer> ids = paginaClientes.getContent().stream().map(Cliente::getIdCliente).toList();
+        Map<Integer, Endereco> enderecos = enderecoService.buscarEnderecosPorClientes(ids);
+        Map<Integer, List<ContatoClienteResponseDTO>> contatosPorCliente = contatoService.buscarPorClientesToDto(ids);
+
         return paginaClientes.map(cliente -> {
 
-            List<Endereco> enderecoCliente = enderecoRepository.findByCliente_IdCliente(cliente.getIdCliente());
+            Endereco endereco = enderecos.get(cliente.getIdCliente());
 
-            Endereco endereco = enderecoCliente != null && !enderecoCliente.isEmpty()
-                    ? enderecoCliente.getFirst()
-                    : null;
-
-            List<ContatoClienteResponseDTO> contatos = contatoService.buscarPorClienteToDto(cliente);
+            List<ContatoClienteResponseDTO> contatos = contatosPorCliente.getOrDefault(cliente.getIdCliente(), List.of());
 
             return new ListarClientesResponseDTO(
                     cliente.getIdCliente(),

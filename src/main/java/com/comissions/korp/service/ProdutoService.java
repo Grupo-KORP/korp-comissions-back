@@ -68,16 +68,12 @@ public class ProdutoService {
                 .orElseThrow(() -> new RecursoNaoEncontrado("Produto não encontrado"));
     }
 
+    /** Produtos ativos cujo nome contém o texto, sem diferenciar maiúsculas; sem resultado devolve lista vazia. */
     public List<ProdutoResponse> buscarPorNome(String nome){
-        List<ProdutoResponse> produtos = produtoRepository.findByNomeContains(nome)
+        return produtoRepository.findByNomeContainingIgnoreCaseAndAtivoTrue(nome)
                 .stream()
                 .map(this::convertToResponseDTO)
                 .collect(Collectors.toList());
-
-        if (produtos.isEmpty()) {
-            throw new RuntimeException("Nenhum produto encontrado com esse nome");
-        }
-        return produtos;
     }
 
 

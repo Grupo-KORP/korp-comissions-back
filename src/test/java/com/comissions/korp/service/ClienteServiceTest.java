@@ -151,7 +151,7 @@ class ClienteServiceTest {
         when(clienteRepository.findById(10)).thenReturn(Optional.of(cliente));
         when(usuarioRepository.findById(77)).thenReturn(Optional.of(novoVendedor));
         when(clienteRepository.save(cliente)).thenReturn(cliente);
-        when(enderecoService.buscarEnderecoPorCliente(10)).thenReturn(enderecoExistente);
+        when(enderecoService.buscarEnderecoPorCliente(10)).thenReturn(Optional.of(enderecoExistente));
         when(pedidoRepository.countByCliente(cliente)).thenReturn(2);
         when(contatoService.buscarPorClienteToDto(cliente)).thenReturn(List.of());
 
@@ -238,6 +238,41 @@ class ClienteServiceTest {
         assertThatThrownBy(() -> clienteService.buscarClientePorId(404))
                 .isInstanceOf(RecursoNaoEncontrado.class)
                 .hasMessageContaining("404");
+    }
+
+    // ─── Cliente sem endereço (cadastros antigos) ───────────────────────────────
+
+    @Test
+    void atualizar_deveCriarEndereco_quandoClienteAindaNaoTemEndereco() {
+        Cliente cliente = cliente(10);
+        ClienteRequestDTO request = clienteRequest();
+        Endereco novoEndereco = endereco();
+
+        when(clienteRepository.findById(10)).thenReturn(Optional.of(cliente));
+        when(clienteRepository.save(cliente)).thenReturn(cliente);
+        when(enderecoService.buscarEnderecoPorCliente(10)).thenReturn(Optional.empty());
+        when(enderecoService.convertToEntityFromClienteRequest(request, 10)).thenReturn(novoEndereco);
+        when(contatoService.buscarPorClienteToDto(cliente)).thenReturn(List.of());
+
+        clienteService.atualizar(10, request);
+
+        verify(enderecoService).criarEndereco(novoEndereco);
+        verify(enderecoRepository, org.mockito.Mockito.never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void listarTodosPedidoDto_deveListarClienteSemEnderecoComCamposVazios() {
+        Cliente semEndereco = cliente(10);
+        when(clienteRepository.findAll()).thenReturn(List.of(semEndereco));
+        when(enderecoService.buscarEnderecosPorClientes(List.of(10))).thenReturn(java.util.Map.of());
+        when(contatoService.buscarPorClientesToDto(List.of(10))).thenReturn(java.util.Map.of());
+
+        var lista = clienteService.listarTodosPedidoDto();
+
+        assertThat(lista).hasSize(1);
+        assertThat(lista.get(0).getId()).isEqualTo(10);
+        assertThat(lista.get(0).getCidade()).isNull();
+        assertThat(lista.get(0).getEndereco()).isNull();
     }
 
     private ClienteRequestDTO clienteRequest() {

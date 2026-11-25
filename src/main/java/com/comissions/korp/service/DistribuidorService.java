@@ -177,14 +177,16 @@ public class DistribuidorService {
 
         Page<Distribuidor> paginaDistribuidores = distribuidorRepository.findDistribuidoresComFiltro(filtro, pageable);
 
+        // Endereços e contatos da página inteira, uma consulta cada (antes eram duas por distribuidor)
+        List<Integer> ids = paginaDistribuidores.getContent().stream().map(Distribuidor::getIdDistribuidor).toList();
+        Map<Integer, Endereco> enderecos = enderecoService.buscarEnderecosPorDistribuidores(ids);
+        Map<Integer, List<ContatoDistribuidorResponseDTO>> contatosPorDistribuidor = contatoService.buscarPorDistribuidoresToDto(ids);
+
         return paginaDistribuidores.map(distribuidor -> {
-            List<Endereco> enderecoDistribuidor = enderecoRepository.findByDistribuidor_IdDistribuidor(distribuidor.getIdDistribuidor());
+            Endereco endereco = enderecos.get(distribuidor.getIdDistribuidor());
 
-            Endereco endereco = enderecoDistribuidor != null && !enderecoDistribuidor.isEmpty()
-                    ? enderecoDistribuidor.getFirst()
-                    : null;
-
-            List<ContatoDistribuidorResponseDTO> contatos = contatoService.buscarPorDistribuidorToDto(distribuidor);
+            List<ContatoDistribuidorResponseDTO> contatos =
+                    contatosPorDistribuidor.getOrDefault(distribuidor.getIdDistribuidor(), List.of());
 
             return new ListarDistribuidoresResponseDTO(
                     distribuidor.getIdDistribuidor(),
@@ -208,11 +210,24 @@ public class DistribuidorService {
     }
 
 
+    /**
+     * Distribuidores ativos para a tela de pedido. Endereços e contatos vêm em uma consulta cada,
+     * para todos os distribuidores de uma vez (antes eram duas consultas por distribuidor).
+     */
     public List<DistribuidorPedidoResponseDTO> listarTodosPedidoDto() {
-        return distribuidorRepository.findAll()
+        List<Distribuidor> ativos = distribuidorRepository.findAll()
                 .stream()
                 .filter(distribuidor -> distribuidor.getAtivo() != null && distribuidor.getAtivo())
-                .map(this::convertToPedidoResponseDTO)
+                .toList();
+        List<Integer> ids = ativos.stream().map(Distribuidor::getIdDistribuidor).toList();
+        Map<Integer, Endereco> enderecos = enderecoService.buscarEnderecosPorDistribuidores(ids);
+        Map<Integer, List<ContatoDistribuidorResponseDTO>> contatos = contatoService.buscarPorDistribuidoresToDto(ids);
+
+        return ativos.stream()
+                .map(distribuidor -> convertToPedidoResponseDTO(
+                        distribuidor,
+                        enderecos.get(distribuidor.getIdDistribuidor()),
+                        contatos.getOrDefault(distribuidor.getIdDistribuidor(), List.of())))
                 .collect(Collectors.toList());
     }
 
@@ -241,7 +256,8 @@ public class DistribuidorService {
         return dto;
     }
 
-    private DistribuidorPedidoResponseDTO convertToPedidoResponseDTO(Distribuidor distribuidor) {
+    private DistribuidorPedidoResponseDTO convertToPedidoResponseDTO(Distribuidor distribuidor, Endereco endereco,
+                                                                     List<ContatoDistribuidorResponseDTO> contatos) {
         DistribuidorPedidoResponseDTO dto = new DistribuidorPedidoResponseDTO();
 
         // informações distribuidor
@@ -253,18 +269,15 @@ public class DistribuidorService {
         dto.setEmail(distribuidor.getEmail());
         dto.setFone(distribuidor.getTelefone());
 
-        // informações endereço
-        Endereco endereco = enderecoService.buscarEnderecoPorDistribuidor(distribuidor.getIdDistribuidor());
+        // informações endereço (sem endereço cadastrado, os campos ficam vazios em vez de derrubar a lista)
+        if (endereco != null) {
+            dto.setCidade(endereco.getCidade());
+            dto.setUf(endereco.getEstado());
+            dto.setCep(endereco.getCep());
+            dto.setEndereco(endereco.getLogradouro());
+        }
 
-        dto.setCidade(endereco.getCidade());
-        dto.setUf(endereco.getEstado());
-        dto.setCep(endereco.getCep());
-        dto.setEndereco(endereco.getLogradouro());
-
-        // informações contato
-        List<ContatoDistribuidorResponseDTO> contatoDtoList = contatoService.buscarPorDistribuidorToDto(distribuidor);
-
-        dto.setContatos(contatoDtoList);
+        dto.setContatos(contatos);
 
         return dto;
     }

@@ -11,7 +11,7 @@ import java.util.List;
 
 public interface ProdutoRepository extends JpaRepository<Produto, Integer> {
 
-    List<Produto> findByNomeContains(String nome);
+    List<Produto> findByNomeContainingIgnoreCaseAndAtivoTrue(String nome);
 
     List<Produto> findByIdProdutoIn(List<Integer> idsProdutos);
 

@@ -13,7 +13,11 @@ import com.comissions.korp.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class EnderecoService {
@@ -36,7 +40,7 @@ public class EnderecoService {
         endereco.setLogradouro(requestDTO.getEndereco());
         endereco.setNumero(requestDTO.getNumero());
         endereco.setComplemento(requestDTO.getComplemento());
-        endereco.setBairro(null);
+        endereco.setBairro(requestDTO.getBairro());
         endereco.setEstado(requestDTO.getUf());
         endereco.setCidade(requestDTO.getCidade());
         endereco.setCep(requestDTO.getCep());
@@ -65,14 +69,30 @@ public class EnderecoService {
         return novoEndereco;
     }
 
-    public Endereco buscarEnderecoPorCliente(Integer idCliente) {
-        return enderecoRepository.findFirstByCliente_IdCliente(idCliente)
-                .orElseThrow(() -> new RecursoNaoEncontrado("Endereço não encontrado para o cliente com ID: " + idCliente));
+    /** Primeiro endereço de cada cliente, numa consulta só. Cliente sem endereço não aparece no mapa. */
+    public Map<Integer, Endereco> buscarEnderecosPorClientes(Collection<Integer> idsClientes) {
+        if (idsClientes.isEmpty()) {
+            return Map.of();
+        }
+        Map<Integer, Endereco> porCliente = new HashMap<>();
+        enderecoRepository.buscarDosClientes(idsClientes)
+                .forEach(endereco -> porCliente.putIfAbsent(endereco.getCliente().getIdCliente(), endereco));
+        return porCliente;
     }
 
-    public Endereco buscarEnderecoPorDistribuidor(Integer idDistribuidor) {
-        return enderecoRepository.findFirstByDistribuidor_IdDistribuidor(idDistribuidor)
-                .orElseThrow(() -> new RecursoNaoEncontrado(
-                        "Endereço não encontrado para o distribuidor com ID: " + idDistribuidor));
+    /** Primeiro endereço de cada distribuidor, numa consulta só. Distribuidor sem endereço não aparece no mapa. */
+    public Map<Integer, Endereco> buscarEnderecosPorDistribuidores(Collection<Integer> idsDistribuidores) {
+        if (idsDistribuidores.isEmpty()) {
+            return Map.of();
+        }
+        Map<Integer, Endereco> porDistribuidor = new HashMap<>();
+        enderecoRepository.buscarDosDistribuidores(idsDistribuidores)
+                .forEach(endereco -> porDistribuidor.putIfAbsent(endereco.getDistribuidor().getIdDistribuidor(), endereco));
+        return porDistribuidor;
+    }
+
+    /** Endereço do cliente, se houver. Cadastros antigos podem não ter; quem chama decide o que fazer. */
+    public Optional<Endereco> buscarEnderecoPorCliente(Integer idCliente) {
+        return enderecoRepository.findFirstByCliente_IdCliente(idCliente);
     }
 }

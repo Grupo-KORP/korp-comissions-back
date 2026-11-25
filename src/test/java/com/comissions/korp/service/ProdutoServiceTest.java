@@ -43,6 +43,24 @@ class ProdutoServiceTest {
         return request;
     }
 
+    @Test
+    void buscarPorNome_deveDevolverListaVazia_quandoNenhumProdutoAtivoCorresponde() {
+        org.mockito.Mockito.when(produtoRepository.findByNomeContainingIgnoreCaseAndAtivoTrue("inexistente"))
+                .thenReturn(java.util.List.of());
+
+        org.assertj.core.api.Assertions.assertThat(produtoService.buscarPorNome("inexistente")).isEmpty();
+    }
+
+    @Test
+    void buscarPorNome_deveConverterOsProdutosEncontrados() {
+        org.mockito.Mockito.when(produtoRepository.findByNomeContainingIgnoreCaseAndAtivoTrue("prod"))
+                .thenReturn(java.util.List.of(produto(1, "PN-1", true)));
+
+        org.assertj.core.api.Assertions.assertThat(produtoService.buscarPorNome("prod"))
+                .extracting(com.comissions.korp.DTO.ProdutoDTO.ProdutoResponse::getIdProduto)
+                .containsExactly(1);
+    }
+
     private Produto produto(int id, String pn, boolean ativo) {
         Produto produto = new Produto();
         produto.setIdProduto(id);

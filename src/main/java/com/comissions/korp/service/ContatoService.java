@@ -19,8 +19,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -248,20 +249,29 @@ public class ContatoService {
     }
 
     public List<ContatoDistribuidorResponseDTO> buscarPorDistribuidorToDto(Distribuidor distribuidor) {
-        List<Contato> contatos = contatoRepository.findByDistribuidorAndAtivoTrue(distribuidor);
+        return contatoRepository.findByDistribuidorAndAtivoTrue(distribuidor).stream()
+                .map(this::paraContatoDistribuidorDTO)
+                .collect(Collectors.toList());
+    }
 
-        List<ContatoDistribuidorResponseDTO> contatoDtoList = new ArrayList<>();
+    /** Contatos ativos de vários distribuidores numa consulta só, agrupados pelo id do distribuidor. */
+    public Map<Integer, List<ContatoDistribuidorResponseDTO>> buscarPorDistribuidoresToDto(Collection<Integer> idsDistribuidores) {
+        if (idsDistribuidores.isEmpty()) {
+            return Map.of();
+        }
+        return contatoRepository.buscarAtivosDosDistribuidores(idsDistribuidores).stream()
+                .collect(Collectors.groupingBy(
+                        contato -> contato.getDistribuidor().getIdDistribuidor(),
+                        Collectors.mapping(this::paraContatoDistribuidorDTO, Collectors.toList())));
+    }
 
-        contatos.forEach(contato -> {
-            ContatoDistribuidorResponseDTO contatoDTO = new ContatoDistribuidorResponseDTO();
-            contatoDTO.setIdContato(contato.getIdContato());
-            contatoDTO.setNome(contato.getNome());
-            contatoDTO.setEmail(contato.getEmail());
-            contatoDTO.setTelefone(contato.getTelefone());
-            contatoDtoList.add(contatoDTO);
-        });
-
-        return contatoDtoList;
+    private ContatoDistribuidorResponseDTO paraContatoDistribuidorDTO(Contato contato) {
+        ContatoDistribuidorResponseDTO contatoDTO = new ContatoDistribuidorResponseDTO();
+        contatoDTO.setIdContato(contato.getIdContato());
+        contatoDTO.setNome(contato.getNome());
+        contatoDTO.setEmail(contato.getEmail());
+        contatoDTO.setTelefone(contato.getTelefone());
+        return contatoDTO;
     }
 
     private ContatoResponseDTO convertToResponseDTO(Contato contato) {
@@ -276,20 +286,29 @@ public class ContatoService {
     }
 
     public List<ContatoClienteResponseDTO> buscarPorClienteToDto(Cliente cliente) {
-        List<Contato> contatos = contatoRepository.findByClienteAndAtivoTrue(cliente);
+        return contatoRepository.findByClienteAndAtivoTrue(cliente).stream()
+                .map(this::paraContatoClienteDTO)
+                .collect(Collectors.toList());
+    }
 
-        List<ContatoClienteResponseDTO> contatoDtoList = new ArrayList<>();
+    /** Contatos ativos de vários clientes numa consulta só, agrupados pelo id do cliente. */
+    public Map<Integer, List<ContatoClienteResponseDTO>> buscarPorClientesToDto(Collection<Integer> idsClientes) {
+        if (idsClientes.isEmpty()) {
+            return Map.of();
+        }
+        return contatoRepository.buscarAtivosDosClientes(idsClientes).stream()
+                .collect(Collectors.groupingBy(
+                        contato -> contato.getCliente().getIdCliente(),
+                        Collectors.mapping(this::paraContatoClienteDTO, Collectors.toList())));
+    }
 
-        contatos.forEach(contato -> {;
-            ContatoClienteResponseDTO contatoDTO = new ContatoClienteResponseDTO();
-            contatoDTO.setIdContato(contato.getIdContato());
-            contatoDTO.setNome(contato.getNome());
-            contatoDTO.setEmail(contato.getEmail());
-            contatoDTO.setTelefone(contato.getTelefone());
-            contatoDtoList.add(contatoDTO);
-        });
-
-        return contatoDtoList;
+    private ContatoClienteResponseDTO paraContatoClienteDTO(Contato contato) {
+        ContatoClienteResponseDTO contatoDTO = new ContatoClienteResponseDTO();
+        contatoDTO.setIdContato(contato.getIdContato());
+        contatoDTO.setNome(contato.getNome());
+        contatoDTO.setEmail(contato.getEmail());
+        contatoDTO.setTelefone(contato.getTelefone());
+        return contatoDTO;
     }
 
     private void salvarContatoCliente(String nome, String email, String telefone, Integer idCliente) {

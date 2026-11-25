@@ -62,11 +62,9 @@ public class ProdutoController {
     }
 
     @GetMapping("/buscar/nome/{nome}")
-    @Operation(summary = "Buscar produtos por nome", description = "Retorna produtos que correspondem ao nome informado.")
+    @Operation(summary = "Buscar produtos por nome", description = "Retorna os produtos ativos cujo nome contém o texto informado (sem diferenciar maiúsculas). Sem resultado, devolve lista vazia.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Produtos encontrados com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Nome inválido"),
-            @ApiResponse(responseCode = "404", description = "Produtos não encontrados"),
+            @ApiResponse(responseCode = "200", description = "Busca realizada (a lista pode vir vazia)"),
             @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
     })
     public ResponseEntity<List<ProdutoResponse>> busccarPorNome(@PathVariable String nome){

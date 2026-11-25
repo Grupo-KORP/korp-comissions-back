@@ -207,6 +207,21 @@ class DistribuidorServiceTest {
                 .hasMessageContaining("404");
     }
 
+    @Test
+    void listarTodosPedidoDto_deveListarDistribuidorSemEnderecoComCamposVazios() {
+        Distribuidor semEndereco = distribuidor(20);
+        when(distribuidorRepository.findAll()).thenReturn(List.of(semEndereco));
+        when(enderecoService.buscarEnderecosPorDistribuidores(List.of(20))).thenReturn(java.util.Map.of());
+        when(contatoService.buscarPorDistribuidoresToDto(List.of(20))).thenReturn(java.util.Map.of());
+
+        var lista = distribuidorService.listarTodosPedidoDto();
+
+        assertThat(lista).hasSize(1);
+        assertThat(lista.get(0).getId()).isEqualTo(20);
+        assertThat(lista.get(0).getCidade()).isNull();
+        assertThat(lista.get(0).getEndereco()).isNull();
+    }
+
     private DistribuidorRequestDTO distribuidorRequest() {
         DistribuidorRequestDTO request = new DistribuidorRequestDTO();
         request.setRazaoSocial("Distribuidor Razao");
