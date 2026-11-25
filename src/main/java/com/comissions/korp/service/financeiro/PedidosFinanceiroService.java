@@ -71,7 +71,7 @@ public class PedidosFinanceiroService {
     private PedidoRecenteDTO criarPedido(Pedido pedido, List<Parcela> parcelas, BigDecimal comissao) {
         return new PedidoRecenteDTO(
                 pedido.getIdPedido(),
-                "V" + pedido.getIdPedido(),
+                pedido.getCodigo(),
                 pedido.getDataPedido(),
                 pedido.getUsuario().getNome(),
                 nomeCliente(pedido.getCliente()),

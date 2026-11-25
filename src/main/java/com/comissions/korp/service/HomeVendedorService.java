@@ -39,7 +39,6 @@ import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -55,7 +54,6 @@ import java.util.stream.Collectors;
 public class HomeVendedorService {
 
     private static final Locale LOCALE_BR = Locale.forLanguageTag("pt-BR");
-    private static final DateTimeFormatter DATA_BR = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final String[] MESES = {
             "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
             "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
@@ -365,10 +363,15 @@ public class HomeVendedorService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
+    /**
+     * Quantidade e soma por status no período. Comissões CANCELADA ficam de fora: não entram na
+     * projeção ("comissão bruta a receber"), no total de parcelas nem na tendência.
+     */
     private Map<StatusComissao, ResumoStatusDTO> resumirPorStatus(Integer idVendedor, Intervalo intervalo) {
         return comissaoRepository
                 .resumirPorStatus(idVendedor, intervalo.inicio(), intervalo.fim(), StatusParcela.CANCELADO)
                 .stream()
+                .filter(linha -> linha.status() != StatusComissao.CANCELADA)
                 .collect(Collectors.toMap(ResumoStatusDTO::status, Function.identity()));
     }
 
@@ -390,9 +393,10 @@ public class HomeVendedorService {
         BigDecimal totalComissao = somarComissoes(comissoes);
 
         VendaResumoDTO venda = new VendaResumoDTO();
-        venda.setId("V" + pedido.getIdPedido());
+        // id e nome usam o código do pedido (ex.: 251126-P03); idPedido segue sendo o id técnico.
+        venda.setId(pedido.getCodigo());
         venda.setIdPedido(pedido.getIdPedido());
-        venda.setNome("VENDA " + pedido.getIdPedido());
+        venda.setNome(pedido.getCodigo());
         venda.setCliente(criarNomeClienteTabela(pedido.getCliente()));
         venda.setValorComissao(totalComissao);
         // A linha "Venda" mostra o total do período; o detalhamento por parcela agora é
@@ -432,6 +436,10 @@ public class HomeVendedorService {
         detalhe.setCliente(criarPessoaCliente(pedido.getCliente()));
         detalhe.setDistribuidor(criarPessoaDistribuidor(pedido.getDistribuidor()));
         detalhe.setProduto(criarProdutoVenda(pedido, itens));
+        detalhe.setProdutos(itens.stream()
+                .sorted(Comparator.comparing(ItemPedido::getIdItemPedido))
+                .map(item -> criarProdutoVenda(pedido, item))
+                .toList());
         detalhe.setPedido(criarPedidoVenda(pedido, comissoes));
         return detalhe;
     }
@@ -442,6 +450,7 @@ public class HomeVendedorService {
         dto.setStatusPedido(pedido.getStatusPedido());
         dto.setNumeroNotaDistribuidor(pedido.getNumeroNotaDistribuidor());
         dto.setObservacoes(pedido.getObservacoes());
+        dto.setEntrega(pedido.getEntrega());
         dto.setDatasPagamento(List.of());
 
         if (pedido.getMetodoPagamento() != null) {
@@ -506,7 +515,7 @@ public class HomeVendedorService {
                 .min(Comparator.comparing(ItemPedido::getIdItemPedido));
 
         ProdutoVendaDTO produto = new ProdutoVendaDTO();
-        produto.setEntrega(pedido.getDataPedido() == null ? null : pedido.getDataPedido().format(DATA_BR));
+        produto.setEntrega(pedido.getEntrega());
 
         if (primeiroItem.isEmpty()) {
             produto.setValorTotal(pedido.getValorTotalDistr());
@@ -514,7 +523,12 @@ public class HomeVendedorService {
             return produto;
         }
 
-        ItemPedido item = primeiroItem.get();
+        return criarProdutoVenda(pedido, primeiroItem.get());
+    }
+
+    private ProdutoVendaDTO criarProdutoVenda(Pedido pedido, ItemPedido item) {
+        ProdutoVendaDTO produto = new ProdutoVendaDTO();
+        produto.setEntrega(pedido.getEntrega());
         produto.setIdItemPedido(item.getIdItemPedido());
         produto.setIdProduto(item.getProduto().getIdProduto());
         produto.setDescricao(item.getProduto().getNome());
@@ -542,6 +556,7 @@ public class HomeVendedorService {
         ParcelaDTO dto = new ParcelaDTO();
         dto.setIdParcela(parcela.getId());
         dto.setPedidoId(comissao.getPedido().getIdPedido());
+        dto.setCodigoPedido(comissao.getPedido().getCodigo());
         dto.setCliente(nomeEmpresa(comissao.getPedido().getCliente()));
         dto.setNumeroParcela(parcela.getNumeroParcela());
         dto.setTotalParcelas(totalParcelas);

@@ -20,8 +20,11 @@ public class GlobalExceptionHandler {
 
         String causa = e.getRootCause() != null ? e.getRootCause().getMessage() : "";
 
+        // Dois pedidos criados no mesmo instante disputaram o mesmo código do dia (ex.: 251126-P03)
+        if (causa.contains("uc_pedido_data_numero")) {
+            mensagem = "Outro pedido foi registrado no mesmo instante. Tente salvar o pedido novamente.";
         // DELETE com vínculos (ON DELETE RESTRICT)
-        if (causa.contains("fk_distribuidor") || causa.contains("pedido_ibfk_3")) {
+        } else if (causa.contains("fk_distribuidor") || causa.contains("pedido_ibfk_3")) {
             mensagem = "Distribuidor não pode ser excluído pois possui pedidos vinculados.";
         } else if (causa.contains("fk_produto")) {
             mensagem = "Produto não pode ser excluído pois está vinculado a pedidos.";
@@ -34,6 +37,8 @@ public class GlobalExceptionHandler {
 
         Map<String, String> response = new HashMap<>();
         response.put("erro", mensagem);
+        // "message" é a chave que o front lê; "erro" fica por compatibilidade
+        response.put("message", mensagem);
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }

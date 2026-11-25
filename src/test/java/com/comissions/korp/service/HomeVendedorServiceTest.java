@@ -14,6 +14,7 @@ import com.comissions.korp.entity.ENUM.StatusParcela;
 import com.comissions.korp.entity.Pagamento;
 import com.comissions.korp.entity.Parcela;
 import com.comissions.korp.entity.Pedido;
+import com.comissions.korp.repository.ComissaoRepository;
 import com.comissions.korp.repository.ContatoRepository;
 import com.comissions.korp.repository.EnderecoRepository;
 import com.comissions.korp.repository.ItemPedidoRepository;
@@ -223,6 +224,48 @@ class HomeVendedorServiceTest {
     }
 
     /** Venda 1 (feita no período, 3 parcelas pendentes) e venda 2 (mês anterior, 1 paga e 1 liberada no período). */
+    @Test
+    void buscarDetalheVenda_deveTrazerTodosOsProdutosDoPedidoEmOrdemDeInclusao() {
+        Pedido pedido = pedido(40, LocalDate.of(2026, 11, 25));
+        com.comissions.korp.entity.Distribuidor distribuidor = new com.comissions.korp.entity.Distribuidor();
+        distribuidor.setIdDistribuidor(7);
+        pedido.setDistribuidor(distribuidor);
+        pedido.setEntrega("Imediata");
+
+        when(pedidoRepository.existsByIdPedidoAndUsuario_IdUsuario(40, VENDEDOR)).thenReturn(true);
+        when(pedidoRepository.findByIdPedidoAndAtivoTrue(40)).thenReturn(java.util.Optional.of(pedido));
+        when(itemPedidoRepository.findByPedido(pedido)).thenReturn(List.of(itemDetalhe(8, "Teclado"), itemDetalhe(5, "Mouse")));
+
+        var detalhe = homeVendedorService.buscarDetalheVenda(VENDEDOR, 40);
+
+        assertThat(detalhe.getProdutos())
+                .extracting(produto -> produto.getIdItemPedido(), produto -> produto.getDescricao())
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple(5, "Mouse"),
+                        org.assertj.core.groups.Tuple.tuple(8, "Teclado"));
+        // "produto" segue trazendo o primeiro item, por compatibilidade
+        assertThat(detalhe.getProduto().getIdItemPedido()).isEqualTo(5);
+        // Entrega é do pedido inteiro (antes o campo mostrava a data do pedido)
+        assertThat(detalhe.getPedido().getEntrega()).isEqualTo("Imediata");
+        assertThat(detalhe.getProdutos()).allSatisfy(produto -> assertThat(produto.getEntrega()).isEqualTo("Imediata"));
+    }
+
+    private com.comissions.korp.entity.ItemPedido itemDetalhe(Integer id, String nomeProduto) {
+        com.comissions.korp.entity.Produto produto = new com.comissions.korp.entity.Produto();
+        produto.setIdProduto(id * 100);
+        produto.setNome(nomeProduto);
+
+        com.comissions.korp.entity.ItemPedido item = new com.comissions.korp.entity.ItemPedido();
+        item.setIdItemPedido(id);
+        item.setProduto(produto);
+        item.setQuantidade(1);
+        item.setVlrUnitDistr(new BigDecimal("10.00"));
+        item.setVlrTotalDistr(new BigDecimal("10.00"));
+        item.setVlrUnitCliente(new BigDecimal("12.00"));
+        item.setVlrTotalCliente(new BigDecimal("12.00"));
+        return item;
+    }
+
     private void prepararDuasVendasComParcelas() {
         Pedido vendaDoPeriodo = pedido(1, LocalDate.of(2026, 10, 10));
         Pedido vendaDoMesAnterior = pedido(2, LocalDate.of(2026, 9, 5));
@@ -253,12 +296,15 @@ class HomeVendedorServiceTest {
                 .thenReturn(List.of(
                         new ResumoStatusDTO(StatusComissao.PENDENTE, 1L, new BigDecimal("2000.00")),
                         new ResumoStatusDTO(StatusComissao.LIBERADA, 1L, new BigDecimal("150.00")),
-                        new ResumoStatusDTO(StatusComissao.PAGA, 2L, new BigDecimal("350.00"))
+                        new ResumoStatusDTO(StatusComissao.PAGA, 2L, new BigDecimal("350.00")),
+                        // Canceladas pelo financeiro: não podem entrar em nenhum card nem na tendência
+                        new ResumoStatusDTO(StatusComissao.CANCELADA, 3L, new BigDecimal("900.00"))
                 ));
         when(comissaoRepository.resumirPorStatus(
                 VENDEDOR, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30), StatusParcela.CANCELADO))
                 .thenReturn(List.of(
-                        new ResumoStatusDTO(StatusComissao.PAGA, 2L, new BigDecimal("2000.00"))
+                        new ResumoStatusDTO(StatusComissao.PAGA, 2L, new BigDecimal("2000.00")),
+                        new ResumoStatusDTO(StatusComissao.CANCELADA, 1L, new BigDecimal("500.00"))
                 ));
         when(comissaoRepository.buscarComissoesPorStatusNoPeriodo(
                 eq(VENDEDOR), eq(FiltroStatusVenda.TODAS.getStatusComissoes()), any(), any(), eq(StatusParcela.CANCELADO)))
@@ -276,7 +322,8 @@ class HomeVendedorServiceTest {
         assertThat(resumo.pagamentosPendentes()).isEqualTo(1);
         assertThat(resumo.parcelasPagas()).isEqualTo(2);
         assertThat(resumo.totalParcelas()).isEqualTo(4);
-        // Comissão bruta inclui pendentes, liberadas e pagas: não diminui quando uma parcela é paga
+        // Comissão bruta inclui pendentes, liberadas e pagas (nunca as canceladas):
+        // não diminui quando uma parcela é paga
         assertThat(resumo.projecao()).isEqualByComparingTo("2500.00");
         assertThat(resumo.tendencia()).isEqualTo("+25%");
         assertThat(resumo.tendenciaVendas()).isEqualTo("+100%");

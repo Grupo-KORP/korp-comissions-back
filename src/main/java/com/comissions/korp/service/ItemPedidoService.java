@@ -6,7 +6,9 @@ import com.comissions.korp.DTO.PedidoDTO.PedidoResumidoResponse;
 import com.comissions.korp.DTO.ProdutoDTO.ProdutoResponse;
 import com.comissions.korp.entity.ItemPedido;
 import com.comissions.korp.entity.Pedido;
+import com.comissions.korp.exception.OperacaoNaoPermitida;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
+import com.comissions.korp.exception.RequisicaoInvalida;
 import com.comissions.korp.repository.ItemPedidoRepository;
 import com.comissions.korp.repository.PedidoRepository;
 import org.springframework.stereotype.Service;
@@ -45,9 +47,24 @@ public class ItemPedidoService {
         return itemPedidoResponse;
     }
 
-    public ItemPedidoResponse buscarDtoPorId(Integer id) {
-        ItemPedido itemPedido = buscarItemPedidoPorId(id);
+    public ItemPedidoResponse buscarDtoPorId(Integer id, Integer idVendedor) {
+        ItemPedido itemPedido = buscarItemDoVendedor(id, idVendedor);
         return convertToItemPedidoResponse(itemPedido);
+    }
+
+    /** Item de pedido de outro vendedor ou de pedido excluído responde igual a item inexistente (404). */
+    private ItemPedido buscarItemDoVendedor(Integer id, Integer idVendedor) {
+        ItemPedido item = buscarItemPedidoPorId(id);
+        if (!pertenceAoVendedor(item.getPedido(), idVendedor)) {
+            throw new RecursoNaoEncontrado("Item não encontrado com id: " + id);
+        }
+        return item;
+    }
+
+    private boolean pertenceAoVendedor(Pedido pedido, Integer idVendedor) {
+        return pedido != null && Boolean.TRUE.equals(pedido.getAtivo())
+                && pedido.getUsuario() != null
+                && pedido.getUsuario().getIdUsuario().equals(idVendedor);
     }
 
     public ItemPedido buscarItemPedidoPorId(Integer id) {
@@ -55,8 +72,9 @@ public class ItemPedidoService {
                 .orElseThrow(() -> new RecursoNaoEncontrado("Item não encontrado com id: " + id));
     }
 
-    public List<ItemPedidoResponse> buscarPorPedido(Integer idPedido) {
+    public List<ItemPedidoResponse> buscarPorPedido(Integer idPedido, Integer idVendedor) {
         Pedido pedido = pedidoRepository.findById(idPedido)
+                .filter(encontrado -> pertenceAoVendedor(encontrado, idVendedor))
                 .orElseThrow(() -> new RecursoNaoEncontrado("Pedido não encontrado com id: " + idPedido));
 
         List<ItemPedido> itens = itemPedidoRepository.findByPedido(pedido);
@@ -70,10 +88,39 @@ public class ItemPedidoService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Exclui um item de pedido em andamento e recalcula os totais do pedido.
+     * Pedido aprovado já gerou parcelas e comissões, então não pode mudar; e o pedido precisa
+     * manter pelo menos um item.
+     */
     @Transactional
-    public void deletar(Integer id) {
-        buscarItemPedidoPorId(id);
+    public void deletar(Integer id, Integer idVendedor) {
+        ItemPedido item = buscarItemDoVendedor(id, idVendedor);
+        Pedido pedido = item.getPedido();
+
+        if (!"EM_ANDAMENTO".equals(pedido.getStatusPedido())) {
+            throw new OperacaoNaoPermitida("Pedido aprovado não pode ser alterado.");
+        }
+
+        List<ItemPedido> restantes = itemPedidoRepository.findByPedido(pedido).stream()
+                .filter(outro -> !id.equals(outro.getIdItemPedido()))
+                .toList();
+        if (restantes.isEmpty()) {
+            throw new RequisicaoInvalida("O pedido precisa ter pelo menos um item. Adicione outro item antes de excluir este.");
+        }
+
         itemPedidoRepository.deleteById(id);
+
+        pedido.setValorTotalDistr(somar(restantes, ItemPedido::getVlrTotalDistr));
+        pedido.setValorTotalCliente(somar(restantes, ItemPedido::getVlrTotalCliente));
+        pedidoRepository.save(pedido);
+    }
+
+    private BigDecimal somar(List<ItemPedido> itens, java.util.function.Function<ItemPedido, BigDecimal> valor) {
+        return itens.stream()
+                .map(valor)
+                .filter(java.util.Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     public ItemPedidoResumoResponse convertToItemPedidoResumoResponse(ItemPedido itemPedido) {

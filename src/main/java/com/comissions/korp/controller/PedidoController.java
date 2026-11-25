@@ -31,6 +31,11 @@ public class PedidoController {
         this.securityUtils = securityUtils;
     }
 
+    /** Financeiro e admin consultam pedidos de qualquer vendedor; o vendedor só os próprios. */
+    private boolean possuiAcessoTotal() {
+        return securityUtils.usuarioPossuiAlgumPerfil("FINAN", "ADMIN");
+    }
+
     @PostMapping("/cadastrar")
     @Operation(summary = "Criar pedido", description = "Cadastra um novo pedido para o usuário autenticado.")
     @ApiResponses(value = {
@@ -50,7 +55,8 @@ public class PedidoController {
             @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
     })
     public ResponseEntity<List<PedidoResponse>> listarPedidos() {
-        return ResponseEntity.status(200).body(pedidoService.listarPedidos());
+        return ResponseEntity.status(200).body(
+                pedidoService.listarPedidos(securityUtils.getUsuarioIdAutenticado(), possuiAcessoTotal()));
     }
 
     @GetMapping("/vendedor/{idVendedor}")
@@ -63,7 +69,8 @@ public class PedidoController {
             @PathVariable Integer idVendedor,
             @PageableDefault(size = 10, sort = {"dataPedido", "idPedido"}, direction = Sort.Direction.DESC)
             Pageable pageable) {
-        return ResponseEntity.ok(pedidoService.listarPedidosPorVendedor(idVendedor, pageable));
+        return ResponseEntity.ok(pedidoService.listarPedidosPorVendedor(
+                idVendedor, pageable, securityUtils.getUsuarioIdAutenticado(), possuiAcessoTotal()));
     }
 
     @GetMapping("/buscar/{id}")
@@ -75,7 +82,8 @@ public class PedidoController {
             @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
     })
     public ResponseEntity<PedidoResponse> buscarPedidoPorId(@PathVariable Integer id) {
-        return ResponseEntity.status(200).body(pedidoService.buscarPedidoPorId(id));
+        return ResponseEntity.status(200).body(
+                pedidoService.buscarPedidoPorId(id, securityUtils.getUsuarioIdAutenticado(), possuiAcessoTotal()));
     }
 
     @PutMapping("/atualizar/{id}")
@@ -90,7 +98,8 @@ public class PedidoController {
             @PathVariable Integer id,
             @RequestBody PedidoEditRequest pedidoEditRequest) {
         pedidoEditRequest.setIdPedido(id);
-        return ResponseEntity.status(200).body(pedidoService.editarPedidoFromPedidoEditRequest(pedidoEditRequest));
+        return ResponseEntity.status(200).body(
+                pedidoService.editarPedidoFromPedidoEditRequest(pedidoEditRequest, securityUtils.getUsuarioIdAutenticado()));
     }
 
     @DeleteMapping("/deletar/{id}")
@@ -102,7 +111,7 @@ public class PedidoController {
             @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
     })
     public ResponseEntity<?> deletarPedido(@PathVariable Integer id) {
-        pedidoService.deletarPedido(id);
+        pedidoService.deletarPedido(id, securityUtils.getUsuarioIdAutenticado());
         return ResponseEntity.status(204).body("Pedido deletado com sucesso!");
     }
 
@@ -115,7 +124,7 @@ public class PedidoController {
             @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
     })
     public ResponseEntity<String> criarComissao(@PathVariable Integer idPedido, @RequestBody PagamentoDTO pagamento) {
-        pedidoService.criarComissao(idPedido, pagamento);
+        pedidoService.criarComissao(idPedido, pagamento, securityUtils.getUsuarioIdAutenticado());
         return ResponseEntity.status(201).body("Pedido finalizado com sucesso!");
     }
 }

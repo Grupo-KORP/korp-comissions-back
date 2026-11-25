@@ -6,14 +6,12 @@ import java.util.List;
 
 public class PedidoEditRequest {
     private Integer idPedido;
-    private Integer idCliente;
-    private String nomeFantasiaCliente;
-    private Integer idDistribuidor;
-    private String nomeFantasiaDistribuidor;
-    private Integer idItemPedido;
-    private Integer quantidade;
+    /** Nova quantidade de cada item; itens que não vierem na lista ficam como estão. */
+    private List<ItemQuantidade> itens;
     private String numeroNotaDistribuidor;
     private String observacoes;
+    /** Prazo/condição de entrega do pedido; null mantém o valor atual, texto vazio limpa. */
+    private String entrega;
     private MetodoPagamento metodoPagamento;
     private List<Integer> datasPagamento;
     private Boolean finalizarPedido;
@@ -26,52 +24,50 @@ public class PedidoEditRequest {
         this.idPedido = idPedido;
     }
 
-    public Integer getIdCliente() {
-        return idCliente;
+    public List<ItemQuantidade> getItens() {
+        return itens;
     }
 
-    public void setIdCliente(Integer idCliente) {
-        this.idCliente = idCliente;
+    public void setItens(List<ItemQuantidade> itens) {
+        this.itens = itens;
     }
 
-    public String getNomeFantasiaCliente() {
-        return nomeFantasiaCliente;
+    /** Item do pedido e a quantidade que ele passa a ter. */
+    public static class ItemQuantidade {
+        private Integer idItemPedido;
+        private Integer quantidade;
+
+        public ItemQuantidade() {
+        }
+
+        public ItemQuantidade(Integer idItemPedido, Integer quantidade) {
+            this.idItemPedido = idItemPedido;
+            this.quantidade = quantidade;
+        }
+
+        public Integer getIdItemPedido() {
+            return idItemPedido;
+        }
+
+        public void setIdItemPedido(Integer idItemPedido) {
+            this.idItemPedido = idItemPedido;
+        }
+
+        public Integer getQuantidade() {
+            return quantidade;
+        }
+
+        public void setQuantidade(Integer quantidade) {
+            this.quantidade = quantidade;
+        }
     }
 
-    public void setNomeFantasiaCliente(String nomeFantasiaCliente) {
-        this.nomeFantasiaCliente = nomeFantasiaCliente;
+    public String getEntrega() {
+        return entrega;
     }
 
-    public Integer getIdDistribuidor() {
-        return idDistribuidor;
-    }
-
-    public void setIdDistribuidor(Integer idDistribuidor) {
-        this.idDistribuidor = idDistribuidor;
-    }
-
-    public String getNomeFantasiaDistribuidor() {
-        return nomeFantasiaDistribuidor;
-    }
-
-    public void setNomeFantasiaDistribuidor(String nomeFantasiaDistribuidor) {
-        this.nomeFantasiaDistribuidor = nomeFantasiaDistribuidor;
-    }
-
-    public Integer getIdItemPedido() {
-        return idItemPedido;
-    }
-
-    public void setIdItemPedido(Integer idItemPedido) {
-        this.idItemPedido = idItemPedido;
-    }
-
-    public Integer getQuantidade() {
-        return quantidade;
-    }
-
-    public void setQuantidade(Integer quantidade) {
-        this.quantidade = quantidade;
+    public void setEntrega(String entrega) {
+        this.entrega = entrega;
     }
 
     public String getNumeroNotaDistribuidor() {

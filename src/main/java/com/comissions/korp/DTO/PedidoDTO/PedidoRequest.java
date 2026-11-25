@@ -17,6 +17,16 @@ public class PedidoRequest {
     private String pdfBase64;
     private MetodoPagamento metodoPagamento;
     private Integer idRascunho;
+    /** Prazo/condição de entrega do pedido inteiro (ex.: "Imediata"); opcional, até 100 caracteres. */
+    private String entrega;
+
+    public String getEntrega() {
+        return entrega;
+    }
+
+    public void setEntrega(String entrega) {
+        this.entrega = entrega;
+    }
 
     public PedidoRequest() {
     }

@@ -9,6 +9,10 @@ import java.util.List;
 public class PedidoResponse {
 
     private Integer idPedido;
+    /** Código exibido do pedido (ex.: 251126-P03). */
+    private String codigo;
+    /** Prazo/condição de entrega do pedido (ex.: "Imediata"). */
+    private String entrega;
     private LocalDate dataPedido;
     private String numeroNotaDistribuidor;
     private java.math.BigDecimal valorTotalDistr;
@@ -85,6 +89,22 @@ public class PedidoResponse {
 
     public void setIdPedido(Integer idPedido) {
         this.idPedido = idPedido;
+    }
+
+    public String getEntrega() {
+        return entrega;
+    }
+
+    public void setEntrega(String entrega) {
+        this.entrega = entrega;
+    }
+
+    public String getCodigo() {
+        return codigo;
+    }
+
+    public void setCodigo(String codigo) {
+        this.codigo = codigo;
     }
 
     public LocalDate getDataPedido() {

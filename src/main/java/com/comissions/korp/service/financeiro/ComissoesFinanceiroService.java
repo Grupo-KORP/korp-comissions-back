@@ -8,7 +8,7 @@ import com.comissions.korp.entity.ENUM.StatusParcela;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.repository.FinanceiroRepository;
 import com.comissions.korp.repository.ItemPedidoRepository;
-import com.comissions.korp.service.ComissaoRepository;
+import com.comissions.korp.repository.ComissaoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -105,15 +105,28 @@ public class ComissoesFinanceiroService {
         }
 
         String termo = busca.trim().toLowerCase(Locale.ROOT);
-        String numeroPedido = termo.replaceFirst("^vd?-?", "");
-        if (numeroPedido.matches("\\d+") && linha.idPedido().toString().equals(numeroPedido)) {
-            return true;
-        }
 
         return contem(linha.vendedor(), termo)
                 || contem(linha.cliente(), termo)
-                || contem(linha.codigoPedido(), termo)
+                || correspondeCodigo(linha.codigoPedido(), termo)
                 || contem(linha.produto(), termo);
+    }
+
+    /**
+     * Busca por pedaços do código (ex.: 251126-P03): aceita "P03" ou "P3", só a data ("251126")
+     * e a data digitada com barras ("25/11/26" ou "25/11").
+     */
+    private boolean correspondeCodigo(String codigo, String termo) {
+        if (codigo == null) {
+            return false;
+        }
+        String termoCodigo = termo.replace("/", "").replace(" ", "");
+        if (termoCodigo.isEmpty()) {
+            return false;
+        }
+        String completo = codigo.toLowerCase(Locale.ROOT);
+        String semZerosAEsquerda = completo.replaceFirst("-p0*(\\d+)$", "-p$1");
+        return completo.contains(termoCodigo) || semZerosAEsquerda.contains(termoCodigo);
     }
 
     private boolean contem(String valor, String termo) {
@@ -131,7 +144,7 @@ public class ComissoesFinanceiroService {
         return new ComissaoParcelaDTO(
                 comissao.getId(),
                 pedido.getIdPedido(),
-                "VD-" + pedido.getIdPedido(),
+                pedido.getCodigo(),
                 produtosPorPedido.get(pedido.getIdPedido()),
                 nomeCliente,
                 comissao.getUsuario().getNome(),

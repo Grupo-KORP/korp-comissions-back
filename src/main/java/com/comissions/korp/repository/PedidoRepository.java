@@ -27,8 +27,16 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
 
     Integer countByCliente(Cliente cliente);
 
-        @Query(value = "SELECT p FROM Pedido p JOIN FETCH p.cliente WHERE p.usuario.idUsuario = :idVendedor",
-            countQuery = "SELECT COUNT(p) FROM Pedido p WHERE p.usuario.idUsuario = :idVendedor")
+    List<Pedido> findByAtivoTrue();
+
+    /** Maior sequência já usada no dia (inclui pedidos excluídos, para nenhum código se repetir); 0 se não houver. */
+    @Query("SELECT COALESCE(MAX(p.numeroDia), 0) FROM Pedido p WHERE p.dataPedido = :data")
+    Integer maiorNumeroDoDia(@Param("data") LocalDate data);
+
+    List<Pedido> findByUsuario_IdUsuarioAndAtivoTrue(Integer idUsuario);
+
+        @Query(value = "SELECT p FROM Pedido p JOIN FETCH p.cliente WHERE p.usuario.idUsuario = :idVendedor AND p.ativo = true",
+            countQuery = "SELECT COUNT(p) FROM Pedido p WHERE p.usuario.idUsuario = :idVendedor AND p.ativo = true")
         Page<Pedido> listarPedidosPorVendedor(
             @Param("idVendedor") Integer idVendedor,
             Pageable pageable

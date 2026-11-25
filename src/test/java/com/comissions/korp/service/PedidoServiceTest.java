@@ -23,8 +23,8 @@ import com.comissions.korp.entity.Usuario;
 import com.comissions.korp.exception.OperacaoNaoPermitida;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.exception.RequisicaoInvalida;
-import com.comissions.korp.repository.ClienteRepository;
-import com.comissions.korp.repository.DistribuidorRepository;
+import com.comissions.korp.repository.ParcelaRepository;
+import com.comissions.korp.repository.ComissaoRepository;
 import com.comissions.korp.repository.ItemPedidoRepository;
 import com.comissions.korp.repository.PagamentoRepository;
 import com.comissions.korp.repository.PedidoRepository;
@@ -77,10 +77,6 @@ class PedidoServiceTest {
     @Mock
     private ComissaoRepository comissaoRepository;
     @Mock
-    private ClienteRepository clienteRepository;
-    @Mock
-    private DistribuidorRepository distribuidorRepository;
-    @Mock
     private PedidoRascunhoService rascunhoService;
 
     private PedidoService pedidoService;
@@ -99,8 +95,6 @@ class PedidoServiceTest {
                 pagamentoRepository,
                 parcelaRepository,
                 comissaoRepository,
-                clienteRepository,
-                distribuidorRepository,
                 rascunhoService
         );
     }
@@ -140,6 +134,29 @@ class PedidoServiceTest {
         verify(itemPedidoRepository).save(itemCaptor.capture());
         assertThat(itemCaptor.getValue().getPedido().getIdPedido()).isEqualTo(30);
         assertThat(itemCaptor.getValue().getProduto()).isSameAs(produto);
+    }
+
+    @Test
+    void cadastrarPedido_deveGerarCodigoComProximoNumeroDoDia() {
+        PedidoRequest request = pedidoRequest(List.of(itemRequest(1, 2, "10.00", "15.00")));
+        LocalDate hoje = LocalDate.now();
+
+        when(usuarioRepository.findById(99)).thenReturn(Optional.of(usuario(99)));
+        when(clienteService.buscarClientePorId(10)).thenReturn(cliente(10));
+        when(distribuidorService.buscarDistribuidorPorId(20)).thenReturn(distribuidor(20));
+        when(produtoRepository.findByIdProdutoIn(List.of(1))).thenReturn(List.of(produto(1)));
+        when(pedidoRepository.maiorNumeroDoDia(hoje)).thenReturn(2);
+        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(itemPedidoRepository.save(any(ItemPedido.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(itemPedidoService.convertToItemPedidoResumoResponse(any(ItemPedido.class))).thenReturn(new ItemPedidoResumoResponse());
+
+        PedidoResponse response = pedidoService.cadastrarPedido(request, 99);
+
+        String esperado = hoje.format(java.time.format.DateTimeFormatter.ofPattern("ddMMyy")) + "-P03";
+        assertThat(response.getCodigo()).isEqualTo(esperado);
+        ArgumentCaptor<Pedido> pedidoCaptor = ArgumentCaptor.forClass(Pedido.class);
+        verify(pedidoRepository).save(pedidoCaptor.capture());
+        assertThat(pedidoCaptor.getValue().getNumeroDia()).isEqualTo(3);
     }
 
     @Test
@@ -218,6 +235,86 @@ class PedidoServiceTest {
     }
 
     @Test
+    void cadastrarPedido_deveFalhar_quandoNaoHaItens() {
+        for (List<ItemPedidoRequest> itens : java.util.Arrays.asList(null, List.<ItemPedidoRequest>of())) {
+            PedidoRequest request = pedidoRequest(itens);
+
+            assertThatThrownBy(() -> pedidoService.cadastrarPedido(request, 99))
+                    .isInstanceOf(RequisicaoInvalida.class)
+                    .hasMessage("Informe ao menos um item no pedido.");
+        }
+        verify(pedidoRepository, never()).save(any());
+    }
+
+    @Test
+    void cadastrarPedido_deveFalhar_quandoItemTemQuantidadeInvalida() {
+        ItemPedidoRequest semQuantidade = itemRequest(2, 1, "10.00", "12.00");
+        semQuantidade.setQuantidade(null);
+
+        for (ItemPedidoRequest invalido : List.of(itemRequest(2, 0, "10.00", "12.00"), itemRequest(2, -3, "10.00", "12.00"), semQuantidade)) {
+            PedidoRequest request = pedidoRequest(List.of(itemRequest(1, 2, "10.00", "15.00"), invalido));
+
+            assertThatThrownBy(() -> pedidoService.cadastrarPedido(request, 99))
+                    .isInstanceOf(RequisicaoInvalida.class)
+                    .hasMessage("Item 2: a quantidade deve ser maior que zero.");
+        }
+        verify(pedidoRepository, never()).save(any());
+    }
+
+    @Test
+    void cadastrarPedido_deveFalhar_quandoItemNaoTemProdutoOuTemValorNegativo() {
+        ItemPedidoRequest semProduto = itemRequest(1, 1, "10.00", "12.00");
+        semProduto.setFkProduto(null);
+
+        assertThatThrownBy(() -> pedidoService.cadastrarPedido(pedidoRequest(List.of(semProduto)), 99))
+                .isInstanceOf(RequisicaoInvalida.class)
+                .hasMessage("Item 1: informe o produto.");
+        assertThatThrownBy(() -> pedidoService.cadastrarPedido(pedidoRequest(List.of(itemRequest(1, 1, "-5.00", "12.00"))), 99))
+                .isInstanceOf(RequisicaoInvalida.class)
+                .hasMessage("Item 1: os valores unitários não podem ser negativos.");
+        verify(pedidoRepository, never()).save(any());
+    }
+
+    @Test
+    void cadastrarPedido_deveFalhar_quandoClienteOuDistribuidorNaoInformado() {
+        PedidoRequest semCliente = pedidoRequest(List.of(itemRequest(1, 1, "10.00", "12.00")));
+        semCliente.setCliente(null);
+        PedidoRequest semDistribuidor = pedidoRequest(List.of(itemRequest(1, 1, "10.00", "12.00")));
+        semDistribuidor.getDistribuidor().setId(null);
+
+        assertThatThrownBy(() -> pedidoService.cadastrarPedido(semCliente, 99))
+                .isInstanceOf(RequisicaoInvalida.class)
+                .hasMessage("Informe o cliente do pedido.");
+        assertThatThrownBy(() -> pedidoService.cadastrarPedido(semDistribuidor, 99))
+                .isInstanceOf(RequisicaoInvalida.class)
+                .hasMessage("Informe o distribuidor do pedido.");
+        verify(pedidoRepository, never()).save(any());
+    }
+
+    @Test
+    void cadastrarPedido_deveRecalcularTotaisDoItem_ignorandoOsEnviadosNoRequest() {
+        ItemPedidoRequest item = itemRequest(1, 2, "10.00", "15.00");
+        item.setVlrTotalDistr(new BigDecimal("999.00"));
+        item.setVlrTotalCliente(new BigDecimal("1.00"));
+        PedidoRequest request = pedidoRequest(List.of(item));
+
+        when(usuarioRepository.findById(99)).thenReturn(Optional.of(usuario(99)));
+        when(clienteService.buscarClientePorId(10)).thenReturn(cliente(10));
+        when(distribuidorService.buscarDistribuidorPorId(20)).thenReturn(distribuidor(20));
+        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(produtoRepository.findByIdProdutoIn(List.of(1))).thenReturn(List.of(produto(1)));
+        when(itemPedidoRepository.save(any(ItemPedido.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(itemPedidoService.convertToItemPedidoResumoResponse(any(ItemPedido.class))).thenReturn(new ItemPedidoResumoResponse());
+
+        pedidoService.cadastrarPedido(request, 99);
+
+        ArgumentCaptor<ItemPedido> itemCaptor = ArgumentCaptor.forClass(ItemPedido.class);
+        verify(itemPedidoRepository).save(itemCaptor.capture());
+        assertThat(itemCaptor.getValue().getVlrTotalDistr()).isEqualByComparingTo("20.00");
+        assertThat(itemCaptor.getValue().getVlrTotalCliente()).isEqualByComparingTo("30.00");
+    }
+
+    @Test
     void editarPedido_deveFalhar_quandoItemDoPedidoTemValorFaturadoMenorQueDoDistribuidor() {
         // Arrange
         Pedido pedido = pedido(30, "EM_ANDAMENTO");
@@ -228,16 +325,12 @@ class PedidoServiceTest {
 
         PedidoEditRequest edicao = new PedidoEditRequest();
         edicao.setIdPedido(30);
-        edicao.setIdCliente(10);
-        edicao.setIdDistribuidor(20);
 
         when(pedidoRepository.findById(30)).thenReturn(Optional.of(pedido));
-        when(clienteService.buscarClientePorId(10)).thenReturn(cliente(10));
-        when(distribuidorService.buscarDistribuidorPorId(20)).thenReturn(distribuidor(20));
         when(itemPedidoRepository.findByPedido(pedido)).thenReturn(List.of(item));
 
         // Act / Assert
-        assertThatThrownBy(() -> pedidoService.editarPedidoFromPedidoEditRequest(edicao))
+        assertThatThrownBy(() -> pedidoService.editarPedidoFromPedidoEditRequest(edicao, 99))
                 .isInstanceOf(RequisicaoInvalida.class)
                 .hasMessageContaining("Produto 1");
 
@@ -286,7 +379,7 @@ class PedidoServiceTest {
         when(pagamentoRepository.save(any(Pagamento.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // Act
-        String mensagem = pedidoService.criarComissao(30, pagamentoDTO);
+        String mensagem = pedidoService.criarComissao(30, pagamentoDTO, 99);
 
         // Assert
         assertThat(mensagem).contains("30");
@@ -322,7 +415,7 @@ class PedidoServiceTest {
         when(pedidoRepository.findById(30)).thenReturn(Optional.of(pedido));
 
         // Act / Assert
-        assertThatThrownBy(() -> pedidoService.criarComissao(30, pagamentoDTO(MetodoPagamento.BOLETO, 30, 60)))
+        assertThatThrownBy(() -> pedidoService.criarComissao(30, pagamentoDTO(MetodoPagamento.BOLETO, 30, 60), 99))
                 .isInstanceOf(OperacaoNaoPermitida.class)
                 .hasMessageContaining("em andamento");
 
@@ -337,7 +430,7 @@ class PedidoServiceTest {
         when(pagamentoRepository.existsByPedido_IdPedido(30)).thenReturn(true);
 
         // Act / Assert
-        assertThatThrownBy(() -> pedidoService.criarComissao(30, pagamentoDTO(MetodoPagamento.BOLETO, 30, 60)))
+        assertThatThrownBy(() -> pedidoService.criarComissao(30, pagamentoDTO(MetodoPagamento.BOLETO, 30, 60), 99))
                 .isInstanceOf(OperacaoNaoPermitida.class)
                 .hasMessageContaining("pagamento");
 
@@ -354,7 +447,7 @@ class PedidoServiceTest {
         when(pagamentoRepository.save(any(Pagamento.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // Act
-        pedidoService.criarComissao(30, pagamentoDTO(MetodoPagamento.AVISTA, 0));
+        pedidoService.criarComissao(30, pagamentoDTO(MetodoPagamento.AVISTA, 0), 99);
 
         // Assert
         ArgumentCaptor<List<Parcela>> parcelasCaptor = ArgumentCaptor.forClass(List.class);
@@ -377,7 +470,7 @@ class PedidoServiceTest {
         when(pagamentoRepository.save(any(Pagamento.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // Act
-        pedidoService.criarComissao(30, pagamentoDTO(MetodoPagamento.BOLETO, 30, 60));
+        pedidoService.criarComissao(30, pagamentoDTO(MetodoPagamento.BOLETO, 30, 60), 99);
 
         // Assert
         ArgumentCaptor<List<Comissao>> comissoesCaptor = ArgumentCaptor.forClass(List.class);
@@ -436,8 +529,6 @@ class PedidoServiceTest {
 
         PedidoEditRequest edicao = new PedidoEditRequest();
         edicao.setIdPedido(30);
-        edicao.setIdCliente(10);
-        edicao.setIdDistribuidor(20);
         edicao.setNumeroNotaDistribuidor("NF-1");
         edicao.setObservacoes("Obs");
         edicao.setMetodoPagamento(MetodoPagamento.BOLETO);
@@ -445,15 +536,13 @@ class PedidoServiceTest {
         edicao.setFinalizarPedido(true);
 
         when(pedidoRepository.findById(30)).thenReturn(Optional.of(pedido));
-        when(clienteService.buscarClientePorId(10)).thenReturn(cliente(10));
-        when(distribuidorService.buscarDistribuidorPorId(20)).thenReturn(distribuidor(20));
         when(itemPedidoRepository.findByPedido(pedido)).thenReturn(List.of(item));
         when(pagamentoRepository.existsByPedido_IdPedido(30)).thenReturn(false);
         when(pagamentoRepository.save(any(Pagamento.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(itemPedidoService.convertToItemPedidoResumoResponse(any(ItemPedido.class))).thenReturn(new ItemPedidoResumoResponse());
 
         // Act
-        PedidoResponse response = pedidoService.editarPedidoFromPedidoEditRequest(edicao);
+        PedidoResponse response = pedidoService.editarPedidoFromPedidoEditRequest(edicao, 99);
 
         // Assert
         assertThat(response.getStatusPedido()).isEqualTo("APROVADO");
@@ -467,6 +556,9 @@ class PedidoServiceTest {
         ArgumentCaptor<List<Parcela>> parcelasCaptor = ArgumentCaptor.forClass(List.class);
         verify(parcelaRepository).saveAll(parcelasCaptor.capture());
         assertThat(parcelasCaptor.getValue()).extracting(Parcela::getPrazoDias).containsExactly(10, 30, 60, 120, 180);
+
+        // Editar o pedido não altera o cadastro do cliente nem do distribuidor
+        org.mockito.Mockito.verifyNoInteractions(clienteService, distribuidorService);
     }
 
     @Test
@@ -482,25 +574,291 @@ class PedidoServiceTest {
 
         PedidoEditRequest edicao = new PedidoEditRequest();
         edicao.setIdPedido(30);
-        edicao.setIdCliente(10);
-        edicao.setIdDistribuidor(20);
         edicao.setNumeroNotaDistribuidor("NF-1");
         edicao.setObservacoes("Obs");
         edicao.setDatasPagamento(List.of(10));
         edicao.setFinalizarPedido(true);
 
         when(pedidoRepository.findById(30)).thenReturn(Optional.of(pedido));
-        when(clienteService.buscarClientePorId(10)).thenReturn(cliente(10));
-        when(distribuidorService.buscarDistribuidorPorId(20)).thenReturn(distribuidor(20));
         when(itemPedidoRepository.findByPedido(pedido)).thenReturn(List.of(item));
         when(pagamentoRepository.existsByPedido_IdPedido(30)).thenReturn(false);
 
         // Act / Assert
-        assertThatThrownBy(() -> pedidoService.editarPedidoFromPedidoEditRequest(edicao))
+        assertThatThrownBy(() -> pedidoService.editarPedidoFromPedidoEditRequest(edicao, 99))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("método de pagamento");
 
         verify(pagamentoRepository, never()).save(any());
+    }
+
+    // ─── Entrega do pedido ──────────────────────────────────────────────────────
+
+    @Test
+    void cadastrarPedido_deveGravarEntregaSemEspacosNasPontas() {
+        PedidoRequest request = pedidoRequest(List.of(itemRequest(1, 1, "10.00", "12.00")));
+        request.setEntrega("  15 dias  ");
+        when(usuarioRepository.findById(99)).thenReturn(Optional.of(usuario(99)));
+        when(clienteService.buscarClientePorId(10)).thenReturn(cliente(10));
+        when(distribuidorService.buscarDistribuidorPorId(20)).thenReturn(distribuidor(20));
+        when(produtoRepository.findByIdProdutoIn(List.of(1))).thenReturn(List.of(produto(1)));
+        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(itemPedidoRepository.save(any(ItemPedido.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(itemPedidoService.convertToItemPedidoResumoResponse(any(ItemPedido.class))).thenReturn(new ItemPedidoResumoResponse());
+
+        PedidoResponse response = pedidoService.cadastrarPedido(request, 99);
+
+        assertThat(response.getEntrega()).isEqualTo("15 dias");
+    }
+
+    @Test
+    void cadastrarPedido_deveFalhar_quandoEntregaPassaDe100Caracteres() {
+        PedidoRequest request = pedidoRequest(List.of(itemRequest(1, 1, "10.00", "12.00")));
+        request.setEntrega("x".repeat(101));
+        when(usuarioRepository.findById(99)).thenReturn(Optional.of(usuario(99)));
+        when(clienteService.buscarClientePorId(10)).thenReturn(cliente(10));
+        when(distribuidorService.buscarDistribuidorPorId(20)).thenReturn(distribuidor(20));
+        when(produtoRepository.findByIdProdutoIn(List.of(1))).thenReturn(List.of(produto(1)));
+
+        assertThatThrownBy(() -> pedidoService.cadastrarPedido(request, 99))
+                .isInstanceOf(RequisicaoInvalida.class)
+                .hasMessage("A entrega deve ter no máximo 100 caracteres.");
+        verify(pedidoRepository, never()).save(any());
+    }
+
+    @Test
+    void editarPedido_deveAtualizarLimparOuManterEntrega() {
+        Pedido pedido = pedido(30, "EM_ANDAMENTO");
+        pedido.setEntrega("Imediata");
+        when(pedidoRepository.findById(30)).thenReturn(Optional.of(pedido));
+
+        PedidoEditRequest semEntrega = new PedidoEditRequest();
+        semEntrega.setIdPedido(30);
+        pedidoService.editarPedidoFromPedidoEditRequest(semEntrega, 99);
+        assertThat(pedido.getEntrega()).isEqualTo("Imediata");
+
+        PedidoEditRequest novaEntrega = new PedidoEditRequest();
+        novaEntrega.setIdPedido(30);
+        novaEntrega.setEntrega("30 dias");
+        pedidoService.editarPedidoFromPedidoEditRequest(novaEntrega, 99);
+        assertThat(pedido.getEntrega()).isEqualTo("30 dias");
+
+        PedidoEditRequest entregaVazia = new PedidoEditRequest();
+        entregaVazia.setIdPedido(30);
+        entregaVazia.setEntrega("");
+        pedidoService.editarPedidoFromPedidoEditRequest(entregaVazia, 99);
+        assertThat(pedido.getEntrega()).isNull();
+    }
+
+    // ─── Quantidade de cada item na edição ──────────────────────────────────────
+
+    @Test
+    void editarPedido_deveAtualizarQuantidadeDeCadaItemERecalcularTotais() {
+        Pedido pedido = pedido(30, "EM_ANDAMENTO");
+        ItemPedido item1 = itemDoPedido(1, 1, "10.00", "15.00");
+        ItemPedido item2 = itemDoPedido(2, 1, "20.00", "25.00");
+        when(pedidoRepository.findById(30)).thenReturn(Optional.of(pedido));
+        when(itemPedidoRepository.findByPedido(pedido)).thenReturn(List.of(item1, item2));
+        when(itemPedidoService.convertToItemPedidoResumoResponse(any(ItemPedido.class))).thenReturn(new ItemPedidoResumoResponse());
+
+        PedidoEditRequest edicao = new PedidoEditRequest();
+        edicao.setIdPedido(30);
+        edicao.setItens(List.of(new PedidoEditRequest.ItemQuantidade(1, 3), new PedidoEditRequest.ItemQuantidade(2, 2)));
+
+        pedidoService.editarPedidoFromPedidoEditRequest(edicao, 99);
+
+        assertThat(item1.getQuantidade()).isEqualTo(3);
+        assertThat(item1.getVlrTotalDistr()).isEqualByComparingTo("30.00");
+        assertThat(item1.getVlrTotalCliente()).isEqualByComparingTo("45.00");
+        assertThat(item2.getQuantidade()).isEqualTo(2);
+        assertThat(item2.getVlrTotalDistr()).isEqualByComparingTo("40.00");
+        assertThat(item2.getVlrTotalCliente()).isEqualByComparingTo("50.00");
+        assertThat(pedido.getValorTotalDistr()).isEqualByComparingTo("70.00");
+        assertThat(pedido.getValorTotalCliente()).isEqualByComparingTo("95.00");
+        verify(itemPedidoRepository).save(item1);
+        verify(itemPedidoRepository).save(item2);
+    }
+
+    @Test
+    void editarPedido_deveFalharSemAlterarNada_quandoItemNaoEDoPedidoOuQuantidadeInvalida() {
+        Pedido pedido = pedido(30, "EM_ANDAMENTO");
+        ItemPedido item1 = itemDoPedido(1, 1, "10.00", "15.00");
+        when(pedidoRepository.findById(30)).thenReturn(Optional.of(pedido));
+        when(itemPedidoRepository.findByPedido(pedido)).thenReturn(List.of(item1));
+
+        PedidoEditRequest itemDeOutroPedido = new PedidoEditRequest();
+        itemDeOutroPedido.setIdPedido(30);
+        itemDeOutroPedido.setItens(List.of(new PedidoEditRequest.ItemQuantidade(1, 5), new PedidoEditRequest.ItemQuantidade(77, 2)));
+
+        PedidoEditRequest quantidadeZero = new PedidoEditRequest();
+        quantidadeZero.setIdPedido(30);
+        quantidadeZero.setItens(List.of(new PedidoEditRequest.ItemQuantidade(1, 0)));
+
+        assertThatThrownBy(() -> pedidoService.editarPedidoFromPedidoEditRequest(itemDeOutroPedido, 99))
+                .isInstanceOf(RecursoNaoEncontrado.class)
+                .hasMessageContaining("77");
+        assertThatThrownBy(() -> pedidoService.editarPedidoFromPedidoEditRequest(quantidadeZero, 99))
+                .isInstanceOf(RequisicaoInvalida.class)
+                .hasMessageContaining("quantidade deve ser maior que zero");
+
+        assertThat(item1.getQuantidade()).isEqualTo(1);
+        verify(itemPedidoRepository, never()).save(any());
+        verify(pedidoRepository, never()).save(any());
+    }
+
+    private ItemPedido itemDoPedido(Integer id, Integer quantidade, String unitDistr, String unitCliente) {
+        ItemPedido item = new ItemPedido();
+        item.setIdItemPedido(id);
+        item.setProduto(produto(id));
+        item.setQuantidade(quantidade);
+        item.setVlrUnitDistr(new BigDecimal(unitDistr));
+        item.setVlrUnitCliente(new BigDecimal(unitCliente));
+        item.setVlrTotalDistr(new BigDecimal(unitDistr).multiply(BigDecimal.valueOf(quantidade)));
+        item.setVlrTotalCliente(new BigDecimal(unitCliente).multiply(BigDecimal.valueOf(quantidade)));
+        return item;
+    }
+
+    // ─── Dono do pedido ─────────────────────────────────────────────────────────
+
+    @Test
+    void criarComissao_deveResponderNaoEncontrado_quandoPedidoEDeOutroVendedor() {
+        when(pedidoRepository.findById(30)).thenReturn(Optional.of(pedido(30, "EM_ANDAMENTO")));
+
+        assertThatThrownBy(() -> pedidoService.criarComissao(30, pagamentoDTO(MetodoPagamento.AVISTA, 0), 7))
+                .isInstanceOf(RecursoNaoEncontrado.class)
+                .hasMessageContaining("30");
+
+        verify(pagamentoRepository, never()).save(any());
+        verify(pedidoRepository, never()).save(any());
+    }
+
+    @Test
+    void editarPedido_deveResponderNaoEncontrado_quandoPedidoEDeOutroVendedor() {
+        when(pedidoRepository.findById(30)).thenReturn(Optional.of(pedido(30, "EM_ANDAMENTO")));
+        PedidoEditRequest edicao = new PedidoEditRequest();
+        edicao.setIdPedido(30);
+
+        assertThatThrownBy(() -> pedidoService.editarPedidoFromPedidoEditRequest(edicao, 7))
+                .isInstanceOf(RecursoNaoEncontrado.class);
+
+        verify(pedidoRepository, never()).save(any());
+    }
+
+    @Test
+    void deletarPedido_deveInativarApenasPedidoDoProprioVendedor() {
+        Pedido pedido = pedido(30, "EM_ANDAMENTO");
+        when(pedidoRepository.findById(30)).thenReturn(Optional.of(pedido));
+
+        assertThatThrownBy(() -> pedidoService.deletarPedido(30, 7))
+                .isInstanceOf(RecursoNaoEncontrado.class);
+        assertThat(pedido.getAtivo()).isTrue();
+
+        pedidoService.deletarPedido(30, 99);
+        assertThat(pedido.getAtivo()).isFalse();
+        verify(pedidoRepository).save(pedido);
+    }
+
+    @Test
+    void buscarPedidoPorId_deveLiberarQualquerPedidoSomenteComAcessoTotal() {
+        Pedido pedido = pedido(30, "EM_ANDAMENTO");
+        when(pedidoRepository.findById(30)).thenReturn(Optional.of(pedido));
+        when(itemPedidoRepository.findByPedido(pedido)).thenReturn(List.of());
+
+        assertThatThrownBy(() -> pedidoService.buscarPedidoPorId(30, 7, false))
+                .isInstanceOf(RecursoNaoEncontrado.class);
+        assertThat(pedidoService.buscarPedidoPorId(30, 7, true).getIdPedido()).isEqualTo(30);
+        assertThat(pedidoService.buscarPedidoPorId(30, 99, false).getIdPedido()).isEqualTo(30);
+    }
+
+    @Test
+    void listarPedidosPorVendedor_deveImpedirVendedorDeConsultarOutroVendedor() {
+        assertThatThrownBy(() -> pedidoService.listarPedidosPorVendedor(99, org.springframework.data.domain.Pageable.unpaged(), 7, false))
+                .isInstanceOf(RecursoNaoEncontrado.class);
+        verify(pedidoRepository, never()).listarPedidosPorVendedor(any(), any());
+    }
+
+    @Test
+    void listarPedidos_deveTrazerSoOsAtivosDoVendedorSemAcessoTotal() {
+        when(pedidoRepository.findByUsuario_IdUsuarioAndAtivoTrue(99)).thenReturn(List.of());
+
+        pedidoService.listarPedidos(99, false);
+
+        verify(pedidoRepository).findByUsuario_IdUsuarioAndAtivoTrue(99);
+        verify(pedidoRepository, never()).findByAtivoTrue();
+        verify(pedidoRepository, never()).findAll();
+    }
+
+    @Test
+    void criarComissao_deveFalharComMensagemClara_quandoVendedorNaoTemPercentual() {
+        Pedido pedido = pedido(30, "EM_ANDAMENTO");
+        pedido.getUsuario().setPercentualComissao(null);
+        when(pedidoRepository.findById(30)).thenReturn(Optional.of(pedido));
+        when(pagamentoRepository.existsByPedido_IdPedido(30)).thenReturn(false);
+
+        assertThatThrownBy(() -> pedidoService.criarComissao(30, pagamentoDTO(MetodoPagamento.AVISTA, 0), 99))
+                .isInstanceOf(RequisicaoInvalida.class)
+                .hasMessageContaining("percentual de comissão");
+
+        verify(pagamentoRepository, never()).save(any());
+        verify(parcelaRepository, never()).saveAll(any());
+        assertThat(pedido.getStatusPedido()).isEqualTo("EM_ANDAMENTO");
+    }
+
+    // ─── Cadastros inativos e pedido excluído ───────────────────────────────────
+
+    @Test
+    void cadastrarPedido_deveFalhar_quandoClienteOuDistribuidorEstaInativo() {
+        Cliente clienteInativo = cliente(10);
+        clienteInativo.setAtivo(false);
+        Distribuidor distribuidorInativo = distribuidor(20);
+        distribuidorInativo.setAtivo(false);
+        when(usuarioRepository.findById(99)).thenReturn(Optional.of(usuario(99)));
+        when(clienteService.buscarClientePorId(10)).thenReturn(clienteInativo, cliente(10));
+        when(distribuidorService.buscarDistribuidorPorId(20)).thenReturn(distribuidorInativo);
+
+        assertThatThrownBy(() -> pedidoService.cadastrarPedido(pedidoRequest(List.of(itemRequest(1, 1, "10.00", "12.00"))), 99))
+                .isInstanceOf(RequisicaoInvalida.class)
+                .hasMessageContaining("cliente selecionado está inativo");
+        assertThatThrownBy(() -> pedidoService.cadastrarPedido(pedidoRequest(List.of(itemRequest(1, 1, "10.00", "12.00"))), 99))
+                .isInstanceOf(RequisicaoInvalida.class)
+                .hasMessageContaining("distribuidor selecionado está inativo");
+        verify(pedidoRepository, never()).save(any());
+    }
+
+    @Test
+    void cadastrarPedido_deveFalhar_quandoProdutoEstaInativo() {
+        Produto inativo = produto(2);
+        inativo.setAtivo(false);
+        when(usuarioRepository.findById(99)).thenReturn(Optional.of(usuario(99)));
+        when(clienteService.buscarClientePorId(10)).thenReturn(cliente(10));
+        when(distribuidorService.buscarDistribuidorPorId(20)).thenReturn(distribuidor(20));
+        when(produtoRepository.findByIdProdutoIn(List.of(1, 2))).thenReturn(List.of(produto(1), inativo));
+
+        PedidoRequest request = pedidoRequest(List.of(itemRequest(1, 1, "10.00", "12.00"), itemRequest(2, 1, "10.00", "12.00")));
+
+        assertThatThrownBy(() -> pedidoService.cadastrarPedido(request, 99))
+                .isInstanceOf(RequisicaoInvalida.class)
+                .hasMessageContaining("Item 2")
+                .hasMessageContaining("inativo");
+        verify(pedidoRepository, never()).save(any());
+        verify(itemPedidoRepository, never()).save(any());
+    }
+
+    @Test
+    void pedidoExcluido_deveResponderNaoEncontradoMesmoParaODono() {
+        Pedido excluido = pedido(30, "EM_ANDAMENTO");
+        excluido.setAtivo(false);
+        when(pedidoRepository.findById(30)).thenReturn(Optional.of(excluido));
+
+        assertThatThrownBy(() -> pedidoService.criarComissao(30, pagamentoDTO(MetodoPagamento.AVISTA, 0), 99))
+                .isInstanceOf(RecursoNaoEncontrado.class);
+        assertThatThrownBy(() -> pedidoService.deletarPedido(30, 99))
+                .isInstanceOf(RecursoNaoEncontrado.class);
+        assertThatThrownBy(() -> pedidoService.buscarPedidoPorId(30, 99, false))
+                .isInstanceOf(RecursoNaoEncontrado.class);
+        assertThatThrownBy(() -> pedidoService.buscarPedidoPorId(30, 7, true))
+                .isInstanceOf(RecursoNaoEncontrado.class);
+        verify(pagamentoRepository, never()).save(any());
+        verify(pedidoRepository, never()).save(any());
     }
 
     private PedidoRequest pedidoRequest(List<ItemPedidoRequest> itens) {

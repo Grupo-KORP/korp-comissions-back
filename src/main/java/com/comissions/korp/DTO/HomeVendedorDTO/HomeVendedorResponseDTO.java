@@ -212,6 +212,8 @@ public class HomeVendedorResponseDTO {
     public static class ParcelaDTO {
         private Integer idParcela;
         private Integer pedidoId;
+        /** Código exibido do pedido da parcela (ex.: 251126-P03). */
+        private String codigoPedido;
         private String cliente;
         private String label;
         private BigDecimal valor;
@@ -284,6 +286,14 @@ public class HomeVendedorResponseDTO {
             this.pedidoId = pedidoId;
         }
 
+        public String getCodigoPedido() {
+            return codigoPedido;
+        }
+
+        public void setCodigoPedido(String codigoPedido) {
+            this.codigoPedido = codigoPedido;
+        }
+
         public String getCliente() {
             return cliente;
         }
@@ -296,8 +306,19 @@ public class HomeVendedorResponseDTO {
     public static class DetalheVendaDTO {
         private PessoaDTO cliente;
         private PessoaDTO distribuidor;
+        /** Primeiro item do pedido. Mantido por compatibilidade; use "produtos". */
         private ProdutoVendaDTO produto;
+        /** Todos os itens do pedido, na ordem em que foram incluídos. */
+        private List<ProdutoVendaDTO> produtos;
         private PedidoVendaDTO pedido;
+
+        public List<ProdutoVendaDTO> getProdutos() {
+            return produtos;
+        }
+
+        public void setProdutos(List<ProdutoVendaDTO> produtos) {
+            this.produtos = produtos;
+        }
 
         public PessoaDTO getCliente() {
             return cliente;
@@ -337,6 +358,8 @@ public class HomeVendedorResponseDTO {
         private String statusPedido;
         private String numeroNotaDistribuidor;
         private String observacoes;
+        /** Prazo/condição de entrega do pedido (ex.: "Imediata"). */
+        private String entrega;
         private String metodoPagamento;
         private Boolean parcelado;
         private Integer quantidadeParcelas;
@@ -372,6 +395,14 @@ public class HomeVendedorResponseDTO {
 
         public void setObservacoes(String observacoes) {
             this.observacoes = observacoes;
+        }
+
+        public String getEntrega() {
+            return entrega;
+        }
+
+        public void setEntrega(String entrega) {
+            this.entrega = entrega;
         }
 
         public String getMetodoPagamento() {

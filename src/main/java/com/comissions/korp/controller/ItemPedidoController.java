@@ -1,6 +1,7 @@
 package com.comissions.korp.controller;
 
 import com.comissions.korp.DTO.ItemPedidoDTO.ItemPedidoResponse;
+import com.comissions.korp.config.utils.SecurityUtils;
 import com.comissions.korp.entity.ItemPedido;
 import com.comissions.korp.service.ItemPedidoService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,9 +18,11 @@ import java.util.List;
 public class ItemPedidoController {
 
     private ItemPedidoService itemPedidoService;
+    private SecurityUtils securityUtils;
 
-    public ItemPedidoController(ItemPedidoService itemPedidoService) {
+    public ItemPedidoController(ItemPedidoService itemPedidoService, SecurityUtils securityUtils) {
         this.itemPedidoService = itemPedidoService;
+        this.securityUtils = securityUtils;
     }
 
     @GetMapping("/buscar/{id}")
@@ -31,7 +34,7 @@ public class ItemPedidoController {
             @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
     })
     public ResponseEntity<ItemPedidoResponse> buscarPorId(@PathVariable Integer id) {
-            return ResponseEntity.status(200).body(itemPedidoService.buscarDtoPorId(id));
+            return ResponseEntity.status(200).body(itemPedidoService.buscarDtoPorId(id, securityUtils.getUsuarioIdAutenticado()));
     }
 
     @GetMapping("/buscar")
@@ -44,27 +47,25 @@ public class ItemPedidoController {
     })
     public ResponseEntity<Object> buscarPorPedido(@RequestParam Integer idPedido) {
         try {
-            return ResponseEntity.status(200).body(itemPedidoService.buscarPorPedido(idPedido));
+            return ResponseEntity.status(200).body(itemPedidoService.buscarPorPedido(idPedido, securityUtils.getUsuarioIdAutenticado()));
         } catch (RuntimeException e) {
             return ResponseEntity.status(404).body(e.getMessage());
         }
     }
 
     @DeleteMapping("/deletar/{id}")
-    @Operation(summary = "Remover item de pedido", description = "Remove um item de pedido pelo ID informado.")
+    @Operation(summary = "Remover item de pedido", description = "Remove um item de pedido em andamento e recalcula os totais do pedido.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Item removido com sucesso"),
-            @ApiResponse(responseCode = "400", description = "ID inválido"),
+            @ApiResponse(responseCode = "400", description = "Último item do pedido não pode ser removido"),
             @ApiResponse(responseCode = "404", description = "Item não encontrado"),
+            @ApiResponse(responseCode = "409", description = "Pedido aprovado não pode ser alterado"),
             @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
     })
     public ResponseEntity<Object> deletar(@PathVariable Integer id) {
-        try {
-            itemPedidoService.deletar(id);
-            return ResponseEntity.status(200).body("Item deletado com sucesso!");
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(404).body(e.getMessage());
-        }
+        // Erros (404, 400, 409) seguem para o GlobalExceptionHandler, com o status certo de cada regra.
+        itemPedidoService.deletar(id, securityUtils.getUsuarioIdAutenticado());
+        return ResponseEntity.status(200).body("Item deletado com sucesso!");
     }
 
 }

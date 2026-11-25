@@ -1,4 +1,4 @@
-package com.comissions.korp.service;
+package com.comissions.korp.repository;
 
 import com.comissions.korp.entity.Parcela;
 import org.springframework.data.jpa.repository.JpaRepository;

@@ -47,8 +47,6 @@ public class PedidoService {
     private final PagamentoRepository pagamentoRepository;
     private final ParcelaRepository parcelaRepository;
     private final ComissaoRepository comissaoRepository;
-    private final ClienteRepository clienteRepository;
-    private final DistribuidorRepository distribuidorRepository;
     private final PedidoRascunhoService rascunhoService;
 
 
@@ -57,7 +55,7 @@ public class PedidoService {
             , ProdutoRepository produtoRepository
             , ClienteService clienteService
             , DistribuidorService distribuidorService,
-                         ItemPedidoService itemPedidoService, UsuarioRepository usuarioRepository, EmailService emailService, PagamentoRepository pagamentoRepository, ParcelaRepository parcelaRepository, ComissaoRepository comissaoRepository, ClienteRepository clienteRepository, DistribuidorRepository distribuidorRepository, PedidoRascunhoService rascunhoService) {
+                         ItemPedidoService itemPedidoService, UsuarioRepository usuarioRepository, EmailService emailService, PagamentoRepository pagamentoRepository, ParcelaRepository parcelaRepository, ComissaoRepository comissaoRepository, PedidoRascunhoService rascunhoService) {
         this.pedidoRepository = pedidoRepository;
         this.itemPedidoRepository = itemPedidoRepository;
         this.produtoRepository = produtoRepository;
@@ -69,8 +67,6 @@ public class PedidoService {
         this.pagamentoRepository = pagamentoRepository;
         this.parcelaRepository = parcelaRepository;
         this.comissaoRepository = comissaoRepository;
-        this.clienteRepository = clienteRepository;
-        this.distribuidorRepository = distribuidorRepository;
         this.rascunhoService = rascunhoService;
     }
 
@@ -80,17 +76,30 @@ public class PedidoService {
         if (pedidoRequest.getMetodoPagamento() == null) {
             throw new IllegalArgumentException("Informe o método de pagamento do pedido.");
         }
+        if (pedidoRequest.getCliente() == null || pedidoRequest.getCliente().getId() == null) {
+            throw new RequisicaoInvalida("Informe o cliente do pedido.");
+        }
+        if (pedidoRequest.getDistribuidor() == null || pedidoRequest.getDistribuidor().getId() == null) {
+            throw new RequisicaoInvalida("Informe o distribuidor do pedido.");
+        }
 
-        validarMargemItens(pedidoRequest.getItens());
+        validarItensDoPedido(pedidoRequest.getItens());
 
         Usuario vendedor = usuarioRepository.findById(vendedorId)
                 .orElseThrow(() -> new RuntimeException("Vendedor não encontrado com id: " + vendedorId));
 
         Cliente cliente = clienteService.buscarClientePorId(pedidoRequest.getCliente().getId());
+        if (!Boolean.TRUE.equals(cliente.getAtivo())) {
+            throw new RequisicaoInvalida("O cliente selecionado está inativo e não pode receber pedidos.");
+        }
         Distribuidor distribuidor = distribuidorService.buscarDistribuidorPorId(pedidoRequest.getDistribuidor().getId());
+        if (!Boolean.TRUE.equals(distribuidor.getAtivo())) {
+            throw new RequisicaoInvalida("O distribuidor selecionado está inativo e não pode receber pedidos.");
+        }
+        Map<Integer, Produto> produtoMap = mapearProdutosPorId(pedidoRequest.getItens());
+        validarProdutosDosItens(pedidoRequest.getItens(), produtoMap);
 
         Pedido pedidoSalvo = pedidoRepository.save(criarPedidoFromRequest(pedidoRequest, cliente, distribuidor, vendedor));
-        Map<Integer, Produto> produtoMap = mapearProdutosPorId(pedidoRequest.getItens());
         List<ItemPedido> itensSalvos = salvarItensDoPedido(pedidoSalvo, pedidoRequest.getItens(), produtoMap);
 
         rascunhoService.excluirAposCriarPedido(vendedorId, pedidoRequest.getIdRascunho());
@@ -103,7 +112,7 @@ public class PedidoService {
             emailService.enviarPedidoDistribuidor(
                     pedidoRequest.getDistribuidor().getEmail(),
                     pedidoRequest.getDistribuidor().getNomeFantasia(),
-                    String.valueOf(pedidoSalvo.getIdPedido()),
+                    pedidoSalvo.getCodigo(),
                     pedidoRequest.getCliente().getRazaoSocial(),
                     pdfBytes
             );
@@ -112,8 +121,11 @@ public class PedidoService {
         return convertToPedidoResponse(pedidoSalvo, itensSalvos);
     }
 
-    public List<PedidoResponse> listarPedidos() {
-        List<Pedido> pedidos = pedidoRepository.findAll();
+    /** Financeiro/admin (acessoTotal) vê todos os pedidos; o vendedor vê só os próprios. */
+    public List<PedidoResponse> listarPedidos(Integer idUsuarioLogado, boolean acessoTotal) {
+        List<Pedido> pedidos = acessoTotal
+                ? pedidoRepository.findByAtivoTrue()
+                : pedidoRepository.findByUsuario_IdUsuarioAndAtivoTrue(idUsuarioLogado);
         List<PedidoResponse> response = new ArrayList<>();
 
         for (Pedido pedido : pedidos) {
@@ -124,8 +136,13 @@ public class PedidoService {
         return response;
     }
 
+    /** Financeiro/admin (acessoTotal) consulta qualquer vendedor; o vendedor só consulta o próprio histórico. */
     @Transactional(readOnly = true)
-    public Page<PedidoResponse> listarPedidosPorVendedor(Integer idVendedor, Pageable pageable) {
+    public Page<PedidoResponse> listarPedidosPorVendedor(Integer idVendedor, Pageable pageable,
+                                                         Integer idUsuarioLogado, boolean acessoTotal) {
+        if (!acessoTotal && !idVendedor.equals(idUsuarioLogado)) {
+            throw new RecursoNaoEncontrado("Vendedor não encontrado com id: " + idVendedor);
+        }
         Page<Pedido> pedidos = pedidoRepository.listarPedidosPorVendedor(idVendedor, pageable);
         List<Integer> idsPedido = pedidos.getContent().stream().map(Pedido::getIdPedido).toList();
         Map<Integer, BigDecimal> comissoesPorPedido = idsPedido.isEmpty()
@@ -148,46 +165,33 @@ public class PedidoService {
         });
     }
 
-    public PedidoResponse buscarPedidoPorId(Integer id) {
-        Pedido pedido = pedidoRepository.findById(id)
-                .orElseThrow(() -> new RecursoNaoEncontrado("Pedido não encontrado com id: " + id));
+    /** Financeiro/admin (acessoTotal) busca qualquer pedido; o vendedor só os próprios. */
+    public PedidoResponse buscarPedidoPorId(Integer id, Integer idUsuarioLogado, boolean acessoTotal) {
+        Pedido pedido = acessoTotal
+                ? pedidoRepository.findById(id)
+                        .filter(encontrado -> Boolean.TRUE.equals(encontrado.getAtivo()))
+                        .orElseThrow(() -> new RecursoNaoEncontrado("Pedido não encontrado com id: " + id))
+                : buscarPedidoDoVendedor(id, idUsuarioLogado);
 
         List<ItemPedido> itens = itemPedidoRepository.findByPedido(pedido);
         return convertToPedidoResponse(pedido, itens);
     }
 
-
-
-    @Transactional
-    public PedidoResponse atualizarPedido(Integer id, PedidoRequest pedidoRequest, Integer vendedorId) {
-        validarMargemItens(pedidoRequest.getItens());
-
-        Pedido pedido = pedidoRepository.findById(id)
-                .orElseThrow(() -> new RecursoNaoEncontrado("Pedido não encontrado com id: " + id));
-
-                Usuario vendedor = usuarioRepository.findById(vendedorId)
-                .orElseThrow(() -> new RuntimeException("Vendedor não encontrado com id: " + vendedorId));
-
-        Cliente cliente = clienteService.buscarClientePorId(pedidoRequest.getCliente().getId());
-        Distribuidor distribuidor = distribuidorService.buscarDistribuidorPorId(pedidoRequest.getDistribuidor().getId());
-
-        atualizarDadosPedido(pedido, pedidoRequest, cliente, distribuidor,vendedor);
-
-        Pedido pedidoAtualizado = pedidoRepository.save(pedido);
-
-        if (pedidoRequest.getItens() != null) {
-            atualizarItensDoPedido(pedidoAtualizado, pedidoRequest.getItens());
-        }
-
-        List<ItemPedido> itens = itemPedidoRepository.findByPedido(pedidoAtualizado);
-
-        return convertToPedidoResponse(pedidoAtualizado, itens);
+    /**
+     * Busca o pedido conferindo se ele pertence ao vendedor e não foi excluído. Pedido de outro
+     * vendedor ou excluído responde igual a pedido inexistente (404), para não revelar que ele existe.
+     */
+    private Pedido buscarPedidoDoVendedor(Integer idPedido, Integer idVendedor) {
+        return pedidoRepository.findById(idPedido)
+                .filter(pedido -> Boolean.TRUE.equals(pedido.getAtivo()))
+                .filter(pedido -> pedido.getUsuario() != null
+                        && pedido.getUsuario().getIdUsuario().equals(idVendedor))
+                .orElseThrow(() -> new RecursoNaoEncontrado("Pedido não encontrado com id: " + idPedido));
     }
 
     @Transactional
-    public void deletarPedido(Integer id) {
-        Pedido pedido = pedidoRepository.findById(id)
-                .orElseThrow(() -> new RecursoNaoEncontrado("Pedido não encontrado com id: " + id));
+    public void deletarPedido(Integer id, Integer idVendedor) {
+        Pedido pedido = buscarPedidoDoVendedor(id, idVendedor);
 
         pedido.setAtivo(false);
 
@@ -199,6 +203,8 @@ public class PedidoService {
     private PedidoResponse convertToPedidoResponse(Pedido pedido, List<ItemPedido> itens) {
         PedidoResponse pedidoResponse = new PedidoResponse();
         pedidoResponse.setIdPedido(pedido.getIdPedido());
+        pedidoResponse.setCodigo(pedido.getCodigo());
+        pedidoResponse.setEntrega(pedido.getEntrega());
         pedidoResponse.setDataPedido(pedido.getDataPedido());
         pedidoResponse.setNumeroNotaDistribuidor(pedido.getNumeroNotaDistribuidor());
         pedidoResponse.setValorTotalDistr(pedido.getValorTotalRevenda());
@@ -252,7 +258,11 @@ public class PedidoService {
         Pedido pedido = new Pedido();
         pedido.setStatusPedido("EM_ANDAMENTO");
         pedido.setMetodoPagamento(pedidoRequest.getMetodoPagamento());
+        pedido.setEntrega(normalizarEntrega(pedidoRequest.getEntrega()));
         atualizarDadosPedido(pedido, pedidoRequest, cliente, distribuidor, vendedor);
+        // Próximo número do dia para o código (ex.: 251126-P03). A constraint uc_pedido_data_numero
+        // impede repetição se dois pedidos forem criados ao mesmo tempo.
+        pedido.setNumeroDia(pedidoRepository.maiorNumeroDoDia(pedido.getDataPedido()) + 1);
         return pedido;
     }
 
@@ -280,15 +290,29 @@ public class PedidoService {
         return itensSalvos;
     }
 
-    private void atualizarItensDoPedido(Pedido pedido, List<ItemPedidoRequest> itensRequest) {
-        itemPedidoRepository.deleteByPedido(pedido);
+    private static final int TAMANHO_MAXIMO_ENTREGA = 100;
 
-        if (itensRequest.isEmpty()) {
-            return;
+    /** Entrega é opcional: sem espaços nas pontas, texto vazio vira "sem entrega" e o limite é 100 caracteres. */
+    private String normalizarEntrega(String entrega) {
+        if (entrega == null || entrega.isBlank()) {
+            return null;
         }
+        String texto = entrega.trim();
+        if (texto.length() > TAMANHO_MAXIMO_ENTREGA) {
+            throw new RequisicaoInvalida("A entrega deve ter no máximo " + TAMANHO_MAXIMO_ENTREGA + " caracteres.");
+        }
+        return texto;
+    }
 
-        Map<Integer, Produto> produtoMap = mapearProdutosPorId(itensRequest);
-        salvarItensDoPedido(pedido, itensRequest, produtoMap);
+    /** Confere, antes de gravar o pedido, que todo produto dos itens existe e está ativo. */
+    private void validarProdutosDosItens(List<ItemPedidoRequest> itens, Map<Integer, Produto> produtoMap) {
+        for (int i = 0; i < itens.size(); i++) {
+            Produto produto = buscarProdutoPorId(itens.get(i).getFkProduto(), produtoMap);
+            if (!Boolean.TRUE.equals(produto.getAtivo())) {
+                throw new RequisicaoInvalida("Item " + (i + 1) + ": o produto " + produto.getNome()
+                        + " está inativo e não pode ser usado no pedido.");
+            }
+        }
     }
 
     private Produto buscarProdutoPorId(Integer idProduto, Map<Integer, Produto> produtoMap) {
@@ -305,16 +329,18 @@ public class PedidoService {
         itemPedido.setProduto(produto);
         itemPedido.setQuantidade(itemRequest.getQuantidade());
         itemPedido.setVlrUnitDistr(itemRequest.getVlrUnitDistr());
-        itemPedido.setVlrTotalDistr(itemRequest.getVlrTotalDistr());
         itemPedido.setVlrUnitCliente(itemRequest.getVlrUnitCliente());
-        itemPedido.setVlrTotalCliente(itemRequest.getVlrTotalCliente());
+        // Totais do item calculados aqui (quantidade × unitário), com a mesma regra do total do pedido.
+        // Os totais enviados no request são ignorados para os dois nunca divergirem.
+        BigDecimal quantidade = BigDecimal.valueOf(itemRequest.getQuantidade());
+        itemPedido.setVlrTotalDistr(itemRequest.getVlrUnitDistr().multiply(quantidade));
+        itemPedido.setVlrTotalCliente(itemRequest.getVlrUnitCliente().multiply(quantidade));
         return itemPedido;
     }
 
     @Transactional
-    public String criarComissao(Integer idPedido, PagamentoDTO pagamento) {
-        Pedido pedido = pedidoRepository.findById(idPedido)
-                .orElseThrow(() -> new RecursoNaoEncontrado("Pedido não encontrado com id: " + idPedido));
+    public String criarComissao(Integer idPedido, PagamentoDTO pagamento, Integer idVendedor) {
+        Pedido pedido = buscarPedidoDoVendedor(idPedido, idVendedor);
 
         if (!"EM_ANDAMENTO".equals(pedido.getStatusPedido())) {
             throw new OperacaoNaoPermitida("Não é possível criar comissão para um pedido que não está em andamento.");
@@ -336,6 +362,7 @@ public class PedidoService {
     }
 
     public Pagamento criarPagamentoFromPagamentoDTOAndPedido(PagamentoDTO pagamento, Pedido pedido) {
+        validarPercentualComissaoDoVendedor(pedido);
         MetodoPagamento metodo = getMetodoPagamentoFromPagamentoDTO(pagamento);
         validarPrazosPagamento(metodo, pagamento.getDatasPagamento());
 
@@ -347,6 +374,17 @@ public class PedidoService {
         pagamentoPedido.setMetodoPagamento(metodo);
         pagamentoPedido.setQuantidadeParcelas(quantidadeParcelas);
         return pagamentoPedido;
+    }
+
+    /**
+     * A comissão é calculada com o percentual do vendedor no momento da finalização; sem ele não há
+     * como gerar as comissões. Roda antes de gravar o pagamento, nos dois fluxos de finalização.
+     */
+    private void validarPercentualComissaoDoVendedor(Pedido pedido) {
+        if (pedido.getUsuario() == null || pedido.getUsuario().getPercentualComissao() == null) {
+            throw new RequisicaoInvalida("O vendedor deste pedido não tem percentual de comissão cadastrado. "
+                    + "Peça ao financeiro para cadastrá-lo antes de finalizar o pedido.");
+        }
     }
 
     public MetodoPagamento getMetodoPagamentoFromPagamentoDTO(PagamentoDTO pagamento) {
@@ -453,30 +491,26 @@ public class PedidoService {
     }
 
     @Transactional
-    public PedidoResponse editarPedidoFromPedidoEditRequest(PedidoEditRequest pedido) {
-        Pedido pedidoAtual = pedidoRepository.findById(pedido.getIdPedido())
-                .orElseThrow(() -> new RecursoNaoEncontrado("Pedido não encontrado com id: " + pedido.getIdPedido()));
+    public PedidoResponse editarPedidoFromPedidoEditRequest(PedidoEditRequest pedido, Integer idVendedor) {
+        Pedido pedidoAtual = buscarPedidoDoVendedor(pedido.getIdPedido(), idVendedor);
 
         if (!"EM_ANDAMENTO".equals(pedidoAtual.getStatusPedido())) {
             throw new OperacaoNaoPermitida("Pedido aprovado não pode ser editado.");
         }
 
-        Cliente cliente = clienteService.buscarClientePorId(pedido.getIdCliente());
-        cliente.setNomeFantasia(pedido.getNomeFantasiaCliente());
-        clienteRepository.save(cliente);
-
-        Distribuidor distribuidor = distribuidorService.buscarDistribuidorPorId(pedido.getIdDistribuidor());
-        distribuidor.setNomeFantasia(pedido.getNomeFantasiaDistribuidor());
-        distribuidorRepository.save(distribuidor);
-
+        // Cliente e distribuidor não são alterados por aqui: o pedido mostra sempre os dados atuais
+        // do cadastro, que se edita nas telas de Clientes e Distribuidores.
         pedidoAtual.setNumeroNotaDistribuidor(pedido.getNumeroNotaDistribuidor());
         pedidoAtual.setObservacoes(pedido.getObservacoes());
+        if (pedido.getEntrega() != null) {
+            pedidoAtual.setEntrega(normalizarEntrega(pedido.getEntrega()));
+        }
         if (pedido.getMetodoPagamento() != null) {
             pedidoAtual.setMetodoPagamento(pedido.getMetodoPagamento());
         }
 
-        if (pedido.getQuantidade() != null) {
-            atualizarQuantidadeItemPedido(pedidoAtual, pedido);
+        if (pedido.getItens() != null && !pedido.getItens().isEmpty()) {
+            atualizarQuantidadesDosItens(pedidoAtual, pedido.getItens());
         }
 
         validarMargemItensPedido(itemPedidoRepository.findByPedido(pedidoAtual));
@@ -499,14 +533,24 @@ public class PedidoService {
         return convertToPedidoResponse(pedidoAtual, itemPedidoRepository.findByPedido(pedidoAtual));
     }
 
-    // Comissão nunca negativa: em cada item o valor faturado pode ser igual, jamais menor que o do distribuidor.
-    private void validarMargemItens(List<ItemPedidoRequest> itens) {
-        if (itens == null) {
-            return;
+    /**
+     * O pedido precisa de ao menos um item, e cada item precisa de produto, quantidade inteira maior
+     * que zero e valores unitários válidos (ver validarMargem).
+     */
+    private void validarItensDoPedido(List<ItemPedidoRequest> itens) {
+        if (itens == null || itens.isEmpty()) {
+            throw new RequisicaoInvalida("Informe ao menos um item no pedido.");
         }
         for (int i = 0; i < itens.size(); i++) {
             ItemPedidoRequest item = itens.get(i);
-            validarMargem(item.getVlrUnitDistr(), item.getVlrUnitCliente(), "Item " + (i + 1));
+            String identificacao = "Item " + (i + 1);
+            if (item == null || item.getFkProduto() == null) {
+                throw new RequisicaoInvalida(identificacao + ": informe o produto.");
+            }
+            if (item.getQuantidade() == null || item.getQuantidade() < 1) {
+                throw new RequisicaoInvalida(identificacao + ": a quantidade deve ser maior que zero.");
+            }
+            validarMargem(item.getVlrUnitDistr(), item.getVlrUnitCliente(), identificacao);
         }
     }
 
@@ -517,9 +561,13 @@ public class PedidoService {
         }
     }
 
+    // Comissão nunca negativa: em cada item o valor faturado pode ser igual, jamais menor que o do distribuidor.
     private void validarMargem(BigDecimal valorUnitDistr, BigDecimal valorUnitCliente, String identificacao) {
         if (valorUnitDistr == null || valorUnitCliente == null) {
             throw new RequisicaoInvalida(identificacao + ": informe os valores unitários do distribuidor e do cliente.");
+        }
+        if (valorUnitDistr.signum() < 0 || valorUnitCliente.signum() < 0) {
+            throw new RequisicaoInvalida(identificacao + ": os valores unitários não podem ser negativos.");
         }
         if (valorUnitCliente.compareTo(valorUnitDistr) < 0) {
             throw new RequisicaoInvalida(identificacao
@@ -527,32 +575,35 @@ public class PedidoService {
         }
     }
 
-    private void atualizarQuantidadeItemPedido(Pedido pedidoAtual, PedidoEditRequest pedido) {
-        if (pedido.getQuantidade() <= 0) {
-            throw new IllegalArgumentException("Quantidade deve ser maior que zero.");
+    /**
+     * Aplica a nova quantidade de cada item enviado e recalcula os totais desses itens.
+     * Valida tudo antes de alterar: item que não é deste pedido responde 404 e quantidade
+     * menor que 1 responde 400, sem mudar nenhum item.
+     */
+    private void atualizarQuantidadesDosItens(Pedido pedidoAtual, List<PedidoEditRequest.ItemQuantidade> novasQuantidades) {
+        Map<Integer, ItemPedido> itensDoPedido = itemPedidoRepository.findByPedido(pedidoAtual).stream()
+                .collect(Collectors.toMap(ItemPedido::getIdItemPedido, item -> item));
+
+        for (PedidoEditRequest.ItemQuantidade novo : novasQuantidades) {
+            if (novo == null || novo.getIdItemPedido() == null || !itensDoPedido.containsKey(novo.getIdItemPedido())) {
+                Integer id = novo == null ? null : novo.getIdItemPedido();
+                throw new RecursoNaoEncontrado("Item do pedido não encontrado com id: " + id);
+            }
+            if (novo.getQuantidade() == null || novo.getQuantidade() < 1) {
+                ItemPedido item = itensDoPedido.get(novo.getIdItemPedido());
+                String nome = item.getProduto() != null ? item.getProduto().getNome() : "Item " + item.getIdItemPedido();
+                throw new RequisicaoInvalida(nome + ": a quantidade deve ser maior que zero.");
+            }
         }
 
-        ItemPedido item = buscarItemEditavel(pedidoAtual, pedido.getIdItemPedido());
-        item.setQuantidade(pedido.getQuantidade());
-        item.setVlrTotalDistr(item.getVlrUnitDistr().multiply(BigDecimal.valueOf(pedido.getQuantidade())));
-        item.setVlrTotalCliente(item.getVlrUnitCliente().multiply(BigDecimal.valueOf(pedido.getQuantidade())));
-        itemPedidoRepository.save(item);
-    }
-
-    private ItemPedido buscarItemEditavel(Pedido pedidoAtual, Integer idItemPedido) {
-        List<ItemPedido> itens = itemPedidoRepository.findByPedido(pedidoAtual);
-        if (itens.isEmpty()) {
-            throw new RecursoNaoEncontrado("Pedido não possui itens para edição.");
+        for (PedidoEditRequest.ItemQuantidade novo : novasQuantidades) {
+            ItemPedido item = itensDoPedido.get(novo.getIdItemPedido());
+            BigDecimal quantidade = BigDecimal.valueOf(novo.getQuantidade());
+            item.setQuantidade(novo.getQuantidade());
+            item.setVlrTotalDistr(item.getVlrUnitDistr().multiply(quantidade));
+            item.setVlrTotalCliente(item.getVlrUnitCliente().multiply(quantidade));
+            itemPedidoRepository.save(item);
         }
-
-        if (idItemPedido == null) {
-            return itens.get(0);
-        }
-
-        return itens.stream()
-                .filter(item -> idItemPedido.equals(item.getIdItemPedido()))
-                .findFirst()
-                .orElseThrow(() -> new RecursoNaoEncontrado("Item do pedido não encontrado com id: " + idItemPedido));
     }
 
     private void recalcularTotaisPedido(Pedido pedidoAtual) {

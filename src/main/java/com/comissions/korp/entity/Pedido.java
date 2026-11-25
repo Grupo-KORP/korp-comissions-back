@@ -5,12 +5,17 @@ import com.comissions.korp.entity.ENUM.MetodoPagamento;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "pedido")
+@Table(name = "pedido",
+        uniqueConstraints = @UniqueConstraint(name = "uc_pedido_data_numero", columnNames = {"data_pedido", "numero_dia"}))
 public class Pedido {
+
+    /** Parte de data do código do pedido: dia, mês e ano com dois dígitos (ex.: 251126). */
+    private static final DateTimeFormatter FORMATO_DATA_CODIGO = DateTimeFormatter.ofPattern("ddMMyy");
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -19,6 +24,10 @@ public class Pedido {
 
     @Column(name = "data_pedido", nullable = false)
     private LocalDate dataPedido;
+
+    /** Sequência do pedido no dia da criação, no sistema todo (1º do dia = 1). Nunca muda. */
+    @Column(name = "numero_dia", nullable = false)
+    private Integer numeroDia;
 
     @Column(name = "numero_nota_distribuidor", length = 20)
     private String numeroNotaDistribuidor;
@@ -40,6 +49,10 @@ public class Pedido {
 
     @Column(length = 250)
     private String observacoes;
+
+    /** Prazo/condição de entrega do pedido inteiro (ex.: "Imediata", "15 dias"). */
+    @Column(name = "entrega", length = 100)
+    private String entrega;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "metodo_pagamento", length = 20)
@@ -77,6 +90,33 @@ public class Pedido {
 
     public void setDataPedido(LocalDate dataPedido) {
         this.dataPedido = dataPedido;
+    }
+
+    public String getEntrega() {
+        return entrega;
+    }
+
+    public void setEntrega(String entrega) {
+        this.entrega = entrega;
+    }
+
+    public Integer getNumeroDia() {
+        return numeroDia;
+    }
+
+    public void setNumeroDia(Integer numeroDia) {
+        this.numeroDia = numeroDia;
+    }
+
+    /**
+     * Código exibido em todo o sistema: data de criação + "-P" + sequência do dia com pelo menos
+     * dois dígitos. Ex.: 3º pedido de 25/11/2026 = "251126-P03"; o 100º do dia = "251126-P100".
+     */
+    public String getCodigo() {
+        if (dataPedido == null || numeroDia == null) {
+            return null;
+        }
+        return dataPedido.format(FORMATO_DATA_CODIGO) + "-P" + String.format("%02d", numeroDia);
     }
 
     public String getNumeroNotaDistribuidor() {

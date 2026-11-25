@@ -20,5 +20,4 @@ public interface ItemPedidoRepository extends JpaRepository<ItemPedido, Integer>
     """)
     List<ItemPedido> buscarItensDosPedidos(@Param("idsPedido") List<Integer> idsPedido);
 
-    void deleteByPedido(Pedido pedido);
 }

@@ -1,4 +1,4 @@
-package com.comissions.korp.service;
+package com.comissions.korp.repository;
 
 import com.comissions.korp.DTO.HomeVendedorDTO.ResumoStatusDTO;
 import com.comissions.korp.entity.Comissao;
