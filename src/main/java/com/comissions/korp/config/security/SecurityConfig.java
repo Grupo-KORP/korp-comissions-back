@@ -60,10 +60,20 @@ public class SecurityConfig {
                         .requestMatchers("/financeiro/**").hasAnyRole("FINAN", "ADMIN")
                         .requestMatchers("/api/pedidos/rascunhos", "/api/pedidos/rascunhos/**").hasRole("VEND")
 
+                        // ── Área do vendedor ─────────────────────────────────────────
+                        // A ordem importa: a primeira regra que casar com a URL é a aplicada.
+                        // Histórico de pedidos de um vendedor: também usado pela tela de vendedores do financeiro.
+                        .requestMatchers(HttpMethod.GET, "/api/pedidos/vendedor/**").hasAnyRole("VEND", "FINAN", "ADMIN")
+                        // Consultas avulsas de pedido: exigem login (o dono do pedido é conferido no service).
+                        .requestMatchers(HttpMethod.GET, "/api/pedidos/listar", "/api/pedidos/buscar/**").authenticated()
+                        // Criar, editar, finalizar e excluir pedidos e itens: só o vendedor.
+                        .requestMatchers("/api/pedidos/**", "/api/item_pedido/**").hasRole("VEND")
+                        .requestMatchers("/api/vendedor/**").hasRole("VEND")
+                        // Cadastros usados pelo vendedor: exigem login.
+                        .requestMatchers("/api/cliente/**", "/api/distribuidor/**", "/api/contatos/**", "/api/produto/**").authenticated()
 
                         // Descomente para proteger por role:
                         // .requestMatchers("/financeiro/**").hasRole("FINAN")
-                        // .requestMatchers("/vendas/**").hasRole("VEND")
                         .anyRequest().permitAll()
                 )
                 .authenticationProvider(authenticationProvider())
