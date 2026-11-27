@@ -6,26 +6,25 @@ import com.comissions.korp.service.Email.dto.EnviarPedidoDistribuidorRequest;
 import com.comissions.korp.service.Email.dto.EnviarSenhaProvisoriaRequest;
 import com.comissions.korp.service.Email.dto.EnviarTrocaSenhaRequest;
 import feign.FeignException;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import java.io.UnsupportedEncodingException;
 import java.util.Base64;
 
 @Service
 public class EmailService {
 
-    public static final String URL_SITE = "http://localhost:5173/vendedores/redefinir-senha";
+    private static final String CAMINHO_REDEFINIR_SENHA = "/vendedores/redefinir-senha";
 
     private final EmailServiceClient emailServiceClient;
+    private final String frontendBaseUrl;
 
-    public EmailService(EmailServiceClient emailServiceClient) {
+    public EmailService(
+            EmailServiceClient emailServiceClient,
+            @Value("${app.frontend.base-url:http://localhost:5173}") String frontendBaseUrl) {
         this.emailServiceClient = emailServiceClient;
+        this.frontendBaseUrl = frontendBaseUrl.replaceAll("/+$", "");
     }
 
     @Async
@@ -41,7 +40,7 @@ public class EmailService {
     @Async
     public void enviarEmailTrocaSenha(Usuario usuario) {
         try {
-            String url = URL_SITE + "?token=" + usuario.getToken();
+            String url = frontendBaseUrl + CAMINHO_REDEFINIR_SENHA + "?token=" + usuario.getToken();
             emailServiceClient.enviarTrocaSenha(
                     new EnviarTrocaSenhaRequest(usuario.getNome(), usuario.getEmail(), url));
         } catch (FeignException e) {
