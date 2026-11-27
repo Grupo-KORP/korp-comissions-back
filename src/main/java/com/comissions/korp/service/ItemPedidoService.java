@@ -1,5 +1,6 @@
 package com.comissions.korp.service;
 
+import com.comissions.korp.config.PainelVendedorCache;
 import com.comissions.korp.DTO.ItemPedidoDTO.ItemPedidoResponse;
 import com.comissions.korp.DTO.ItemPedidoDTO.ItemPedidoResumoResponse;
 import com.comissions.korp.DTO.PedidoDTO.PedidoResumidoResponse;
@@ -26,12 +27,15 @@ public class ItemPedidoService {
     private final ItemPedidoRepository itemPedidoRepository;
     private final ProdutoService produtoService;
     private final PedidoRepository pedidoRepository;
+    private final PainelVendedorCache painelVendedorCache;
 
 
-    public ItemPedidoService(ItemPedidoRepository itemPedidoRepository, ProdutoService produtoService, PedidoRepository pedidoRepository) {
+    public ItemPedidoService(ItemPedidoRepository itemPedidoRepository, ProdutoService produtoService, PedidoRepository pedidoRepository,
+                             PainelVendedorCache painelVendedorCache) {
         this.itemPedidoRepository = itemPedidoRepository;
         this.produtoService = produtoService;
         this.pedidoRepository = pedidoRepository;
+        this.painelVendedorCache = painelVendedorCache;
     }
 
     public ItemPedidoResponse convertToItemPedidoResponse(ItemPedido itemPedido) {
@@ -95,6 +99,9 @@ public class ItemPedidoService {
      */
     @Transactional
     public void deletar(Integer id, Integer idVendedor) {
+        // Painel do vendedor muda com esta escrita: apaga o cache depois do commit
+        painelVendedorCache.invalidarAposCommit();
+
         ItemPedido item = buscarItemDoVendedor(id, idVendedor);
         Pedido pedido = item.getPedido();
 

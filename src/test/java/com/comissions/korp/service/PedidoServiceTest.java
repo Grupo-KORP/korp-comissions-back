@@ -81,6 +81,9 @@ class PedidoServiceTest {
 
     private PedidoService pedidoService;
 
+    @Mock
+    private com.comissions.korp.config.PainelVendedorCache painelVendedorCache;
+
     @BeforeEach
     void setUp() {
         pedidoService = new PedidoService(
@@ -95,7 +98,8 @@ class PedidoServiceTest {
                 pagamentoRepository,
                 parcelaRepository,
                 comissaoRepository,
-                rascunhoService
+                rascunhoService,
+                painelVendedorCache
         );
     }
 

@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
+import com.comissions.korp.DTO.PaginaDTO;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -113,20 +113,20 @@ class HomeVendedorServiceTest {
         assertThat(resumo.tendenciaVendas()).isEqualTo("0%");
         assertThat(resumo.tendenciaLiberadas()).isEqualTo("0%");
         assertThat(painel.parcelasDoPeriodo()).isEmpty();
-        assertThat(painel.linhas()).isEmpty();
+        assertThat(painel.linhas().content()).isEmpty();
     }
 
     @Test
     void buscarPainel_devePaginarPorLinha_contandoVendaEParcelas() {
         prepararDuasVendasComParcelas();
 
-        Page<LinhaPainelDTO> primeira = homeVendedorService.buscarPainel(
+        PaginaDTO<LinhaPainelDTO> primeira = homeVendedorService.buscarPainel(
                 VENDEDOR, 2026, 10, null, FiltroStatusVenda.TODAS, PRIMEIRA_PAGINA).linhas();
 
         // 1 linha de venda (só a feita no período) + 5 parcelas no período = 6 linhas
-        assertThat(primeira.getTotalElements()).isEqualTo(6);
-        assertThat(primeira.getTotalPages()).isEqualTo(2);
-        assertThat(primeira.getContent())
+        assertThat(primeira.totalElements()).isEqualTo(6);
+        assertThat(primeira.totalPages()).isEqualTo(2);
+        assertThat(primeira.content())
                 .extracting(linha -> linha.tipo(), linha -> linha.venda().getIdPedido(),
                         linha -> linha.parcela() == null ? null : linha.parcela().getNumeroParcela())
                 .containsExactly(
@@ -137,12 +137,12 @@ class HomeVendedorServiceTest {
                         org.assertj.core.groups.Tuple.tuple(TipoLinha.PAGAMENTO, 2, 1)
                 );
         // A venda leva todas as parcelas (modal), não só as do período
-        assertThat(primeira.getContent().get(4).venda().getParcelasDaVenda()).hasSize(3);
+        assertThat(primeira.content().get(4).venda().getParcelasDaVenda()).hasSize(3);
 
-        Page<LinhaPainelDTO> segunda = homeVendedorService.buscarPainel(
+        PaginaDTO<LinhaPainelDTO> segunda = homeVendedorService.buscarPainel(
                 VENDEDOR, 2026, 10, null, FiltroStatusVenda.TODAS, PageRequest.of(1, 5)).linhas();
 
-        assertThat(segunda.getContent())
+        assertThat(segunda.content())
                 .extracting(linha -> linha.tipo(), linha -> linha.venda().getIdPedido(), linha -> linha.parcela().getNumeroParcela())
                 .containsExactly(org.assertj.core.groups.Tuple.tuple(TipoLinha.PAGAMENTO, 2, 2));
     }
@@ -161,9 +161,9 @@ class HomeVendedorServiceTest {
                 VENDEDOR, 2026, 10, null, FiltroStatusVenda.VENDAS, PageRequest.of(0, 1));
 
         assertThat(painel.resumo().totalVendas()).isEqualTo(2);
-        assertThat(painel.linhas().getTotalElements()).isEqualTo(2);
-        assertThat(painel.linhas().getTotalPages()).isEqualTo(2);
-        assertThat(painel.linhas().getContent())
+        assertThat(painel.linhas().totalElements()).isEqualTo(2);
+        assertThat(painel.linhas().totalPages()).isEqualTo(2);
+        assertThat(painel.linhas().content())
                 .extracting(LinhaPainelDTO::tipo, linha -> linha.venda().getIdPedido(), LinhaPainelDTO::parcela)
                 .containsExactly(org.assertj.core.groups.Tuple.tuple(TipoLinha.VENDA, 1, null));
         // Pedidos de outros meses que só têm parcela no período não entram na lista de vendas
@@ -186,7 +186,7 @@ class HomeVendedorServiceTest {
                 VENDEDOR, 2026, 11, null, FiltroStatusVenda.PENDENTES, PRIMEIRA_PAGINA);
 
         assertThat(painel.resumo().totalVendas()).isZero();
-        assertThat(painel.linhas().getContent())
+        assertThat(painel.linhas().content())
                 .extracting(LinhaPainelDTO::tipo, linha -> linha.venda().getIdPedido(), linha -> linha.parcela().getNumeroParcela())
                 .containsExactly(org.assertj.core.groups.Tuple.tuple(TipoLinha.PAGAMENTO, 1, 2));
         verify(pedidoRepository).contarVendasDoPeriodo(VENDEDOR, LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 30));
@@ -196,11 +196,11 @@ class HomeVendedorServiceTest {
     void buscarPainel_filtroLiberadas_deveListarSoParcelasLiberadasEPagas() {
         prepararDuasVendasComParcelas();
 
-        Page<LinhaPainelDTO> linhas = homeVendedorService.buscarPainel(
+        PaginaDTO<LinhaPainelDTO> linhas = homeVendedorService.buscarPainel(
                 VENDEDOR, 2026, 10, null, FiltroStatusVenda.LIBERADAS, PRIMEIRA_PAGINA).linhas();
 
-        assertThat(linhas.getTotalElements()).isEqualTo(2);
-        assertThat(linhas.getContent())
+        assertThat(linhas.totalElements()).isEqualTo(2);
+        assertThat(linhas.content())
                 .extracting(LinhaPainelDTO::tipo, linha -> linha.venda().getIdPedido(), linha -> linha.parcela().getStatus())
                 .containsExactly(
                         org.assertj.core.groups.Tuple.tuple(TipoLinha.PAGAMENTO, 2, "PAGA"),
@@ -212,13 +212,13 @@ class HomeVendedorServiceTest {
     void buscarPainel_filtroPendentes_deveListarSoParcelasPendentes_paginando() {
         prepararDuasVendasComParcelas();
 
-        Page<LinhaPainelDTO> segunda = homeVendedorService.buscarPainel(
+        PaginaDTO<LinhaPainelDTO> segunda = homeVendedorService.buscarPainel(
                 VENDEDOR, 2026, 10, null, FiltroStatusVenda.PENDENTES, PageRequest.of(1, 2)).linhas();
 
         // 3 parcelas pendentes no período (a de novembro fica de fora), 2 por página
-        assertThat(segunda.getTotalElements()).isEqualTo(3);
-        assertThat(segunda.getTotalPages()).isEqualTo(2);
-        assertThat(segunda.getContent())
+        assertThat(segunda.totalElements()).isEqualTo(3);
+        assertThat(segunda.totalPages()).isEqualTo(2);
+        assertThat(segunda.content())
                 .extracting(LinhaPainelDTO::tipo, linha -> linha.parcela().getNumeroParcela(), linha -> linha.parcela().getStatus())
                 .containsExactly(org.assertj.core.groups.Tuple.tuple(TipoLinha.PAGAMENTO, 3, "PENDENTE"));
     }

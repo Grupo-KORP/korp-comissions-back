@@ -2,7 +2,7 @@ package com.comissions.korp.DTO.HomeVendedorDTO;
 
 import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorResponseDTO.ParcelaDTO;
 import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorResponseDTO.VendaResumoDTO;
-import org.springframework.data.domain.Page;
+import com.comissions.korp.DTO.PaginaDTO;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -17,6 +17,8 @@ import java.util.List;
  *   PAGAMENTO por parcela de comissão; os cards mostram só vendas (VENDAS) ou só parcelas
  *   (LIBERADAS/PENDENTES). A paginação conta linhas, não vendas</li>
  * </ul>
+ * Fica guardado no cache do Redis (ver CacheConfig), por isso todo o conteúdo precisa ir e
+ * voltar do JSON: as linhas usam PaginaDTO, não a Page do Spring.
  */
 public record HomeVendedorPainelDTO(
         Integer ano,
@@ -24,7 +26,7 @@ public record HomeVendedorPainelDTO(
         String nomeMes,
         ResumoDTO resumo,
         List<ParcelaDTO> parcelasDoPeriodo,
-        Page<LinhaPainelDTO> linhas
+        PaginaDTO<LinhaPainelDTO> linhas
 ) {
 
     public enum TipoLinha {

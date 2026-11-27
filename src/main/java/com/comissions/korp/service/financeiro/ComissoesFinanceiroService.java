@@ -1,5 +1,6 @@
 package com.comissions.korp.service.financeiro;
 
+import com.comissions.korp.config.PainelVendedorCache;
 import com.comissions.korp.DTO.HomeFinanceiroDTO.ComissaoParcelaDTO;
 import com.comissions.korp.DTO.HomeFinanceiroDTO.ComissoesPainelDTO;
 import com.comissions.korp.entity.Comissao;
@@ -26,19 +27,25 @@ public class ComissoesFinanceiroService {
     private final FinanceiroRepository financeiroRepository;
     private final ItemPedidoRepository itemPedidoRepository;
         private final ComissaoRepository comissaoRepository;
+    private final PainelVendedorCache painelVendedorCache;
 
     public ComissoesFinanceiroService(
             FinanceiroRepository financeiroRepository,
                         ItemPedidoRepository itemPedidoRepository,
-                        ComissaoRepository comissaoRepository
+                        ComissaoRepository comissaoRepository,
+            PainelVendedorCache painelVendedorCache
     ) {
         this.financeiroRepository = financeiroRepository;
         this.itemPedidoRepository = itemPedidoRepository;
                 this.comissaoRepository = comissaoRepository;
+        this.painelVendedorCache = painelVendedorCache;
     }
 
         @Transactional
         public StatusComissao atualizarStatus(Integer idComissao, StatusComissao novoStatus) {
+                // Painel do vendedor muda com esta escrita: apaga o cache depois do commit
+                painelVendedorCache.invalidarAposCommit();
+
                 Comissao comissao = comissaoRepository.findById(idComissao)
                                 .orElseThrow(() -> new RecursoNaoEncontrado("Comissão não encontrada com ID: " + idComissao));
                 comissao.setStatusComissao(novoStatus);

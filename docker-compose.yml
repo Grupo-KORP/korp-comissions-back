@@ -1,0 +1,17 @@
+# Redis usado como cache do painel do vendedor.
+# Subir:  docker compose up -d        Parar:  docker compose down
+# Ver as chaves:  docker exec -it korp-redis redis-cli KEYS "korp:*"
+services:
+  redis:
+    image: redis:7.4-alpine
+    container_name: korp-redis
+    ports:
+      - "6379:6379"
+    # Cache puro: não grava em disco e, ao encher a memória, descarta as chaves usadas há mais tempo.
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3

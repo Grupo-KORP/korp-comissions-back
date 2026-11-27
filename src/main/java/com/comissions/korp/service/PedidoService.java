@@ -1,5 +1,6 @@
 package com.comissions.korp.service;
 
+import com.comissions.korp.config.PainelVendedorCache;
 import com.comissions.korp.DTO.ItemPedidoDTO.ItemPedidoRequest;
 import com.comissions.korp.DTO.ItemPedidoDTO.ItemPedidoResumoResponse;
 import com.comissions.korp.DTO.PagamentoDTO;
@@ -48,6 +49,7 @@ public class PedidoService {
     private final ParcelaRepository parcelaRepository;
     private final ComissaoRepository comissaoRepository;
     private final PedidoRascunhoService rascunhoService;
+    private final PainelVendedorCache painelVendedorCache;
 
 
     public PedidoService(PedidoRepository pedidoRepository
@@ -55,7 +57,7 @@ public class PedidoService {
             , ProdutoRepository produtoRepository
             , ClienteService clienteService
             , DistribuidorService distribuidorService,
-                         ItemPedidoService itemPedidoService, UsuarioRepository usuarioRepository, EmailService emailService, PagamentoRepository pagamentoRepository, ParcelaRepository parcelaRepository, ComissaoRepository comissaoRepository, PedidoRascunhoService rascunhoService) {
+                         ItemPedidoService itemPedidoService, UsuarioRepository usuarioRepository, EmailService emailService, PagamentoRepository pagamentoRepository, ParcelaRepository parcelaRepository, ComissaoRepository comissaoRepository, PedidoRascunhoService rascunhoService, PainelVendedorCache painelVendedorCache) {
         this.pedidoRepository = pedidoRepository;
         this.itemPedidoRepository = itemPedidoRepository;
         this.produtoRepository = produtoRepository;
@@ -68,10 +70,14 @@ public class PedidoService {
         this.parcelaRepository = parcelaRepository;
         this.comissaoRepository = comissaoRepository;
         this.rascunhoService = rascunhoService;
+        this.painelVendedorCache = painelVendedorCache;
     }
 
     @Transactional
     public PedidoResponse cadastrarPedido(PedidoRequest pedidoRequest, Integer vendedorId) {
+// Painel do vendedor muda com esta escrita: apaga o cache depois do commit
+painelVendedorCache.invalidarAposCommit();
+
 
         if (pedidoRequest.getMetodoPagamento() == null) {
             throw new IllegalArgumentException("Informe o método de pagamento do pedido.");
@@ -191,6 +197,9 @@ public class PedidoService {
 
     @Transactional
     public void deletarPedido(Integer id, Integer idVendedor) {
+        // Painel do vendedor muda com esta escrita: apaga o cache depois do commit
+        painelVendedorCache.invalidarAposCommit();
+
         Pedido pedido = buscarPedidoDoVendedor(id, idVendedor);
 
         pedido.setAtivo(false);
@@ -340,6 +349,9 @@ public class PedidoService {
 
     @Transactional
     public String criarComissao(Integer idPedido, PagamentoDTO pagamento, Integer idVendedor) {
+        // Painel do vendedor muda com esta escrita: apaga o cache depois do commit
+        painelVendedorCache.invalidarAposCommit();
+
         Pedido pedido = buscarPedidoDoVendedor(idPedido, idVendedor);
 
         if (!"EM_ANDAMENTO".equals(pedido.getStatusPedido())) {
@@ -492,6 +504,9 @@ public class PedidoService {
 
     @Transactional
     public PedidoResponse editarPedidoFromPedidoEditRequest(PedidoEditRequest pedido, Integer idVendedor) {
+        // Painel do vendedor muda com esta escrita: apaga o cache depois do commit
+        painelVendedorCache.invalidarAposCommit();
+
         Pedido pedidoAtual = buscarPedidoDoVendedor(pedido.getIdPedido(), idVendedor);
 
         if (!"EM_ANDAMENTO".equals(pedidoAtual.getStatusPedido())) {

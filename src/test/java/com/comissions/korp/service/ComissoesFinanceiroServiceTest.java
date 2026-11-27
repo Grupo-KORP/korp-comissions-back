@@ -39,11 +39,14 @@ class ComissoesFinanceiroServiceTest {
     @Mock
     private ComissaoRepository comissaoRepository;
 
+    @Mock
+    private com.comissions.korp.config.PainelVendedorCache painelVendedorCache;
+
     private ComissoesFinanceiroService service;
 
     @BeforeEach
     void setUp() {
-        service = new ComissoesFinanceiroService(financeiroRepository, itemPedidoRepository, comissaoRepository);
+        service = new ComissoesFinanceiroService(financeiroRepository, itemPedidoRepository, comissaoRepository, painelVendedorCache);
         // 251126-P03 e 261126-P14
         when(financeiroRepository.buscarComissoesDoPeriodo(any(), any(), any(), any())).thenReturn(List.of(
                 comissao(30, LocalDate.of(2026, 11, 25), 3),

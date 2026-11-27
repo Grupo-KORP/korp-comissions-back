@@ -36,13 +36,16 @@ class ItemPedidoServiceTest {
     @Mock
     private PedidoRepository pedidoRepository;
 
+    @Mock
+    private com.comissions.korp.config.PainelVendedorCache painelVendedorCache;
+
     private ItemPedidoService itemPedidoService;
     private Pedido pedido;
     private ItemPedido item;
 
     @BeforeEach
     void setUp() {
-        itemPedidoService = new ItemPedidoService(itemPedidoRepository, produtoService, pedidoRepository);
+        itemPedidoService = new ItemPedidoService(itemPedidoRepository, produtoService, pedidoRepository, painelVendedorCache);
 
         Usuario dono = new Usuario();
         dono.setIdUsuario(99);

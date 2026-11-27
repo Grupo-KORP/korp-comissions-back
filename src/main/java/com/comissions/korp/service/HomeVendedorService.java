@@ -12,6 +12,8 @@ import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorResponseDTO.PessoaDTO
 import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorResponseDTO.ProdutoVendaDTO;
 import com.comissions.korp.DTO.HomeVendedorDTO.HomeVendedorResponseDTO.VendaResumoDTO;
 import com.comissions.korp.DTO.HomeVendedorDTO.ResumoStatusDTO;
+import com.comissions.korp.DTO.PaginaDTO;
+import com.comissions.korp.config.CacheConfig;
 import com.comissions.korp.entity.Cliente;
 import com.comissions.korp.entity.Comissao;
 import com.comissions.korp.entity.Contato;
@@ -26,6 +28,9 @@ import com.comissions.korp.entity.Parcela;
 import com.comissions.korp.entity.Pedido;
 import com.comissions.korp.exception.RecursoNaoEncontrado;
 import com.comissions.korp.repository.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -52,6 +57,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class HomeVendedorService {
+
+    private static final Logger log = LoggerFactory.getLogger(HomeVendedorService.class);
 
     private static final Locale LOCALE_BR = Locale.forLanguageTag("pt-BR");
     private static final String[] MESES = {
@@ -104,6 +111,13 @@ public class HomeVendedorService {
     // Painel (listagem paginada + resumo)
     // ═══════════════════════════════════════════════════════════════════════════
 
+    /**
+     * Cache (Redis): a 1ª chamada com a mesma chave (vendedor + período + filtro + página) monta o
+     * painel a partir do banco e guarda o resultado; as seguintes devolvem o que está no Redis,
+     * sem rodar este método, até expirar (TTL) ou até uma escrita apagar o cache (PainelVendedorCache,
+     * chamado em PedidoService, ItemPedidoService e ComissoesFinanceiroService). Ver CacheConfig.
+     */
+    @Cacheable(cacheNames = CacheConfig.PAINEL_VENDEDOR, keyGenerator = CacheConfig.CHAVE_PAINEL_VENDEDOR)
     @Transactional(readOnly = true)
     public HomeVendedorPainelDTO buscarPainel(
             Integer idVendedor,
@@ -113,6 +127,8 @@ public class HomeVendedorService {
             FiltroStatusVenda filtro,
             Pageable pageable
     ) {
+        log.info("Painel do vendedor {} montado a partir do banco (cache miss): ano={}, mes={}, dia={}, filtro={}, pagina={}",
+                idVendedor, ano, mes, dia, filtro, pageable.getPageNumber());
         YearMonth periodo = resolverPeriodo(ano, mes);
         Intervalo intervalo = resolverIntervalo(periodo, dia);
 
@@ -165,7 +181,7 @@ public class HomeVendedorService {
                 nomeMes(periodo),
                 resumo,
                 parcelasDoPeriodo,
-                paginaLinhas
+                PaginaDTO.de(paginaLinhas)
         );
     }
 
